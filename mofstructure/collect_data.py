@@ -156,20 +156,23 @@ def compile_data(cif_files, result_folder, verbose=False):
     search_data2 = {}
     
     for cif_file in cif_files:
-        ase_atom = read(cif_file)
-        ase_atom = remove_guest(ase_atom)
-        base_name = cif_file[:cif_file.rindex('.')].split('/')[-1]
-        print (base_name)
-        ase_atom = remove_guest(ase_atom)
-        pores = zeo_calculation(ase_atom)
-       
-        data_to_json1, ase_data1 = sbu_data(ase_atom)
-        data_to_json2, ase_data2  = ligand_data(ase_atom)
-        porosity_dic[base_name] = pores
-        search_data1[base_name] = data_to_json1
-        search_data2[base_name] = data_to_json2
-        sbu_data3 = dict(merge_two_dicts(ase_data1,ase_data2))
-        ase_dic[base_name]  = sbu_data3
+        try:
+            ase_atom = read(cif_file)
+            ase_atom = remove_guest(ase_atom)
+            base_name = cif_file[:cif_file.rindex('.')].split('/')[-1]
+            print (base_name)
+            ase_atom = remove_guest(ase_atom)
+            pores = zeo_calculation(ase_atom)
+           
+            data_to_json1, ase_data1 = sbu_data(ase_atom)
+            data_to_json2, ase_data2  = ligand_data(ase_atom)
+            porosity_dic[base_name] = pores
+            search_data1[base_name] = data_to_json1
+            search_data2[base_name] = data_to_json2
+            sbu_data3 = dict(merge_two_dicts(ase_data1,ase_data2))
+            ase_dic[base_name]  = sbu_data3
+        except Exception:
+            pass
     if not os.path.exists(result_folder):
         os.makedirs(result_folder)
         

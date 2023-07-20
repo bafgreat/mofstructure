@@ -77,19 +77,22 @@ def remove_guest(ase_atom):
 
 
 def work_flow(cif_file, save_dir, verbose=False):
-    ase_atom = read(cif_file)
-    ase_atom = remove_guest(ase_atom)
-    base_name = cif_file[:cif_file.rindex('.')].split('/')[-1]
-    if not os.path.exists(save_dir):
-        os.makedirs(save_dir)
-    path_to_file = save_dir+'/'+base_name
+    try:
+        ase_atom = read(cif_file)
+        ase_atom = remove_guest(ase_atom)
+        base_name = cif_file[:cif_file.rindex('.')].split('/')[-1]
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+        path_to_file = save_dir+'/'+base_name
 
-    ase_atom = remove_guest(ase_atom)
-    pores = zeo_calculation(ase_atom)
-    df = pd.DataFrame(pores, index=[0])
-    df.to_csv(path_to_file+'_porosity_data.csv')
-    sbu_data(ase_atom, path_to_file)
-    ligand_data(ase_atom, path_to_file)
+        ase_atom = remove_guest(ase_atom)
+        pores = zeo_calculation(ase_atom)
+        df = pd.DataFrame(pores, index=[0])
+        df.to_csv(path_to_file+'_porosity_data.csv')
+        sbu_data(ase_atom, path_to_file)
+        ligand_data(ase_atom, path_to_file)
+    except Exception:
+        pass
     if verbose:
         print(f"Saved results to {path_to_file}")
     return
