@@ -1,11 +1,15 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 =======
 >>>>>>> d381921 (changed license and README)
 =======
 >>>>>>> develop
+=======
+
+>>>>>>> refs/remotes/origin/main
 # Generalities 
 This is an elaborate python module that provides simple fucntions for
 manipulation metal-organic frameworks and other porous systems such as 
@@ -143,17 +147,23 @@ In the future the code should be able to:
 4. Decontsruction of COFs into their building units 
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> b860a42 (added a couple of scripts)
 
 =======
-# mofstructures
-<<<<<<< HEAD
-A python package to deconstruct MOFs into building units, compute porosity, remove unbound guests and compute cheminfomatic data of building units
->>>>>>> 2f416c4 (Initial commit)
 =======
+>>>>>>> refs/remotes/origin/main
+# mofstructures
+
+A python package to deconstruct MOFs into building units, compute porosity, remove unbound guests and compute cheminfomatic data of building units
+
+
 A generalized python package to deconstruct MOFs into building units,compute cheminformatic identifiers of building units,compute porosity of all frameworks, remove unbound guest molecules, wrap systems to remove visual effects of periodicity and in the future compute rcsr topology and subsitutue building units. 
 
+<<<<<<< HEAD
 >>>>>>> 90ea5f7 (Update README.md)
 =======
 
 >>>>>>> develop
+=======
+>>>>>>> refs/remotes/origin/main
