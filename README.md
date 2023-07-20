@@ -67,7 +67,7 @@ ase_atom = read(cif_file)
 no_guest_indices = mofdeconstructor.remove_unbound_guest(ase_atom)
 no_guest_atom = ase_atom[no_guest_indices]
 ```
-![guest removal](doc/guest_removal.gif)
+![guest removal](images/guest_removal.gif)
 4. Computing porosity 
 ```
 pores = porosity.zeo_calculation(ase_ato, probe_radius=1.86, number_of_steps=5000)
@@ -75,7 +75,7 @@ df = pd.DataFrame(pores, index=[0])
 df.to_csv('pore.csv')
 ```
 5. sbus and ligands 
-![MOF deconstruction](doc/deconstruction.gif)
+![MOF deconstruction](images/deconstruction.gif)
 ```
 connected_components, atoms_indices_at_breaking_point, porpyrin_checker, all_regions = MOF_deconstructor.secondary_building_units(ase_atom)
 
@@ -139,5 +139,5 @@ In the future the code should be able to:
 3. Automatic curation of cifs
 4. Decontsruction of COFs into their building units 
 
-![application](doc/decon.jpeg)
-![application](doc/‎guest.jpeg)
+![application](images/decon.jpeg)
+![application](images/‎guest.jpeg)
