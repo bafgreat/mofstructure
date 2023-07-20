@@ -139,5 +139,5 @@ In the future the code should be able to:
 3. Automatic curation of cifs
 4. Decontsruction of COFs into their building units 
 
-![application](images/decon.jpeg)
-![application](images/‎guest.jpeg)
+![](images/decon.jpeg)
+![](images/‎guest.jpeg)
