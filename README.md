@@ -1,5 +1,8 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> d381921 (changed license and README)
 # Generalities 
 This is an elaborate python module that provides simple fucntions for
 manipulation metal-organic frameworks and other porous systems such as 
@@ -138,3 +141,7 @@ In the future the code should be able to:
 
 >>>>>>> b860a42 (added a couple of scripts)
 
+=======
+# mofstructures
+A python package to deconstruct MOFs into building units, compute porosity, remove unbound guests and compute cheminfomatic data of building units
+>>>>>>> 2f416c4 (Initial commit)
