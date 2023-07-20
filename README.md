@@ -2,18 +2,18 @@
 =======
 # Generalities 
 This is an elaborate python module that provides simple fucntions for
-manipulation metal organic frameworks and  other porous systems such as 
-COFs and Zeolites. The module can enable 
+manipulation metal-organic frameworks and other porous systems such as 
+COFs and Zeolites. Some uses of the module involves 
 
-1. Computation of geometry properties of MOFs. It calls zeo++ in the background and enables a quick computation of all porosity information and returns a python dictionary object.
+1. Computation of geometric properties of MOFs. It calls zeo++ in the background and enables a quick computation of all porosity information such pld, lcd, asa ...
 
 2. Automated removal of unbound guest molecules
 
-3. Deconstruction of metal organic frameworks into building units. And for each buidling units (organic ligand, metal cluster, organic sbu and metal sbu) computes their cheminformatic identifiers such as SMILES strings, inchi and inchikey 
+3. Deconstruction of metal-organic frameworks into building units. And for each buidling units (organic ligand, metal cluster, organic sbu and metal sbu) computes their cheminformatic identifiers such as SMILES strings, inchi and inchikey. It also identify the type of metal sbu and coordination number of central metal.  
 
-4. wraps systems around unit cell so as to remove effect of pbc. 
+4. Wraps systems around unit cell so as to remove effect of pbc. This is often the case, when one tries to visualize the cif files or convert cif files into xyz, the system often appears to be uncoordinated
 
-5. Seperation of building units into regions 
+5. Seperation of building units into regions. This is essential when on wishes to subsitute a specific ligand or building unit.  
 
 # Installation 
 ## Option 1 
@@ -122,8 +122,12 @@ for cif_files in all_cifs:
     buildingunits.work_flow(cif_files, result_folder)
 # Note that result_folder can be any path. If the path does not exist, it will create one and populate it with all the data. 
 ```
+
 # Support 
 The module contains much more functionalities. If you are struggling or if you wish to compute a new quantity that is not yet present, feel free to send me an email. dak52@uclive.ac.nz 
+<object data="how-to-doc.html" width="100%" height="600">
+  <p>how-to-tutorial</p>
+</object>
 
 # Roadmap
 In the future the code should be able to: 
