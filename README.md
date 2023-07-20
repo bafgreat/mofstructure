@@ -1,4 +1,4 @@
-
+![](images/Rotation.gif)
 # Generalities 
 This is an elaborate python module that provides simple fucntions for
 manipulation metal-organic frameworks and other porous systems such as 
