@@ -132,14 +132,13 @@ The module contains much more functionalities. If you are struggling or if you w
 </object>
 
 
+
+![proccess](images/‎guest.jpeg)
 # Roadmap
 In the future the code should be able to: 
 1. Compute rcsr topological code
 2. Subsitutue building units in a MOF to enable framework functionalisation
 3. Automatic curation of cifs
 4. Decontsruction of COFs into their building units 
-
-![proccess](images/‎guest.jpeg)
-
 ![process2](images/decon.jpeg)
 
