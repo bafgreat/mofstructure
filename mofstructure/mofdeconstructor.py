@@ -1,7 +1,6 @@
 #!/usr/bin/python
 from __future__ import print_function
 __author__ = "Dr. Dinga Wonanke"
-__version__ = '0.1.0'
 __status__ = "production"
 
 from pymatgen.analysis.local_env import JmolNN
