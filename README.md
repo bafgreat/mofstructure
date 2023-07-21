@@ -1,4 +1,4 @@
-![](images/Rotation.gif)
+![intro](images/Rotation.gif)
 # Generalities 
 This is an elaborate python module that provides simple fucntions for
 manipulation metal-organic frameworks and other porous systems such as 
@@ -139,5 +139,6 @@ In the future the code should be able to:
 3. Automatic curation of cifs
 4. Decontsruction of COFs into their building units 
 
-![](images/decon.jpeg)
-![](images/‎guest.jpeg)
+![proccess](images/‎guest.jpeg)
+![process2](images/decon.jpeg)
+
