@@ -129,7 +129,7 @@ for cif_files in all_cifs:
 The module contains much more functionalities. If you are struggling or if you wish to compute a new quantity that is not yet present, feel free to send me an email. dak52@uclive.ac.nz 
 
 <object data="doc/how-to-doc.html" width="100%" height="600">
-  <p>Click <a href="how-to-doc.html">here</a> how-to-tutorial.</p>
+  <p>Click <a href="doc/how-to-doc.html">here</a> how-to-tutorial.</p>
 </object>
 
 # Roadmap
