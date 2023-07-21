@@ -63,11 +63,12 @@ import pandas as pd
 ase_atom = read(cif_file)
 ```
 3. Removal of unbound guest 
+![guest removal](images/guest_removal.gif)
 ```
 no_guest_indices = mofdeconstructor.remove_unbound_guest(ase_atom)
 no_guest_atom = ase_atom[no_guest_indices]
 ```
-![guest removal](images/guest_removal.gif)
+
 4. Computing porosity 
 ```
 pores = porosity.zeo_calculation(ase_ato, probe_radius=1.86, number_of_steps=5000)
@@ -128,17 +129,14 @@ for cif_files in all_cifs:
 The module contains much more functionalities. If you are struggling or if you wish to compute a new quantity that is not yet present, feel free to send me an email. dak52@uclive.ac.nz 
 
 <object data="doc/how-to-doc.html" width="100%" height="600">
-  <p>Click <a href="example.html">here</a> how-to-tutorial.</p>
+  <p>Click <a href="how-to-doc.html">here</a> how-to-tutorial.</p>
 </object>
 
-
-
-![proccess](images/‎guest.jpeg)
 # Roadmap
 In the future the code should be able to: 
 1. Compute rcsr topological code
 2. Subsitutue building units in a MOF to enable framework functionalisation
 3. Automatic curation of cifs
 4. Decontsruction of COFs into their building units 
-![process2](images/decon.jpeg)
-
+![process](images/decon.jpeg)
+![proccess](images/‎guest.jpeg)
