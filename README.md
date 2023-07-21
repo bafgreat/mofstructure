@@ -21,7 +21,7 @@ COFs and Zeolites. Some uses of the module involves
 ```
   git clone https://github.com/bafgreat/mofstructure.git mofstructure
   cd mofstructure
-  pip install -e .
+  pip install .
 ```
 # How to: Quick start 
 ## Run on the commandline
