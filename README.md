@@ -140,5 +140,6 @@ In the future the code should be able to:
 4. Decontsruction of COFs into their building units 
 
 ![proccess](images/‎guest.jpeg)
+
 ![process2](images/decon.jpeg)
 
