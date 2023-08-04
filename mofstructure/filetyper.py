@@ -6,112 +6,184 @@ import pickle
 import csv
 import json
 import codecs
+from zipfile import ZipFile
 import numpy as np
 from ase import Atoms
 import ase
-    
+import pandas as pd
+
+
 class AtomsEncoder(json.JSONEncoder):
     '''
     ASE atom type encorder for json to enable serialising 
     ase atom object.
     '''
-    def default(self, obj):
-        if isinstance(obj, Atoms):
-            coded = dict(positions=[list(pos) for pos in obj.get_positions()],lattice_vectors=[list(c) for c in obj.get_cell()],labels=list(obj.get_chemical_symbols()))
-            if len(obj.get_cell()) == 3:
+
+    def default(self, encorder_obj):
+        '''
+        define different encoder to serialise ase atom objects
+        '''
+        if isinstance(encorder_obj, Atoms):
+            coded = dict(positions=[list(pos) for pos in encorder_obj.get_positions()], lattice_vectors=[
+                         list(c) for c in encorder_obj.get_cell()], labels=list(encorder_obj.get_chemical_symbols()))
+            if len(encorder_obj.get_cell()) == 3:
                 coded['periodic'] = ['True', 'True', 'True']
-            coded['n_atoms'] = len(list(obj.get_chemical_symbols()))
-            coded['atomic_numbers'] = obj.get_atomic_numbers().tolist()     
-            keys = list(obj.info.keys())
+            coded['n_atoms'] = len(list(encorder_obj.get_chemical_symbols()))
+            coded['atomic_numbers'] = encorder_obj.get_atomic_numbers().tolist()
+            keys = list(encorder_obj.info.keys())
             if 'atom_indices_mapping' in keys:
-                info = obj.info
+                info = encorder_obj.info
                 coded.update(info)
             return coded
-        if isinstance(obj, ase.spacegroup.Spacegroup):
-            return obj.todict()
-        return json.JSONEncoder.default(self, obj)
+        if isinstance(encorder_obj, ase.spacegroup.Spacegroup):
+            return encorder_obj.todict()
+        return json.JSONEncoder.default(self, encorder_obj)
 
-def numpy_to_json(Array, file_name):
+
+def numpy_to_json(ndarray, file_name):
     '''
     Serialise a numpy object
     '''
-    json.dump(Array.tolist(), codecs.open(file_name, 'w', encoding='utf-8'), separators=(',', ':'), sort_keys=True)
-    return
-    
-def Write_Json(list,file_name):
-    json.dump(list, codecs.open(file_name, 'w', encoding='utf-8'))
-    
-def Json_to_Numpy(json_file):
-    read_json = codecs.open(json_file, 'r', encoding='utf-8').read()
-    read_json = np.array(json.loads(read_json))
-    return read_json
-    
-def Write_JSON_ATOM(data,  AtomsEncoder, filename):
-    with open(filename, 'w') as f:
-        json.dump(data, f, indent=4, sort_keys=False, cls=AtomsEncoder)
+    json.dump(ndarray.tolist(), codecs.open(file_name, 'w',
+              encoding='utf-8'), separators=(',', ':'), sort_keys=True)
     return
 
-def Append_JSON_ATOM(data,  AtomsEncoder, filename):
-    with open(filename, 'r+') as f:
+
+def write_json(list_obj, file_name):
+    '''
+    write a list to json
+    '''
+    json.dump(list_obj, codecs.open(file_name, 'w', encoding='utf-8'))
+
+
+def json_to_numpy(json_file):
+    '''
+    serialised a numpy array to json
+    '''
+    json_reader = codecs.open(json_file, 'r', encoding='utf-8').read()
+    json_reader = np.array(json.loads(json_reader))
+    return read_json
+
+
+def json_to_ase_atom(data,  encoder, filename):
+    '''
+    serialise an ase atom type and write as json
+    '''
+    with open(filename, 'w', encoding='utf-8') as f_obj:
+        json.dump(data, f_obj, indent=4, sort_keys=False, cls=encoder)
+    return
+
+
+def append_json_atom(data,  encoder, filename):
+    '''
+    append a data containing an ase atom object
+    '''
+    with open(filename, 'r+', encoding='utf-8') as f_obj:
         # First we load existing data into a dict.
-        file_data = json.load(f)
+        file_data = json.load(f_obj)
         # Join new_data with file_data inside emp_details
         file_data.update(data)
         # Sets file's current position at offset.
-        f.seek(0)
+        f_obj.seek(0)
         # convert back to json.
 
-        json.dump(data, f, indent=4, sort_keys=False, cls=AtomsEncoder)
-  
+        json.dump(data, f_obj, indent=4, sort_keys=False, cls=encoder)
+
 
 def append_json(new_data, filename):
-    with open(filename,'r+') as file:
-          # First we load existing data into a dict.
+    '''
+    append a new data in an existing json file 
+    '''
+    with open(filename, 'r+', encoding='utf-8') as file:
+        # First we load existing data into a dict.
         file_data = json.load(file)
         # Join new_data with file_data inside emp_details
         file_data.update(new_data)
         # Sets file's current position at offset.
         file.seek(0)
         # convert back to json.
-        json.dump(file_data, file, indent = 4, sort_keys=True)
-    
-def Read_Json(file_name):
-    f = open(file_name)
-    data = json.load(f)
-    f.close()
-    return data
-    
+        json.dump(file_data, file, indent=4, sort_keys=True)
 
-def CSV_reader(file):
-    f = open(file, 'r')
-    data = csv.reader(f)
+
+def read_json(file_name):
+    '''
+    load a json file
+    '''
+    with open(file_name, 'r', encoding='utf-8') as f_obj:
+        data = json.load(f_obj)
+
     return data
+
+
+def csv_read(csv_file):
+    '''
+    Read a csv file 
+    '''
+    f_obj = open(csv_file, 'r', encoding='utf-8')
+    data = csv.reader(f_obj)
+    return data
+
 
 def get_contents(filename):
-    with open(filename, 'r') as f:
-        contents = f.readlines()
+    '''
+    Read a file and return a list content
+    '''
+    with open(filename, 'r', encoding='utf-8') as f_obj:
+        contents = f_obj.readlines()
     return contents
 
+
 def put_contents(filename, output):
-    with open(filename, 'w') as f:
-        f.writelines(output)
+    '''
+    write a list object into a file
+    '''
+    with open(filename, 'w', encoding='utf-8') as f_obj:
+        f_obj.writelines(output)
     return
 
 
 def append_contents(filename, output):
-    with open(filename, 'a') as f:
-        f.writelines(output)
+    '''
+    append contents into a file
+    '''
+    with open(filename, 'a', encoding='utf-8') as f_obj:
+        f_obj.writelines(output)
     return
 
 
-def Pickle_load(filename):
+def pickle_load(filename):
+    '''
+    load a pickle file
+    '''
     data = open(filename, 'rb')
     data = pickle.load(data)
     return data
-    
-def Read_zip(zip_file):
-    from zipfile import ZipFile
+
+
+def read_zip(zip_file):
+    '''
+    read a zip file
+    '''
     content = ZipFile(zip_file, 'r')
     content.extractall(zip_file)
     content.close()
     return content
+
+
+def load_data(filename):
+    ''' 
+    function that recognises file extenion and chooses the correction
+    function to load the data.
+    '''
+    file_ext = filename[filename.rindex('.')+1:]
+    if file_ext == 'json':
+        data = read_json(filename)
+    elif file_ext == 'csv':
+        data = pd.read_csv(filename)
+    elif file_ext == 'p':
+        data = pickle_load(filename)
+    elif file_ext == 'xlsx':
+        data = pd.read_excel(filename)
+    else:
+        data = get_contents(filename)
+    return data

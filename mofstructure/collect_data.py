@@ -190,15 +190,16 @@ def compile_data(cif_files, result_folder, verbose=False):
     if not os.path.exists(result_folder):
         os.makedirs(result_folder)
     data_f = pd.DataFrame.from_dict(porosity_dic, orient='index')
+    data_f.index.name = 'mof_names'
     data_f.to_csv(result_folder+'/porosity_data.csv')
 
     encoder = Writer.AtomsEncoder
-    Writer.Write_JSON_ATOM(ase_atoms_dic, encoder,
-                           result_folder+'/ase_atoms_building_units.json')
-    Writer.Write_Json(search_data1,  result_folder+'/sbus_and_linkers.json')
-    Writer.Write_Json(search_data2, result_folder+'/cluster_and_ligands.json')
+    Writer.json_to_ase_atom(ase_atoms_dic, encoder,
+                            result_folder+'/ase_atoms_building_units.json')
+    Writer.write_json(search_data1,  result_folder+'/sbus_and_linkers.json')
+    Writer.write_json(search_data2, result_folder+'/cluster_and_ligands.json')
     if verbose:
-        print(f"Saved results to {path_to_file}")
+        print(f"Saved results to {result_folder}")
     return
 
 
@@ -217,5 +218,4 @@ def main():
     args = parser.parse_args()
     cif_files = [os.path.join(args.cif_folder, f) for f in os.listdir(
         args.cif_folder) if f.endswith('.cif')]
-    print(cif_files)
     compile_data(cif_files, args.save_dir, args.verbose)

@@ -999,15 +999,15 @@ def is_uio66(ase_atom, graph):
     check = []
     verdict = False
     all_connectivity = list(graph.values())
-    for connectivity in All_connectivity:
-        metalNeighbours = 0
-        oxygenNeighbours = 0
-        for bondedAtomIndex in connectivity:
-            if ase_atom[bondedAtomIndex].symbol in transition_metals():
-                metalNeighbours += 1
-            if ase_atom[bondedAtomIndex].symbol == 'O':
-                oxygenNeighbours += 1
-        if metalNeighbours == 4 and (oxygenNeighbours == 6 or oxygenNeighbours == 8) and (len(connectivity) == 10 or len(connectivity) == 12):
+    for connectivity in all_connectivity:
+        metal_neighbours = 0
+        oxygen_neighbours = 0
+        for bonded_atom_index in connectivity:
+            if ase_atom[bonded_atom_index].symbol in transition_metals():
+                metal_neighbours += 1
+            if ase_atom[bonded_atom_index].symbol == 'O':
+                oxygen_neighbours += 1
+        if metal_neighbours == 4 and (oxygen_neighbours == 6 or oxygen_neighbours == 8) and (len(connectivity) == 10 or len(connectivity) == 12):
             verdict = True
         check.append(verdict)
         correct = False
@@ -1097,11 +1097,11 @@ def find_unique_building_units(list_of_connected_components, atom_pairs_at_break
         if wrap_system:
             molecule_to_write = wrap_systems_in_unit_cell(molecule_to_write)
         if cheminfo:
-            smi, inChi, inChiKey = compute_openbabel_cheminformatic(
+            smi, chem_inchi, chem_inchiKey = compute_openbabel_cheminformatic(
                 molecule_to_write)
             molecule_to_write.info['smi'] = smi
-            molecule_to_write.info['inchi'] = str(inChi)
-            molecule_to_write.info['inchikey'] = str(inChiKey)
+            molecule_to_write.info['inchi'] = str(chem_inchi)
+            molecule_to_write.info['inchikey'] = str(chem_inchiKey)
         molecule_to_write.info['atom_indices_mapping'] = [
             list_of_connected_components[i] for i in all_regions[key]]
         metal = [i.index for i in molecule_to_write if i.symbol in transition_metals(
