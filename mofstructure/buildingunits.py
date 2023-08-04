@@ -2,13 +2,13 @@
 from __future__ import print_function
 __author__ = "Dr. Dinga Wonanke"
 __status__ = "production"
-import sys
+import argparse
 import os
 from ase.io import read
+import pandas as pd
 import mofstructure.mofdeconstructor as MOF_deconstructor
 from mofstructure.porosity import zeo_calculation
-import pandas as pd
-import argparse
+
 
 def sbu_data(ase_atom, path_to_file):
     '''
@@ -19,7 +19,6 @@ def sbu_data(ase_atom, path_to_file):
     ase_atom : ASE atoms object
     path_to_file : result directory or folder
     '''
-
     connected_components, atoms_indices_at_breaking_point, porpyrin_checker, all_regions = MOF_deconstructor.\
         secondary_building_units(ase_atom)
     metal_sbus, organic_sbus, building_unit_regions = MOF_deconstructor.\
@@ -48,8 +47,6 @@ def ligand_data(ase_atom, path_to_file):
     ase_atom : ASE atoms object
     path_to_file : result directory or folder
     '''
-    
-
     connected_components, atoms_indices_at_breaking_point, porpyrin_checker, all_regions = MOF_deconstructor.\
         ligands_and_metal_clusters(ase_atom)
     metal_clusters, organic_ligands, building_unit_regions = MOF_deconstructor.\
@@ -65,7 +62,7 @@ def ligand_data(ase_atom, path_to_file):
     for j,  mof_ligand in enumerate(organic_ligands):
         mof_ligand.write(path_to_file + '_organic_ligand_'+str(j+1)+'.xyz')
     return building_unit_regions
-    
+
 
 def remove_guest(ase_atom):
     '''
@@ -76,6 +73,18 @@ def remove_guest(ase_atom):
 
 
 def work_flow(cif_file, save_dir, verbose=False):
+    '''
+    A workflow to remove guest, compute porosity and deconstructure
+    mofs. The function starts with checking and removing any unbound
+    guest molecule present in the MOF. After that it computed the porosity
+    of the MOF and load this data in the output folder. Finally the deconstructs
+    the MOFs into the various building units and safe these building units
+    in '.xyz' formats in the output folder. 
+    Parameters
+    ----------
+    cif_file : a cif file or any ase readable file containing a MOF.
+    save_dir : path to output folder
+    '''
     try:
         ase_atom = read(cif_file)
         ase_atom = remove_guest(ase_atom)
@@ -86,8 +95,8 @@ def work_flow(cif_file, save_dir, verbose=False):
 
         ase_atom = remove_guest(ase_atom)
         pores = zeo_calculation(ase_atom)
-        df = pd.DataFrame(pores, index=[0])
-        df.to_csv(path_to_file+'_porosity_data.csv')
+        data_f = pd.DataFrame(pores, index=[0])
+        data_f.to_csv(path_to_file+'_porosity_data.csv')
         sbu_data(ase_atom, path_to_file)
         ligand_data(ase_atom, path_to_file)
     except Exception:
@@ -97,6 +106,9 @@ def work_flow(cif_file, save_dir, verbose=False):
     return
 
 def main():
+    '''
+    Routine runner for CLI
+    '''
     parser = argparse.ArgumentParser(description='Run work_flow function with optional verbose output')
     parser.add_argument('cif_file', type=str, help='path to CIF file')
     parser.add_argument('-s', '--save_dir', type=str, default='MOF_building_units', help='directory to save output files')

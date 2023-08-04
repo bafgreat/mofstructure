@@ -16,7 +16,9 @@ COFs and Zeolites. Some uses of the module involves
 
 # Installation 
 ## Option 1 
- `pip install mofstructure`
+ ```
+ pip install mofstructure
+ ```
 ## Option 2 
 ```
   git clone https://github.com/bafgreat/mofstructure.git mofstructure
@@ -140,4 +142,4 @@ In the future the code should be able to:
 4. Decontsruction of COFs into their building units 
 ![process](images/decon.jpeg)
 
-![proccess](images/‎guest.png)
+![proccess](images/guest.png)

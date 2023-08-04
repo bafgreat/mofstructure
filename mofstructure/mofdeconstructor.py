@@ -602,7 +602,8 @@ def secondary_building_units(ase_atom):
 
     Returns
     -------
-     list_of_connected_components : list of connected components, in which each list contains atom indices
+     list_of_connected_components : list of connected components,in which 
+     each list contains atom indices
      atom_pairs_at_breaking_point  : Dictionary containing point of disconnection
      Porphyrin_checker : Boolean showing whether the metal is in the centre of a porpherin
      Regions : Dictionary of regions.
@@ -868,9 +869,7 @@ def ligands_and_metal_clusters(ase_atom):
                         atom_pairs_at_breaking_point[atoms] = met
 
         if ase_atom[atoms].symbol == 'P':
-            '''
-            Find the carbon closest to P, which is not bonded to a metal and cut
-            '''
+            # Find the carbon closest to P, which is not bonded to a metal and cut
             connected = [i for i in graph[atoms]
                          if ase_atom[i].symbol not in transition_metals()]
             metal_oxy = [[i for i in graph[j] if ase_atom[i].symbol in transition_metals()]
@@ -930,10 +929,10 @@ def is_ferrocene(metal_sbu, graph):
     '''
     A simple script to check whether a metal_sbu is ferrocene
     '''
-    Check = []
+    check = []
     verdict = False
-    All_connectivity = list(graph.values())
-    for connectivity in All_connectivity:
+    all_connectivity = list(graph.values())
+    for connectivity in all_connectivity:
         if len(connectivity) >= 10:
             carbons = 0
             for bondedAtomIndex in connectivity:
@@ -941,21 +940,21 @@ def is_ferrocene(metal_sbu, graph):
                     carbons += 1
             if carbons >= 10:
                 verdict = True
-            Check.append(verdict)
-        Correct = False
-        if True in Check:
-            Correct = True
-    return Correct
+            check.append(verdict)
+        correct = False
+        if True in check:
+            correct = True
+    return correct
 
 
 def is_paddlewheel(metal_sbu, graph):
     """
     Returns True if the atom is part of a paddlewheel motif
     """
-    Check = []
+    check = []
     verdict = False
-    All_connectivity = list(graph.values())
-    for connectivity in All_connectivity:
+    all_connectivity = list(graph.values())
+    for connectivity in all_connectivity:
         metalNeighbours = 0
         oxygenNeighbours = 0
         for bondedAtomIndex in connectivity:
@@ -965,18 +964,18 @@ def is_paddlewheel(metal_sbu, graph):
                 oxygenNeighbours += 1
         if metalNeighbours == 1 and oxygenNeighbours == 4 and len(connectivity) >= 5 and len(connectivity) <= 6:
             verdict = True
-        Check.append(verdict)
-    Correct = False
-    if True in Check:
-        Correct = True
-    return Correct
+        check.append(verdict)
+    correct = False
+    if True in check:
+        correct = True
+    return correct
 
 
 def is_paddlewheel_with_water(ase_atom, graph):
     """
     Returns True if the atom is part of a paddle wheel with water motif
     """
-    Check = []
+    check = []
     metal = []
     verdict = False
     for atoms in ase_atom:
@@ -986,20 +985,20 @@ def is_paddlewheel_with_water(ase_atom, graph):
             connectivity = graph[index]
             if len([ase_atom[i].symbol for i in connectivity if ase_atom[i].symbol == 'O']) == 5:
                 verdict = True
-                Check.append(verdict)
-    Correct = False
-    if True in Check and len(metal) == 2:
-        Correct = True
-    return Correct
+                check.append(verdict)
+    correct = False
+    if True in check and len(metal) == 2:
+        correct = True
+    return correct
 
 
 def is_uio66(ase_atom, graph):
     """
     Returns True if the atom is part of a UIO66 motif
     """
-    Check = []
+    check = []
     verdict = False
-    All_connectivity = list(graph.values())
+    all_connectivity = list(graph.values())
     for connectivity in All_connectivity:
         metalNeighbours = 0
         oxygenNeighbours = 0
@@ -1010,18 +1009,18 @@ def is_uio66(ase_atom, graph):
                 oxygenNeighbours += 1
         if metalNeighbours == 4 and (oxygenNeighbours == 6 or oxygenNeighbours == 8) and (len(connectivity) == 10 or len(connectivity) == 12):
             verdict = True
-        Check.append(verdict)
-        Correct = False
-        if True in Check:
-            Correct = True
-    return Correct
+        check.append(verdict)
+        correct = False
+        if True in check:
+            correct = True
+    return correct
 
 
 def is_irmof(ase_atom, graph):
     """
     Returns True if the atom is part of a IRMOF motif
     """
-    Check = []
+    check = []
     verdict = False
     for atoms in ase_atom:
         if atoms.symbol == 'O':
@@ -1030,18 +1029,18 @@ def is_irmof(ase_atom, graph):
             if len(connectivity) == 4 and len([ase_atom[i].symbol for i in connectivity if ase_atom[i].symbol in transition_metals()]) == 4:
 
                 verdict = True
-                Check.append(verdict)
-    Correct = False
-    if True in Check:
-        Correct = True
-    return Correct
+                check.append(verdict)
+    correct = False
+    if True in check:
+        correct = True
+    return correct
 
 
 def is_mof32(ase_atom, graph):
     """
     Returns True if the atom is part of a MOF32 motif
     """
-    Check = []
+    check = []
     metal = []
     verdict = False
     for atoms in ase_atom:
@@ -1051,11 +1050,11 @@ def is_mof32(ase_atom, graph):
             connectivity = graph[index]
             if len([ase_atom[i].symbol for i in connectivity if ase_atom[i].symbol == 'O']) == 8:
                 verdict = True
-                Check.append(verdict)
-    Correct = False
-    if True in Check and len(metal) == 1:
-        Correct = True
-    return Correct
+                check.append(verdict)
+    correct = False
+    if True in check and len(metal) == 1:
+        correct = True
+    return correct
 
 
 def rod_manipulation(ase_atom, checker):
@@ -1249,4 +1248,3 @@ def wrap_systems_in_unit_cell(ase_atom, max_iter=30, skin=0.3):
             if number_of_iterations == max_iter:
                 break
         return ase_atom
-

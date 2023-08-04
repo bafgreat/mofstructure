@@ -2,27 +2,26 @@
 from __future__ import print_function
 __author__ = "Dr. Dinga Wonanke"
 __status__ = "production"
-import sys
-import subprocess
-import os
-import csv
-import json, codecs
-import numpy as np
 import pickle
+import csv
+import json
+import codecs
+import numpy as np
 from ase import Atoms
-import ase 
-
-    
+import ase
     
 class AtomsEncoder(json.JSONEncoder):
+    '''
+    ASE atom type encorder for json to enable serialising 
+    ase atom object.
+    '''
     def default(self, obj):
         if isinstance(obj, Atoms):
             coded = dict(positions=[list(pos) for pos in obj.get_positions()],lattice_vectors=[list(c) for c in obj.get_cell()],labels=list(obj.get_chemical_symbols()))
             if len(obj.get_cell()) == 3:
                 coded['periodic'] = ['True', 'True', 'True']
             coded['n_atoms'] = len(list(obj.get_chemical_symbols()))
-            coded['atomic_numbers'] = obj.get_atomic_numbers().tolist()
-                
+            coded['atomic_numbers'] = obj.get_atomic_numbers().tolist()     
             keys = list(obj.info.keys())
             if 'atom_indices_mapping' in keys:
                 info = obj.info
@@ -32,13 +31,15 @@ class AtomsEncoder(json.JSONEncoder):
             return obj.todict()
         return json.JSONEncoder.default(self, obj)
 
-def Numpy_to_Json(Array, file_name):
+def numpy_to_json(Array, file_name):
+    '''
+    Serialise a numpy object
+    '''
     json.dump(Array.tolist(), codecs.open(file_name, 'w', encoding='utf-8'), separators=(',', ':'), sort_keys=True)
     return
     
 def Write_Json(list,file_name):
     json.dump(list, codecs.open(file_name, 'w', encoding='utf-8'))
-    
     
 def Json_to_Numpy(json_file):
     read_json = codecs.open(json_file, 'r', encoding='utf-8').read()
