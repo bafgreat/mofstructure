@@ -170,7 +170,9 @@ def compile_data(cif_files, result_folder, verbose=False):
     ase_atoms_dic = {}
     search_data1 = {}
     search_data2 = {}
+    metal_info = {}
     for cif_file in cif_files:
+        tmp_metal = {}
         try:
             ase_atom = read(cif_file)
             ase_atom = remove_guest(ase_atom)
@@ -185,6 +187,12 @@ def compile_data(cif_files, result_folder, verbose=False):
             structural_data = dict(merge_two_dicts(
                 structural_data_1, structural_data_2))
             ase_atoms_dic[base_name] = structural_data
+            metal_elt, metal_coordination = MOF_deconstructor.metal_coordination_number(ase_atom)
+            tmp_metal['n_metals'] = len(metal_elt)
+            tmp_metal['max_cn'] = max(list(metal_coordination.values()))
+            tmp_metal['metals'] = metal_elt
+            tmp_metal['metal_cn'] = metal_coordination
+            metal_info[base_name]= tmp_metal
         except Exception:
             pass
     if not os.path.exists(result_folder):
@@ -198,6 +206,7 @@ def compile_data(cif_files, result_folder, verbose=False):
                             result_folder+'/ase_atoms_building_units.json')
     Writer.write_json(search_data1,  result_folder+'/sbus_and_linkers.json')
     Writer.write_json(search_data2, result_folder+'/cluster_and_ligands.json')
+    Writer.write_json(metal_info, result_folder+'/metal_info.json')
     if verbose:
         print(f"Saved results to {result_folder}")
     return
