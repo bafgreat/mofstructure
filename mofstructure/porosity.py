@@ -14,16 +14,18 @@ import mofstructure.filetyper as File_typer
 def zeo_calculation(ase_atom, probe_radius=1.86, number_of_steps=10000, high_accuracy=True):
     '''
     Main script to compute geometric structure of porous systems.
-    The focus here is on MOF, but the script can run on any periodic
-    system.
-    The script computes the accesible surface area, accessible volume
-    and the pore geometry.There are many more outputs which can be extracted
-    from ,vol_str and sa_str.
-    More there are also other computation that can be done. Check out the
-    test directory in dependencies/pyzeo/test. Else contact bafgreat@gmail.com
+    The focus here is on MOF, but the script can run on any porous periodic
+    system. The script computes the accesible surface area, accessible volume
+    and the pore geometry. There are many more outputs which can be extracted
+    from ,vol_str and sa_str. Moreover there are also other computation that can be done.
+    Check out the test directory in dependencies/pyzeo/test. Else contact bafgreat@gmail.com
     if you need more output and can't figure it out.
     Main parameter:
-        ase atom object
+        ase_atom: ase atom object
+        probe_radius: The radius of the probe. Here 1.86 is used as default
+        number_of_steps: Number of GCMC simulation cycles 
+        high_accuracy: key to determine where to perform high accuracy computation
+
     return
         python dictionary containing
         1) AV_Volume_fraction: Accessible volume void fraction

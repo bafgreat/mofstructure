@@ -30,6 +30,29 @@ def transition_metals():
                                                                      for main_index in [1, 2, 5, 6, 7, 8, 9, 10, 14, 15, 16, 17, 18, 33, 34, 35, 36, 52, 53, 54, 85, 86]]]
     return metal
 
+def inter_atomic_distance_check(ase_atom):
+    '''
+    Check that no two atoms are within a distance of 1.0 Amstrong unless it is an X-H bond
+
+    As simple script to convert from ase atom object to pybel
+    Parameters
+    ----------
+    ase_atom : ASE atoms object
+
+    Returns
+    -------
+    boolean
+    '''
+    valid = True
+    distances = ase_atom.get_all_distances(mic=True)
+    for i in range(len(distances)):
+        if ase_atom[i].symbol != 'H':
+            for j in range(len(distances[i])):
+                if i != j:
+                    if distances[i, j] < 0.90:
+                        valid = False
+                        break
+    return valid
 
 def covalent_radius(element):
     '''
@@ -331,6 +354,11 @@ def dfsutil_graph_method(graph, temp, node, visited):
             temp = dfsutil_graph_method(graph, temp, i, visited)
     return temp
 
+def longest_list(lst):
+    '''
+    return longest list in list of list
+    '''
+    return max(lst, key=len)
 
 def remove_unbound_guest(ase_atom):
     '''
@@ -378,9 +406,12 @@ def remove_unbound_guest(ase_atom):
             mof_indices = []
             for frag_indices in temp_indices:
                 mof_indices.extend(fragments[frag_indices])
-            return mof_indices
+            if len(mof_indices) == 0:
+                return longest_list(fragments)
+            else:
+                return mof_indices
         else:
-            return sum(sum(fragments, []))
+            return sum(fragments, [])
 
 
 def connected_components(graph):
@@ -589,6 +620,68 @@ def find_carbonyl_sulphate(ase_atom):
     return sulphate
 
 
+def find_sulfides(ase_atom):
+    '''
+    A simple aglorimth to search for sulfides.
+     S
+     |
+    -C
+     |
+     S
+
+    Parameters:
+    -----------
+    ase_atom: ASE atom
+
+    Returns
+    -------
+    dictionary of key = carbon index and values = sulphur index
+    '''
+    graph, _ = compute_ase_neighbour(ase_atom)
+    sulfides = {}
+    for atoms in ase_atom:
+        if atoms.symbol == 'C':
+            index = atoms.index
+            sulphure_atoms = [i for i in graph[index]
+                              if ase_atom[i].symbol == 'S']
+            if len(sulphure_atoms) == 2:
+                sulphure_to_metal = sum(
+                    [[j for j in graph[i] if ase_atom[j].symbol in transition_metals()] for i in sulphure_atoms], [])
+                if len(sulphure_to_metal) > 0:
+                    sulfides[index] = sulphure_atoms
+    return sulfides
+
+
+def find_phosphate(ase_atom):
+    '''
+    A simple algorithm to search for Carbonyl sulphate found in the system.
+       O
+       |
+      -P-o
+       |
+       O
+    Parameters:
+    -----------
+    ase_atom: ASE atom
+
+    Returns
+    -------
+    dictionary of key = carbon index and values = oxygen index
+    '''
+    graph, _ = compute_ase_neighbour(ase_atom)
+    phosphate = {}
+    for atoms in ase_atom:
+        if atoms.symbol == 'P':
+            index = atoms.index
+            oxygen = [i for i in graph[index] if ase_atom[i].symbol == 'O']
+            if len(oxygen) >= 1:
+                oxy_metal = sum(
+                    [[j for j in graph[i] if ase_atom[j].symbol in transition_metals()] for i in oxygen], [])
+                if len(oxy_metal) > 0:
+                    phosphate[index] = oxygen
+    return phosphate
+
+
 def secondary_building_units(ase_atom):
     """
     1) Search for all carboxylate that are connected to a metal.
@@ -775,7 +868,7 @@ def secondary_building_units(ase_atom):
 
 def ligands_and_metal_clusters(ase_atom):
     '''
-    SStart by checking whether there are more than 2 layers
+    Start by checking whether there are more than 2 layers
     if yes, select one
     Here we select the largest connected component
     Parameters:
@@ -1142,11 +1235,12 @@ def metal_coordination_number(ase_atom):
     '''
     metal_coordination = {}
     graph, _ = compute_ase_neighbour(ase_atom)
+    porph_indices = metal_in_porphyrin2(ase_atom, graph)
     metal_indices = [
         i.index for i in ase_atom if i.symbol in transition_metals()]
     metal_elt = []
     for i in metal_indices:
-        if ase_atom[i].symbol not in metal_elt:
+        if i not in porph_indices and ase_atom[i].symbol not in metal_elt:
             metal_elt.append(ase_atom[i].symbol)
             metal_coordination[ase_atom[i].symbol] = len(graph[i])
     return metal_elt, metal_coordination
