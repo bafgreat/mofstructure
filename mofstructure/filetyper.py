@@ -92,12 +92,18 @@ def append_json_atom(data,  encoder, filename):
 
 def append_json(new_data, filename):
     '''
-    append a new data in an existing json file 
+    append a new data in an existing json file
     '''
+    if not os.path.exists(filename):
+        with open(filename, 'w', encoding='utf-8') as file:
+            file.write('{}')
+    elif os.path.getsize(filename) == 0:
+        with open(filename, 'w', encoding='utf-8') as file:
+            file.write('{}')
     with open(filename, 'r+', encoding='utf-8') as file:
         # First we load existing data into a dict.
         file_data = json.load(file)
-        # Join new_data with file_data inside emp_details
+        # Overwrite existing keys with new_data
         file_data.update(new_data)
         # Sets file's current position at offset.
         file.seek(0)
