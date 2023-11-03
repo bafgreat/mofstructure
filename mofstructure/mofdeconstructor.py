@@ -16,7 +16,7 @@ except ModuleNotFoundError:
     print('install openbabel if you wish to use compute_openbabel_cheminformatic function')
 try:
     from rdkit import Chem
-    # from rdkit.Chem import inchi, rdDetermineBonds
+    from rdkit.Chem import rdDetermineBonds
 except ModuleNotFoundError:
     print('install rdkit if you wish to use compute_cheminformatic_from_rdkit function')
 

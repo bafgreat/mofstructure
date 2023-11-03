@@ -2,6 +2,7 @@
 from __future__ import print_function
 __author__ = "Dr. Dinga Wonanke"
 __status__ = "production"
+import os
 import pickle
 import csv
 import json
