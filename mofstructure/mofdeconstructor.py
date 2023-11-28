@@ -651,6 +651,42 @@ def find_sulfides(ase_atom):
                     sulfides[index] = sulphure_atoms
     return sulfides
 
+def find_COS(ase_atom):
+    '''
+    A simple aglorimth to search for COS.
+     O
+     |
+    -C
+     |
+     S
+
+    Parameters:
+    -----------
+    ase_atom: ASE atom
+
+    Returns
+    -------
+    dictionary of key = carbon index and values = sulphur index
+    '''
+    graph, _ = compute_ase_neighbour(ase_atom)
+    sulfides = {}
+    for atoms in ase_atom:
+        if atoms.symbol == 'C':
+            index = atoms.index
+            if len(graph[index]) == 3:
+                sulphure_atoms = [i for i in graph[index]
+                                if ase_atom[i].symbol == 'S']
+                oxygen_atoms = [i for i in graph[index]
+                                if ase_atom[i].symbol == 'O']
+                if len(sulphure_atoms) + len(oxygen_atoms) == 2:
+                    sulphure_to_metal = sum(
+                        [[j for j in graph[i] if ase_atom[j].symbol in transition_metals()] for i in sulphure_atoms], [])
+                    oxygen_to_metal = sum(
+                        [[j for j in graph[i] if ase_atom[j].symbol in transition_metals()] for i in oxygen_atoms], [])
+                    if len(sulphure_to_metal) > 0 and len(oxygen_to_metal) > 0:
+                        sulfides[index] = sulphure_atoms + oxygen_atoms
+    return sulfides
+
 
 def find_phosphate(ase_atom):
     '''
@@ -708,6 +744,8 @@ def secondary_building_units(ase_atom):
     bonds_to_break = []
     carboxylates = find_carboxylates(ase_atom)
     all_sulphates = find_carbonyl_sulphate(ase_atom)
+    cos_group = find_COS(ase_atom)
+    ferocene_metal = all_ferrocene_metals(ase_atom)
     for atoms in graph:
         if atoms in list(carboxylates.keys()):
             connected = graph[atoms]
@@ -728,12 +766,19 @@ def secondary_building_units(ase_atom):
         if ase_atom[atoms].symbol == 'C':
             connected = graph[atoms]
             oxygens = [i for i in connected if ase_atom[i].symbol == 'O']
+            carbon_metal = [i for i in connected if ase_atom[i].symbol in transition_metals()]
+            carbon_metal = [ i for i in carbon_metal if i not in ferocene_metal]
             if len(oxygens) == 1:
                 oxy_metal = [
                     i for i in oxygens if ase_atom[i].symbol in transition_metals()]
+                oxy_metal = [ i for i in oxy_metal if i not in ferocene_metal]
                 if len(oxy_metal) == 1:
                     atom_pairs_at_breaking_point[oxygens[0]] = oxy_metal[0]
                     bonds_to_break.append([oxygens] + oxy_metal)
+            if len(carbon_metal) > 0:
+                for met in carbon_metal:
+                    atom_pairs_at_breaking_point[atoms] = met
+                    bonds_to_break.append([atoms] + [met])
 
         if atoms in list(all_sulphates.keys()):
             connected = graph[atoms]
@@ -747,22 +792,43 @@ def secondary_building_units(ase_atom):
                 for oxy in oxygen:
                     metal = [i for i in graph[oxy]
                              if ase_atom[i].symbol in transition_metals()]
+                    metal = [ i for i in metal if i not in ferocene_metal]
                     if len(metal) > 0:
                         for met in metal:
                             atom_pairs_at_breaking_point[oxy] = met
                             bonds_to_break.append([oxy] + [met])
 
+        if atoms in list(cos_group.keys()):
+            connected = graph[atoms]
+            all_carbon_indices = [
+                i for i in connected if ase_atom[i].symbol == 'C']
+            non_metals = cos_group[atoms]
+            if len(all_carbon_indices) == 1:
+                atom_pairs_at_breaking_point[atoms] = all_carbon_indices[0]
+                bonds_to_break.append([atoms] + all_carbon_indices)
+            if len(all_carbon_indices) > 1:
+                for atom_idx in non_metals:
+                    metal = [i for i in graph[atom_idx ]
+                             if ase_atom[i].symbol in transition_metals()]
+                    metal = [ i for i in metal if i not in ferocene_metal]
+                    if len(metal) > 0:
+                        for met in metal:
+                            atom_pairs_at_breaking_point[atom_idx] = met
+                            bonds_to_break.append([atom_idx] + [met])
+
         if ase_atom[atoms].symbol == 'O':
             seen = sum(list(carboxylates.values())
-                       + list(all_sulphates.values()), [])
+                       + list(all_sulphates.values()) 
+                       + list(cos_group.values()), [])
             if atoms not in seen:
                 connected = graph[atoms]
                 metal = [
                     i for i in connected if ase_atom[i].symbol in transition_metals()]
+                metal = [ i for i in metal if i not in ferocene_metal]
                 Nitrogen = [i for i in connected if ase_atom[i].symbol == 'N']
                 carbon = [i for i in connected if ase_atom[i].symbol
                           == 'C' and i not in list(carboxylates.keys())]
-                if len(metal) == 1 and len(carbon) == 1:
+                if len(metal) >= 1 and len(carbon) == 1:
                     atom_pairs_at_breaking_point[atoms] = carbon[0]
                     bonds_to_break.append([atoms] + carbon)
                 if len(metal) == 1 and len(Nitrogen) == 1:
@@ -787,19 +853,26 @@ def secondary_building_units(ase_atom):
             connected = graph[atoms]
             metal = [
                 i for i in connected if ase_atom[i].symbol in transition_metals()]
+            metal = [ i for i in metal if i not in ferocene_metal]
             if atoms not in porphyrin_checker:
                 if len(metal) == 1:
                     atom_pairs_at_breaking_point[atoms] = metal[0]
                     bonds_to_break.append([atoms] + metal)
 
         if ase_atom[atoms].symbol == 'S':
-            connected = graph[atoms]
-            metal = [
-                i for i in connected if ase_atom[i].symbol in transition_metals()]
-            if len(metal) > 0:
-                for met in metal:
-                    atom_pairs_at_breaking_point[atoms] = met
-                    bonds_to_break.append([atoms, met])
+            seen = sum(list(carboxylates.values())
+                    + list(all_sulphates.values()) 
+                    + list(cos_group.values()), []
+                    )
+            if atoms not in seen:
+                connected = graph[atoms]
+                metal = [
+                    i for i in connected if ase_atom[i].symbol in transition_metals()]
+                metal = [ i for i in metal if i not in ferocene_metal]
+                if len(metal) > 0:
+                    for met in metal:
+                        atom_pairs_at_breaking_point[atoms] = met
+                        bonds_to_break.append([atoms, met])
 
         if ase_atom[atoms].symbol == 'P':
             # Find the carbon closest to P, which is not bonded to a metal and cut
@@ -813,6 +886,7 @@ def secondary_building_units(ase_atom):
                          for j in connected]
 
             metal = sum(metal_oxy, [])
+            metal = [ i for i in metal if i not in ferocene_metal]
             closest_atoms = sum(
                 [[i for i in graph[j] if i != atoms and not ase_atom[i].symbol in transition_metals()] for j in connected], [])
 
@@ -832,6 +906,7 @@ def secondary_building_units(ase_atom):
                          for j in connected]
 
             metal_connect = sum(metal_oxy, [])
+            metal = [ i for i in metal if i not in ferocene_metal]
             if len(metal_connect) > 0:
                 for frag in metal_connect:
                     atom_pairs_at_breaking_point[frag[0]] = frag[1]
@@ -892,12 +967,14 @@ def ligands_and_metal_clusters(ase_atom):
     carboxylates = find_carboxylates(ase_atom)
     all_sulphates = find_carbonyl_sulphate(ase_atom)
     Seen_oxygen = []
+    ferocene_metal = all_ferrocene_metals(ase_atom)
     for atoms in graph:
         if atoms in list(carboxylates.keys()):
             oxygen = carboxylates[atoms]
             for oxy in oxygen:
                 metal = [i for i in graph[oxy]
                          if ase_atom[i].symbol in transition_metals()]
+                metal = [ i for i in metal if i not in ferocene_metal]
                 if len(metal) > 0:
                     Seen_oxygen.append(oxy)
                     for met in metal:
@@ -911,15 +988,26 @@ def ligands_and_metal_clusters(ase_atom):
             for oxy in oxygen:
                 metal = [i for i in graph[oxy]
                          if ase_atom[i].symbol in transition_metals()]
+                metal = [ i for i in metal if i not in ferocene_metal]
                 if len(metal) > 0:
                     for met in metal:
                         bonds_to_break.append([oxy] + [met])
                         atom_pairs_at_breaking_point[oxy] = met
 
+        if ase_atom[atoms].symbol == 'C':
+            connected = graph[atoms]
+            carbon_metal = [i for i in connected if ase_atom[i].symbol in transition_metals()]
+            carbon_metal = [ i for i in carbon_metal if i not in ferocene_metal]
+            if len(carbon_metal) > 0:
+                for met in carbon_metal:
+                    atom_pairs_at_breaking_point[atoms] = met
+                    bonds_to_break.append([atoms] + [met])
+                    
         if ase_atom[atoms].symbol == 'N':
             connected = graph[atoms]
             metal = [
                 i for i in connected if ase_atom[i].symbol in transition_metals()]
+            metal = [ i for i in metal if i not in ferocene_metal]
             if len(metal) > 0 and atoms not in porphyrin_checker:
                 for met in metal:
                     bonds_to_break.append([atoms, met])
@@ -930,6 +1018,7 @@ def ligands_and_metal_clusters(ase_atom):
             connected = graph[atoms]
             metal = [
                 i for i in connected if ase_atom[i].symbol in transition_metals()]
+            metal = [ i for i in metal if i not in ferocene_metal]
             if len(metal) > 0:
                 if len(metal) > 0:
                     for met in metal:
@@ -941,6 +1030,7 @@ def ligands_and_metal_clusters(ase_atom):
             connected = graph[atoms]
             metal = [
                 i for i in connected if ase_atom[i].symbol in transition_metals()]
+            metal = [ i for i in metal if i not in ferocene_metal]
             Nitrogen = [i for i in connected if ase_atom[i].symbol == 'N']
             carbon = [i for i in connected if ase_atom[i].symbol == 'C']
             if len(metal) > 0 and len(carbon) == 1:
@@ -969,6 +1059,7 @@ def ligands_and_metal_clusters(ase_atom):
                          for j in connected]
 
             metal = sum(metal_oxy, [])
+            metal = [ i for i in metal if i not in ferocene_metal]
             closest_atoms = sum([[[i, j] for i in graph[j] if i != atoms and ase_atom[i].symbol in
                                   transition_metals()]for j in connected], [])
 
@@ -1018,11 +1109,39 @@ def is_rodlike(metal_sbu):
     return Rod_check
 
 
-def is_ferrocene(metal_sbu, graph):
+def all_ferrocene_metals(ase_atom):
+    '''
+    A function to find metals corresponding to ferrocene. 
+    These metals should not be considered during mof-constructions
+    
+    Parameters:
+    -----------
+    ase_atom: ASE atom
+    graph : dictionary containing neigbour lists
+    '''
+    list_of_metals = []
+    graph, _ = compute_ase_neighbour(ase_atom)
+    for atom_index in graph:
+        if ase_atom[atom_index].symbol in transition_metals():
+            connectivity = graph[atom_index]
+            if len(connectivity) >= 10:
+                number_of_carbons = 0
+                for neigbour in connectivity:
+                    if ase_atom[neigbour].symbol == 'C':
+                        number_of_carbons += 1
+                if number_of_carbons >= 10:
+                    list_of_metals.append(atom_index)
+    return list_of_metals
+            
+        
+    
+    
+def is_ferrocene(metal_sbu):
     '''
     A simple script to check whether a metal_sbu is ferrocene
     '''
     check = []
+    graph, _ = compute_ase_neighbour(metal_sbu)
     verdict = False
     all_connectivity = list(graph.values())
     for connectivity in all_connectivity:
@@ -1198,16 +1317,14 @@ def find_unique_building_units(list_of_connected_components, atom_pairs_at_break
         molecule_to_write.info['atom_indices_mapping'] = [
             list_of_connected_components[i] for i in all_regions[key]]
         metal = [i.index for i in molecule_to_write if i.symbol in transition_metals(
-        ) and i.index not in porphyrin_checker]
-
+        ) and i.index not in porphyrin_checker ]
+        non_ferocene_metal = []
         if len(metal) > 0:
             graph_sbu, _ = compute_ase_neighbour(molecule_to_write)
             # Check whether the metal sbu is a rod mof. If is it is rod mof,
             # we rotate and aligne the sbu such that the axis of rotation will be the a-axis.
             if len(is_rodlike(molecule_to_write)) == 1:
-                molecule_to_write.info['sbu_type'] = 'rodlike'
-            elif is_ferrocene(molecule_to_write, graph_sbu):
-                molecule_to_write.info['sbu_type'] = 'ferrocenelike'
+                molecule_to_write.info['sbu_type'] = 'rodlike' 
             elif is_paddlewheel(molecule_to_write, graph_sbu):
                 molecule_to_write.info['sbu_type'] = 'paddlewheel'
             elif is_paddlewheel_with_water(molecule_to_write, graph_sbu):
@@ -1218,6 +1335,13 @@ def find_unique_building_units(list_of_connected_components, atom_pairs_at_break
                 molecule_to_write.info['sbu_type'] = 'MOF32_sbu'
             elif is_irmof(molecule_to_write, graph_sbu):
                 molecule_to_write.info['sbu_type'] = 'IRMOF_sbu'
+            elif is_ferrocene(molecule_to_write):
+                molecule_to_write.info['sbu_type'] = 'ferrocenelike'
+                ferocene_metal = all_ferrocene_metals(molecule_to_write)
+                non_ferocene_metal = [ i for i in metal if not i in ferocene_metal]
+                if len(non_ferocene_metal) == 0:
+                    mof_linker.append(molecule_to_write)
+                    continue
             else:
                 molecule_to_write.info['sbu_type'] = 'still checking!'
             mof_metal.append(molecule_to_write)
