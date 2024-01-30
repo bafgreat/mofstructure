@@ -16,7 +16,7 @@ import pandas as pd
 
 class AtomsEncoder(json.JSONEncoder):
     '''
-    ASE atom type encorder for json to enable serialising 
+    ASE atom type encorder for json to enable serialising
     ase atom object.
     '''
 
@@ -50,12 +50,14 @@ def numpy_to_json(ndarray, file_name):
     return
 
 
-def write_json(list_obj, file_name):
+def write_json(json_obj, file_name):
     '''
-    write a list to json
+    write a python dictionary object to json
     '''
-    json.dump(list_obj, codecs.open(file_name, 'w', encoding='utf-8'))
-
+    # Serializing json
+    json_object = json.dumps(json_obj, indent=4, sort_keys=True)
+    with open(file_name, "w", encoding='utf-8') as outfile:
+        outfile.write(json_object)
 
 def json_to_numpy(json_file):
     '''
@@ -108,7 +110,7 @@ def read_json(file_name):
 
 def csv_read(csv_file):
     '''
-    Read a csv file 
+    Read a csv file
     '''
     f_obj = open(csv_file, 'r', encoding='utf-8')
     data = csv.reader(f_obj)
@@ -162,7 +164,7 @@ def read_zip(zip_file):
 
 
 def load_data(filename):
-    ''' 
+    '''
     function that recognises file extenion and chooses the correction
     function to load the data.
     '''

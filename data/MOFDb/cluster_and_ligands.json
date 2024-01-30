@@ -1,1 +1,109 @@
-{"RUBTAK01": {"n_ligands": 1, "n_clusters": 1, "n_metals": 1, "max_cn": 12, "metals": ["Zr"], "metal_cn": {"Zr": 12}, "metal_cluster_smile": ["[Zr@]123O[Zr]4O[Zr@](O2)(O[Zr](O1)O[Zr]O4)O3.[Zr]"], "metal_cluster_inchikey": ["IITIXEIJMFNXSS-UHFFFAOYSA-N"], "metal_cluster_inchi": ["1S/8O.6Zr"], "ligand_smile": ["O=C(c1ccc(cc1)C(=O)[O])[O]"], "ligand_inchikey": ["FDTQOZYHNDMJCM-UHFFFAOYSA-N"], "ligand_inchi": ["1S/C8H4O4/c9-7(10)5-1-2-6(4-3-5)8(11)12/h1-4H"]}, "SARSUC": {"n_ligands": 2, "n_clusters": 1, "n_metals": 1, "max_cn": 6, "metals": ["Ni"], "metal_cn": {"Ni": 6}, "metal_cluster_smile": ["[Ni][Ni]"], "metal_cluster_inchikey": ["XIKYYQJBTPYKSG-UHFFFAOYSA-N"], "metal_cluster_inchi": ["1S/2Ni"], "ligand_smile": ["O=C(c1cc2c(cc(C(=O)[O])cc2)cc1)[O]", "[N@@]12CC[N@@](CC1)CC2"], "ligand_inchikey": ["DESKXQISJOCIDX-UHFFFAOYSA-N", "IMNIMPAHZVJRPE-UHFFFAOYSA-N"], "ligand_inchi": ["1S/C12H6O4/c13-11(14)9-3-1-7-5-10(12(15)16)4-2-8(7)6-9/h1-6H", "1S/C6H12N2/c1-2-8-5-3-7(1)4-6-8/h1-6H2"]}, "EDUSIF": {"n_ligands": 1, "n_clusters": 1, "n_metals": 1, "max_cn": 4, "metals": ["Zn"], "metal_cn": {"Zn": 4}, "metal_cluster_smile": ["[Zn].O([Zn])[Zn].[Zn]"], "metal_cluster_inchikey": ["PNSYXHRQRRWUAP-UHFFFAOYSA-N"], "metal_cluster_inchi": ["1S/O.4Zn"], "ligand_smile": ["O=C(c1ccc(cc1)C(=O)[O])[O]"], "ligand_inchikey": ["FDTQOZYHNDMJCM-UHFFFAOYSA-N"], "ligand_inchi": ["1S/C8H4O4/c9-7(10)5-1-2-6(4-3-5)8(11)12/h1-4H"]}, "Kick_0": {"n_ligands": 1, "n_clusters": 1, "n_metals": 1, "max_cn": 12, "metals": ["Zr"], "metal_cn": {"Zr": 12}, "metal_cluster_smile": ["O([Zr](O)O[Zr]O[Zr])[Zr]O.O[Zr](O)O[Zr]"], "metal_cluster_inchikey": ["IZPPMHWIQBVKFA-UHFFFAOYSA-J"], "metal_cluster_inchi": ["1S/4H2O.4O.6Zr/h4*1H2;;;;;;;;;;/q;;;;;;;;;;;2*+1;+2/p-4"], "ligand_smile": ["[O]C(=O)c1ccc(/C/2=c\\3/[nH]/c(=C(\\C4=N/C(=C(\\c5[nH]c(/C(=C\\6/C=CC2=N6)/c2ccc(C(=O)[O])cc2)cc5)/c2ccc(C(=O)[O])cc2)/C=C4)/c2ccc(C(=O)[O])cc2)/cc3)cc1"], "ligand_inchikey": ["KMWGWDGIFWLRKA-LWQDQPMZSA-N"], "ligand_inchi": ["1S/C48H26N4O8/c53-45(54)29-9-1-25(2-10-29)41-33-17-19-35(49-33)42(26-3-11-30(12-4-26)46(55)56)37-21-23-39(51-37)44(28-7-15-32(16-8-28)48(59)60)40-24-22-38(52-40)43(36-20-18-34(41)50-36)27-5-13-31(14-6-27)47(57)58/h1-24,49,52H/b41-33-,41-34-,42-35-,42-37-,43-36-,43-38-,44-39-,44-40-"]}}
+{
+    "EDUSIF": {
+        "ligand_inchi": [
+            "1S/C8H4O4/c9-7(10)5-1-2-6(4-3-5)8(11)12/h1-4H"
+        ],
+        "ligand_inchikey": [
+            "FDTQOZYHNDMJCM-UHFFFAOYSA-N"
+        ],
+        "ligand_smile": [
+            "O=C(c1ccc(cc1)C(=O)[O])[O]"
+        ],
+        "metal_cluster_inchi": [
+            "1S/O.4Zn"
+        ],
+        "metal_cluster_inchikey": [
+            "PNSYXHRQRRWUAP-UHFFFAOYSA-N"
+        ],
+        "metal_cluster_smile": [
+            "[Zn].O([Zn])[Zn].[Zn]"
+        ],
+        "metals": [
+            "Zn"
+        ],
+        "n_clusters": 1,
+        "n_ligands": 1,
+        "n_metals": 1
+    },
+    "Kick_0": {
+        "ligand_inchi": [
+            "1S/C48H26N4O8/c53-45(54)29-9-1-25(2-10-29)41-33-17-19-35(49-33)42(26-3-11-30(12-4-26)46(55)56)37-21-23-39(51-37)44(28-7-15-32(16-8-28)48(59)60)40-24-22-38(52-40)43(36-20-18-34(41)50-36)27-5-13-31(14-6-27)47(57)58/h1-24,49,52H/b41-33-,41-34-,42-35-,42-37-,43-36-,43-38-,44-39-,44-40-"
+        ],
+        "ligand_inchikey": [
+            "KMWGWDGIFWLRKA-LWQDQPMZSA-N"
+        ],
+        "ligand_smile": [
+            "[O]C(=O)c1ccc(/C/2=c\\3/[nH]/c(=C(\\C4=N/C(=C(\\c5[nH]c(/C(=C\\6/C=CC2=N6)/c2ccc(C(=O)[O])cc2)cc5)/c2ccc(C(=O)[O])cc2)/C=C4)/c2ccc(C(=O)[O])cc2)/cc3)cc1"
+        ],
+        "metal_cluster_inchi": [
+            "1S/4H2O.4O.6Zr/h4*1H2;;;;;;;;;;/q;;;;;;;;;;;2*+1;+2/p-4"
+        ],
+        "metal_cluster_inchikey": [
+            "IZPPMHWIQBVKFA-UHFFFAOYSA-J"
+        ],
+        "metal_cluster_smile": [
+            "O([Zr](O)O[Zr]O[Zr])[Zr]O.O[Zr](O)O[Zr]"
+        ],
+        "metals": [
+            "Zr"
+        ],
+        "n_clusters": 1,
+        "n_ligands": 1,
+        "n_metals": 1
+    },
+    "RUBTAK01": {
+        "ligand_inchi": [
+            "1S/C8H4O4/c9-7(10)5-1-2-6(4-3-5)8(11)12/h1-4H"
+        ],
+        "ligand_inchikey": [
+            "FDTQOZYHNDMJCM-UHFFFAOYSA-N"
+        ],
+        "ligand_smile": [
+            "O=C(c1ccc(cc1)C(=O)[O])[O]"
+        ],
+        "metal_cluster_inchi": [
+            "1S/8O.6Zr"
+        ],
+        "metal_cluster_inchikey": [
+            "IITIXEIJMFNXSS-UHFFFAOYSA-N"
+        ],
+        "metal_cluster_smile": [
+            "[Zr@]123O[Zr]4O[Zr@](O2)(O[Zr](O1)O[Zr]O4)O3.[Zr]"
+        ],
+        "metals": [
+            "Zr"
+        ],
+        "n_clusters": 1,
+        "n_ligands": 1,
+        "n_metals": 1
+    },
+    "SARSUC": {
+        "ligand_inchi": [
+            "1S/C12H6O4/c13-11(14)9-3-1-7-5-10(12(15)16)4-2-8(7)6-9/h1-6H",
+            "1S/C6H12N2/c1-2-8-5-3-7(1)4-6-8/h1-6H2"
+        ],
+        "ligand_inchikey": [
+            "DESKXQISJOCIDX-UHFFFAOYSA-N",
+            "IMNIMPAHZVJRPE-UHFFFAOYSA-N"
+        ],
+        "ligand_smile": [
+            "O=C(c1cc2c(cc(C(=O)[O])cc2)cc1)[O]",
+            "[N@@]12CC[N@@](CC1)CC2"
+        ],
+        "metal_cluster_inchi": [
+            "1S/2Ni"
+        ],
+        "metal_cluster_inchikey": [
+            "XIKYYQJBTPYKSG-UHFFFAOYSA-N"
+        ],
+        "metal_cluster_smile": [
+            "[Ni][Ni]"
+        ],
+        "metals": [
+            "Ni"
+        ],
+        "n_clusters": 1,
+        "n_ligands": 2,
+        "n_metals": 1
+    }
+}

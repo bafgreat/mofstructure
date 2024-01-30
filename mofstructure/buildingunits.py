@@ -30,8 +30,8 @@ def sbu_data(ase_atom, path_to_file):
             cheminfo=True
         )
     for i, sbu_metal in enumerate(metal_sbus):
-        print('sbu', sbu_metal.info['sbu_type'])
-        print('point_of_extension', len(sbu_metal.info['point_of_extension']))
+        # print('sbu', sbu_metal.info['sbu_type'])
+        # print('point_of_extension', len(sbu_metal.info['point_of_extension']))
         sbu_metal.write(path_to_file + '_metal_sbu_'+str(i+1)+'.xyz')
     for j, sbu_linker in enumerate(organic_sbus):
         sbu_linker.write(path_to_file + '_organic_sbu_'+str(j+1)+'.xyz')
@@ -66,7 +66,7 @@ def ligand_data(ase_atom, path_to_file):
 
 def remove_guest(ase_atom):
     '''
-    Simple function to remove guest molecules in porous system 
+    Simple function to remove guest molecules in porous system
     '''
     index_non_guest = MOF_deconstructor.remove_unbound_guest(ase_atom)
     return ase_atom[index_non_guest]
@@ -79,7 +79,7 @@ def work_flow(cif_file, save_dir, verbose=False):
     guest molecule present in the MOF. After that it computed the porosity
     of the MOF and load this data in the output folder. Finally the deconstructs
     the MOFs into the various building units and safe these building units
-    in '.xyz' formats in the output folder. 
+    in '.xyz' formats in the output folder.
     Parameters
     ----------
     cif_file : a cif file or any ase readable file containing a MOF.

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "mofstructure"
-version = "0.1.2"
+version = "0.1.3"
 description = "A python tool to deconstruct MOFs into building units and compute porosity. The code remove guest from MOFs and all porous systems, compute smiles strings and inchikeys of all building units."
 keywords = ["guest removal", "inchikeys", "inchi", "smiles", "pld", "lcd", "MOF", "COF", "zeolites", "accessible surface area", "void fraction", "coordination number", "porosity", "zeo++", "sbu", "point of extension"]
 authors = ["Dinga Wonanke"]
@@ -8,7 +8,7 @@ license = "MIT"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = ">=3.8"
+python = ">=3.9"
 ase = ">=3.19.0"
 networkx = ">=2.6.3"
 numpy = ">=1.21.6"
@@ -16,10 +16,11 @@ openbabel-wheel = "3.1.1.16"
 pandas = ">=1.3.5"
 pymatgen = ">=2023.2.28"
 pyzeo = ">=0.1.1"
-rdkit = ">=2022.9.5"
+rdkit = "==2022.9.5"
+open_metal_detector = { git = "https://github.com/bafgreat/open_metal_detector.git", branch = "master" }
 [tool.poetry.scripts]
 mofstructure = "mofstructure.buildingunits:main"
 mofstructure_database = "mofstructure.collect_data:main"
 [build-system]
-requires = ["poetry-core"]
+requires = ["poetry-core", "poetry-dynamic-versioning"]
 build-backend = "poetry.core.masonry.api"
