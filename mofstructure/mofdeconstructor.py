@@ -364,7 +364,7 @@ def longest_list(lst):
     return max(lst, key=len)
 
 
-def remove_unbound_guest(ase_atom):
+def remove_unbound_guest_and_return_unique(ase_atom):
     '''
     A simple script to remove guest from a metal organic framework.
     1)It begins by computing a connected graph component of all the fragments in the system
@@ -410,6 +410,50 @@ def remove_unbound_guest(ase_atom):
             mof_indices = []
             for frag_indices in temp_indices:
                 mof_indices.extend(fragments[frag_indices])
+            if len(mof_indices) == 0:
+                return longest_list(fragments)
+            else:
+                return mof_indices
+        else:
+            return sum(fragments, [])
+        
+def remove_unbound_guest(ase_atom):
+    '''
+    A simple script to remove guest from a metal organic framework.
+    1) It begins by computing a connected graph component of all the fragments in the system
+    using ASE neighbour list.
+    2) Secondly it selects indices of connected components which contain a metal
+    3) if the there are two or more components, we create a pytmagen graph for each components and filter out all components that are not polymeric
+    4) If there are two or more polymeric components, we check whether these systems there are identical or different
+    and select all polymeric components
+
+    Parameters:
+    -----------
+    ASE atoms
+
+    Returns
+    -------
+    mof_indices : indices of the guest-free system. The guest-free ase_atom object
+    can be obtained as follows;
+    E.g.
+    guest_free_system = ase_atom[mof_indices]
+    '''
+    atom_neighbors, _ = compute_ase_neighbour(ase_atom)
+    fragments = connected_components(atom_neighbors)
+    if len(fragments) == 1:
+        return [atom.index for atom in ase_atom]
+    else:
+        polymeric_indices = []
+        for i in range(len(fragments)):
+            super_cell = ase_atom[fragments[i]] * (2, 1, 1)
+            coordination_graph, _ = compute_ase_neighbour(super_cell)
+            pymat_graph = connected_components(coordination_graph)
+            if len(pymat_graph) == 1:
+                polymeric_indices.append(i)
+        if len(polymeric_indices) > 0:
+            mof_indices = []
+            for poly_index in polymeric_indices:
+                mof_indices.extend(fragments[poly_index])
             if len(mof_indices) == 0:
                 return longest_list(fragments)
             else:
