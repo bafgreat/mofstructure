@@ -14,7 +14,6 @@ from mofstructure.porosity import zeo_calculation
 import mofstructure.filetyper as read_write
 
 
-
 def sbu_data(ase_atom):
     '''
     Function to compile secondary building units and region of MOFs
@@ -81,6 +80,21 @@ def sbu_data(ase_atom):
         data_to_json['linker_inchi'] = inchi
         data_to_json['n_linker_point_of_extension'] = point_of_extension
     return data_to_json, structural_data
+
+
+def remove_t_factor_and_unique(metal_sites):
+    unique_sites = []
+    seen = set()
+
+    for site in metal_sites:
+        site_without_t_factor = {key: value for key, value in site.items(
+        ) if key not in ['t_factor', 'unique', 'problematic', 'type']}
+        site_tuple = tuple(sorted(site_without_t_factor.items()))
+        if site_tuple not in seen:
+            unique_sites.append(site_without_t_factor)
+            seen.add(site_tuple)
+
+    return unique_sites
 
 
 def ligand_data(ase_atom):
@@ -152,40 +166,57 @@ def merge_two_dicts(dict_1, dict_2):
     combined_dict.update(dict_2)    # modifies z with keys and values of y
     return combined_dict
 
+
 def find_oms(cif_file, base_name, ase_atom, result_folder):
     """
     Function to compute open metal sites
     """
-    result = {}
+    result = []
     oms = []
     enviroment = {}
     test_folder = result_folder+'/test'
-    a_mof_collection = MofCollection(path_list=[cif_file], analysis_folder=test_folder)
+    a_mof_collection = MofCollection(
+        path_list=[cif_file], analysis_folder=test_folder)
     a_mof_collection.analyse_mofs()
-    data = read_write.load_data(test_folder+'/oms_results/'+ base_name+'/'+base_name+'.json')
-    result['has_oms'] = data['has_oms']
-    metal_environment = MOF_deconstructor.metal_coordination_enviroment(ase_atom)
-    metal_sites = data['metal_sites']
-    cn = {metal_site["metal"]:metal_site["number_of_linkers"] for metal_site in metal_sites}
-    max_cn = max(list(cn.values()))
-    print (max_cn , cn )
-    result['metal_cn'] = cn
-    result['max_cn'] = max_cn
-    if data['has_oms'] is True:
+    data = read_write.load_data(
+        test_folder+'/oms_results/' + base_name+'/'+base_name+'.json')
 
-        for  dat  in metal_sites:
-            if dat['is_open'] is True:
-                metal = dat['metal']
-                oms.append(metal)
-                enviroment[metal] = metal_environment[metal]
-        result['oms'] = list(set(oms))
-        result['environment'] = enviroment
-    else:
-        result['oms'] = []
-        result['environment'] = {}
+    # result['has_oms'] = data['has_oms']
+    metal_environment = MOF_deconstructor.metal_coordination_enviroment(
+        ase_atom)
+    metal_sites = data['metal_sites']
+    unique_metal_sites = remove_t_factor_and_unique(metal_sites)
+
+    # cn = {metal_site["metal"]:metal_site["number_of_linkers"] for metal_site in metal_sites}
+    # print ( "coordination number", cn)
+    # max_cn = max(list(cn.values()))
+    # print (max_cn , cn )
+    # result['metal_cn'] = cn
+    # result['max_cn'] = max_cn
+    # if data['has_oms'] is True:
+
+    for dat in unique_metal_sites:
+        # if dat['is_open'] is True:
+        # result["metal"] = dat['metal']
+        tmp = {}
+        tmp["metal"] = dat['metal']
+        # tmp["type"] = dat["type"]
+        tmp["is_open"] = dat["is_open"]
+        tmp['cn'] = dat["number_of_linkers"]
+        tmp['environment'] = metal_environment[dat['metal']]
+        result.append(tmp)
+
+        # oms.append(metal)
+        # enviroment[metal] = metal_environment[metal]
+    # result['oms'] = list(set(oms))
+    # result['environment'] = enviroment
+    # else:
+    #     result['oms'] = []
+    #     result['environment'] = {}
     if os.path.exists(test_folder):
         shutil.rmtree(test_folder)
     return result
+
 
 def compile_data(cif_files, result_folder, verbose=False):
     '''
@@ -223,20 +254,22 @@ def compile_data(cif_files, result_folder, verbose=False):
         # porosity_dic = {}
     else:
         try:
-            ase_atoms_dic = read_write.load_data(result_folder+'/ase_atoms_building_units.json')
+            ase_atoms_dic = read_write.load_data(
+                result_folder+'/ase_atoms_building_units.json')
             # porosity_dic = json.loads(pd.read_csv(result_folder+'/porosity_data.csv', index_col=False).to_json(orient='records'))
-            search_data1 = read_write.load_data(result_folder+'/sbus_and_linkers.json')
-            search_data2 = read_write.load_data(result_folder+'/cluster_and_ligands.json')
-            metal_info =  read_write.load_data(result_folder+'/metal_info.json')
+            search_data1 = read_write.load_data(
+                result_folder+'/sbus_and_linkers.json')
+            search_data2 = read_write.load_data(
+                result_folder+'/cluster_and_ligands.json')
+            metal_info = read_write.load_data(result_folder+'/metal_info.json')
             seen = list(metal_info.keys())
         except Exception:
             pass
 
-
     for cif_file in cif_files:
         try:
             tmp_metal = {}
-            encoder =read_write.AtomsEncoder
+            encoder = read_write.AtomsEncoder
             base_name = cif_file[:cif_file.rindex('.')].split('/')[-1]
             ase_atom = read(cif_file)
             ase_atom = remove_guest(ase_atom)
@@ -251,25 +284,28 @@ def compile_data(cif_files, result_folder, verbose=False):
                 structural_data = dict(merge_two_dicts(
                     structural_data_1, structural_data_2))
                 ase_atoms_dic[base_name] = structural_data
-                metal_elt, _ = MOF_deconstructor.metal_coordination_number(ase_atom)
-                tmp_metal['n_metals'] = len(metal_elt)
-                # tmp_metal['max_cn'] = max(list(metal_coordination.values()))
-                tmp_metal['metals'] = metal_elt
-                # tmp_metal['metal_cn'] = metal_coordination
-                tmp_metal.update(oms)
-                metal_info[base_name]= tmp_metal
+                # metal_elt, _ = MOF_deconstructor.metal_coordination_number(
+                #     ase_atom)
+                # tmp_metal['n_metals'] = len(metal_elt)
+                # # tmp_metal['max_cn'] = max(list(metal_coordination.values()))
+                # tmp_metal['metals'] = metal_elt
+                # # tmp_metal['metal_cn'] = metal_coordination
+                # tmp_metal.update(oms)
+                metal_info[base_name] = oms
                 read_write.append_json_atom(ase_atoms_dic, encoder,
-                                        result_folder+'/ase_atoms_building_units.json')
-                read_write.append_json(search_data1,  result_folder+'/sbus_and_linkers.json')
-                read_write.append_json(search_data2, result_folder+'/cluster_and_ligands.json')
-                read_write.append_json(metal_info, result_folder+'/metal_info.json')
+                                            result_folder+'/ase_atoms_building_units.json')
+                read_write.append_json(
+                    search_data1,  result_folder+'/sbus_and_linkers.json')
+                read_write.append_json(
+                    search_data2, result_folder+'/cluster_and_ligands.json')
+                read_write.append_json(
+                    metal_info, result_folder+'/metal_info.json')
         except Exception:
             pass
 
     data_f = pd.DataFrame.from_dict(porosity_dic, orient='index')
     data_f.index.name = 'mof_names'
     data_f.to_csv(result_folder+'/porosity_data.csv')
-
 
     if verbose:
         print(f"Saved results to {result_folder}")
@@ -292,4 +328,3 @@ def main():
     cif_files = [os.path.join(args.cif_folder, f) for f in os.listdir(
         args.cif_folder) if f.endswith('.cif')]
     compile_data(cif_files, args.save_dir, args.verbose)
-
