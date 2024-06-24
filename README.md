@@ -193,9 +193,42 @@ The new update enables the computation of open metal sites in cifs
 To use this functionality run the following on the command line
 
 ```
-mofstructure_database ciffolder
+mofstructure_database ciffolder --oms
 ```
 
 Here ciffolder corresponse to the directory/folder containing the cif files.
 
 After the computation the metal information will be found in a json file called `metal_info.json`. This file is found in the output folder that defaults to `MOFDb` incase none is provided.
+
+# NB
+Note that computing open metal sites is computationally expensive, especially if you intend to
+run it on a folder with many cif files. There I recommend that if you are not interested in computing the open metal sites simply run command without the --oms option.
+```
+mofstructure_database ciffolder
+```
+This command will generate a MOFDb folder without the `metal_info.json` file. But the code will run very fast.
+
+Also note that the `--oms` option is provided on for the `mofstructure_database` command. This is not available for `mofstructure` command which targets a single cif file. If you have a single cif file wish to compute open metal sites, simply put the cif file in a folder and rin `mofstructure_database` command on the folder (`mofstructure_database ciffolder --oms`).
+
+# Updates version 0.1.5
+The new update enables users to include a Rad file when computing porosity using pyzeo. This allows users to specify the type of radii to use. If omitted, the default pyzeo radii will be used, which are covalent radii obtained from the CSD.
+
+Currently, this functionality can only be used when using mofstructure as a library. This can be done as follows:
+```
+from mofstructure.porosity import zeo_calculation
+from ase.io import read
+
+ase_atom = read(filename)
+
+pore_data = zeo_calculation(ase_atom, rad_file='rad_file_name.dat')
+```
+# NB
+Note that filename is any ASE-readable crystal structure file, ideally a CIF file. Moreover, rad_file_name.dat is a file containing the radii of each element present in the structure file. This should be formatted as follows:
+```
+element radii
+```
+For example, for an MgO system, your Rad file should look like this:
+```
+Mg 0.66
+O 1.84
+```

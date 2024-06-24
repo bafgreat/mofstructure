@@ -11,7 +11,7 @@ from pymatgen.io.ase import AseAtomsAdaptor
 import mofstructure.filetyper as File_typer
 
 
-def zeo_calculation(ase_atom, probe_radius=1.86, number_of_steps=10000, high_accuracy=True):
+def zeo_calculation(ase_atom, probe_radius=1.86, number_of_steps=10000, high_accuracy=True, rad_file=None):
     '''
     Main script to compute geometric structure of porous systems.
     The focus here is on MOF, but the script can run on any porous periodic
@@ -23,7 +23,7 @@ def zeo_calculation(ase_atom, probe_radius=1.86, number_of_steps=10000, high_acc
     Main parameter:
         ase_atom: ase atom object
         probe_radius: The radius of the probe. Here 1.86 is used as default
-        number_of_steps: Number of GCMC simulation cycles 
+        number_of_steps: Number of GCMC simulation cycles
         high_accuracy: key to determine where to perform high accuracy computation
 
     return
@@ -41,7 +41,7 @@ def zeo_calculation(ase_atom, probe_radius=1.86, number_of_steps=10000, high_acc
         8) lfpd_A:The largest included sphere along free sphere path is
                   largest sphere that can be inserted in the pore
         9)PLD_A:The pore limiting diameter is the largest sphere that can freely
-                 diffuse through the porous network without overlapping with any 
+                 diffuse through the porous network without overlapping with any
                  of the atoms in the system
     '''
     tmp_cssr = 'tmp.cssr'
@@ -50,6 +50,13 @@ def zeo_calculation(ase_atom, probe_radius=1.86, number_of_steps=10000, high_acc
     File_typer.put_contents(tmp_cssr, tmp)
     parameters = {}
     atmnet = AtomNetwork.read_from_CSSR(tmp_cssr)
+    if rad_file is not None:
+        try:
+            atmnet = AtomNetwork.read_from_CSSR(tmp_cssr, rad_file)
+        except Exception as e:
+            print ("please edit your rad file. In the meantime, default radii will be used.")
+            atmnet = AtomNetwork.read_from_CSSR(tmp_cssr)
+
     vol_str = volume(
         atmnet, probe_radius, probe_radius, number_of_steps, high_accuracy=high_accuracy)
     if high_accuracy is True:

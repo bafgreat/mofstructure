@@ -218,7 +218,7 @@ def find_oms(cif_file, base_name, ase_atom, result_folder):
     return result
 
 
-def compile_data(cif_files, result_folder, verbose=False):
+def compile_data(cif_files, result_folder, verbose=False, oms=False):
     '''
     A workflow to remove guest, compute porosity and deconstructure
     mofs and creates a MOF database. The function starts with checking and removing any unbound
@@ -256,7 +256,7 @@ def compile_data(cif_files, result_folder, verbose=False):
         try:
             ase_atoms_dic = read_write.load_data(
                 result_folder+'/ase_atoms_building_units.json')
-            # porosity_dic = json.loads(pd.read_csv(result_folder+'/porosity_data.csv', index_col=False).to_json(orient='records'))
+            porosity_dic = json.loads(pd.read_csv(result_folder+'/porosity_data.csv', index_col=False).to_json(orient='records'))
             search_data1 = read_write.load_data(
                 result_folder+'/sbus_and_linkers.json')
             search_data2 = read_write.load_data(
@@ -276,7 +276,13 @@ def compile_data(cif_files, result_folder, verbose=False):
             pores = zeo_calculation(ase_atom)
             porosity_dic[base_name] = pores
             if not base_name in seen:
-                oms = find_oms(cif_file, base_name,  ase_atom, result_folder)
+                #  Run open metal site
+                if oms:
+                    open_metal_sites = find_oms(cif_file, base_name,  ase_atom, result_folder)
+                    metal_info[base_name] = open_metal_sites
+                    read_write.append_json(
+                    metal_info, result_folder+'/metal_info.json')
+
                 data_to_json1, structural_data_1 = sbu_data(ase_atom)
                 data_to_json2, structural_data_2 = ligand_data(ase_atom)
                 search_data1[base_name] = data_to_json1
@@ -291,15 +297,13 @@ def compile_data(cif_files, result_folder, verbose=False):
                 # tmp_metal['metals'] = metal_elt
                 # # tmp_metal['metal_cn'] = metal_coordination
                 # tmp_metal.update(oms)
-                metal_info[base_name] = oms
+
                 read_write.append_json_atom(ase_atoms_dic, encoder,
                                             result_folder+'/ase_atoms_building_units.json')
                 read_write.append_json(
                     search_data1,  result_folder+'/sbus_and_linkers.json')
                 read_write.append_json(
                     search_data2, result_folder+'/cluster_and_ligands.json')
-                read_write.append_json(
-                    metal_info, result_folder+'/metal_info.json')
         except Exception:
             pass
 
@@ -320,6 +324,9 @@ def main():
         description='Run work_flow function with optional verbose output')
     parser.add_argument('cif_folder', type=str,
                         help='list of cif files. like glob')
+
+    parser.add_argument('-o', '--oms', action='store_true',
+                        help='run oms')
     parser.add_argument('-s', '--save_dir', type=str,
                         default='MOFDb', help='directory to save output files')
     parser.add_argument('-v', '--verbose', action='store_true',
@@ -327,4 +334,4 @@ def main():
     args = parser.parse_args()
     cif_files = [os.path.join(args.cif_folder, f) for f in os.listdir(
         args.cif_folder) if f.endswith('.cif')]
-    compile_data(cif_files, args.save_dir, args.verbose)
+    compile_data(cif_files, args.save_dir, args.verbose, args.oms)

@@ -416,7 +416,7 @@ def remove_unbound_guest_and_return_unique(ase_atom):
                 return mof_indices
         else:
             return sum(fragments, [])
-        
+
 def remove_unbound_guest(ase_atom):
     '''
     A simple script to remove guest from a metal organic framework.
@@ -1455,15 +1455,20 @@ def find_unique_building_units(list_of_connected_components, atom_pairs_at_break
         mapped_indices = dict(
             [(i, j) for i, j in zip(components, range(len(components)))])
         molecule_to_write = ase_atom[components]
+        molecule_to_write.info.setdefault('concentration', 0)
         molecule_to_write.info['point_of_extension'] = [
             mapped_indices[i] for i in point_of_extension]
         if wrap_system:
             molecule_to_write = wrap_systems_in_unit_cell(molecule_to_write)
+
         if cheminfo:
             smi, chem_inchi, chem_inchiKey = compute_openbabel_cheminformatic(
                 molecule_to_write)
             molecule_to_write.info['smi'] = smi
             molecule_to_write.info['inchi'] = str(chem_inchi)
+            molecule_to_write.info['inchikey'] = str(chem_inchiKey)
+            if chem_inchiKey == molecule_to_write.info['inchikey']:
+                molecule_to_write.info['concentration'] +=1
             molecule_to_write.info['inchikey'] = str(chem_inchiKey)
         molecule_to_write.info['atom_indices_mapping'] = [
             list_of_connected_components[i] for i in all_regions[key]]
