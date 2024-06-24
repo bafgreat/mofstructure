@@ -49,13 +49,15 @@ def zeo_calculation(ase_atom, probe_radius=1.86, number_of_steps=10000, high_acc
     tmp = ase_to_zeoobject(ase_atom)
     File_typer.put_contents(tmp_cssr, tmp)
     parameters = {}
-    atmnet = AtomNetwork.read_from_CSSR(tmp_cssr)
+    # atmnet = AtomNetwork.read_from_CSSR(tmp_cssr)
     if rad_file is not None:
         try:
-            atmnet = AtomNetwork.read_from_CSSR(tmp_cssr, rad_file=rad_file)
+            atmnet = AtomNetwork.read_from_CSSR(tmp_cssr, rad_flag=True, rad_file=rad_file)
         except Exception as e:
             print ("please edit your rad file. In the meantime, default radii will be used.")
             atmnet = AtomNetwork.read_from_CSSR(tmp_cssr)
+    else:
+        atmnet = AtomNetwork.read_from_CSSR(tmp_cssr)
 
     vol_str = volume(
         atmnet, probe_radius, probe_radius, number_of_steps, high_accuracy=high_accuracy)

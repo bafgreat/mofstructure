@@ -1446,7 +1446,9 @@ def find_unique_building_units(list_of_connected_components, atom_pairs_at_break
     '''
     mof_metal = []
     mof_linker = []
+    # concentration = {}
     building_unit_regions = {}
+    print ('this is the region', all_regions)
     for idx, key in enumerate(all_regions .keys()):
         frag = list(all_regions .keys())[idx]
         components = list_of_connected_components[all_regions[frag][0]]
@@ -1456,7 +1458,7 @@ def find_unique_building_units(list_of_connected_components, atom_pairs_at_break
         mapped_indices = dict(
             [(i, j) for i, j in zip(components, range(len(components)))])
         molecule_to_write = ase_atom[components]
-        molecule_to_write.info.setdefault('concentration', 0)
+        # molecule_to_write.info.setdefault('concentration', 0)
         molecule_to_write.info['point_of_extension'] = [
             mapped_indices[i] for i in point_of_extension]
         if wrap_system:
@@ -1468,8 +1470,11 @@ def find_unique_building_units(list_of_connected_components, atom_pairs_at_break
             molecule_to_write.info['smi'] = smi
             molecule_to_write.info['inchi'] = str(chem_inchi)
             molecule_to_write.info['inchikey'] = str(chem_inchiKey)
-            if chem_inchiKey == molecule_to_write.info['inchikey']:
-                molecule_to_write.info['concentration'] +=1
+
+            # if chem_inchiKey in concentration:
+            #     concentration[chem_inchiKey] +=1
+            # else:
+            #     # concentration.setdefault(chem_inchiKey, 1)
             molecule_to_write.info['inchikey'] = str(chem_inchiKey)
         molecule_to_write.info['atom_indices_mapping'] = [
             list_of_connected_components[i] for i in all_regions[key]]
@@ -1507,7 +1512,7 @@ def find_unique_building_units(list_of_connected_components, atom_pairs_at_break
         else:
             mof_linker.append(molecule_to_write)
         building_unit_regions[idx] = molecule_to_write.info['atom_indices_mapping']
-
+    # print ("concentration ",  concentration)
     return mof_metal, mof_linker, building_unit_regions
 
 
