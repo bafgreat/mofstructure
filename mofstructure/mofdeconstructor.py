@@ -684,6 +684,7 @@ def find_sulfides(ase_atom, graph):
     dictionary of key = carbon index and values = sulphur index
     '''
     sulfides = {}
+    metals = {}
     for atoms in ase_atom:
         if atoms.symbol == 'C':
             index = atoms.index
