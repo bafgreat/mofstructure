@@ -220,10 +220,10 @@ from ase.io import read
 
 ase_atom = read(filename)
 
-pore_data = zeo_calculation(ase_atom, rad_file='rad_file_name.dat')
+pore_data = zeo_calculation(ase_atom, rad_file='rad_file_name.rad')
 ```
 # NB
-Note that filename is any ASE-readable crystal structure file, ideally a CIF file. Moreover, rad_file_name.dat is a file containing the radii of each element present in the structure file. This should be formatted as follows:
+Note that filename is any ASE-readable crystal structure file, ideally a CIF file. Moreover, rad_file_name.rad is a file containing the radii of each element present in the structure file. This should be formatted as follows:
 ```
 element radii
 ```
@@ -232,3 +232,4 @@ For example, for an MgO system, your Rad file should look like this:
 Mg 0.66
 O 1.84
 ```
+Also note that of the radii file does not have the .rad extension like `rad_file_name.rad` the default radii will be used. 

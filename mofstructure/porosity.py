@@ -52,7 +52,7 @@ def zeo_calculation(ase_atom, probe_radius=1.86, number_of_steps=10000, high_acc
     atmnet = AtomNetwork.read_from_CSSR(tmp_cssr)
     if rad_file is not None:
         try:
-            atmnet = AtomNetwork.read_from_CSSR(tmp_cssr, rad_file)
+            atmnet = AtomNetwork.read_from_CSSR(tmp_cssr, rad_file=rad_file)
         except Exception as e:
             print ("please edit your rad file. In the meantime, default radii will be used.")
             atmnet = AtomNetwork.read_from_CSSR(tmp_cssr)
