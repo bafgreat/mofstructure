@@ -147,13 +147,13 @@ def main():
     parser.add_argument('cif_folder', type=str,
                         help='list of cif files. like glob')
 
-    parser.add_argument('-pr', '--probe_radius', default=1.86, action='store_true',
+    parser.add_argument('-pr', '--probe_radius', default=1.86, type=float,
                         help='probe radius (default: 1.86)')
 
-    parser.add_argument('-ns', '--number_of_steps', default=10000, action='store_true',
+    parser.add_argument('-ns', '--number_of_steps', default=10000, type=int,
                         help='Number of GCMC simulation cycles (default: 10000)')
 
-    parser.add_argument('-rf', '--rad_file', default=None, action='store_true',
+    parser.add_argument('-rf', '--rad_file', default=None, type=str,
                         help='path to radii file (default: None). rad file must have .rad file extension')
     parser.add_argument('-s', '--save_dir',
                         default='MOFDb', help='directory to save output files')

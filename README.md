@@ -232,4 +232,30 @@ For example, for an MgO system, your Rad file should look like this:
 Mg 0.66
 O 1.84
 ```
-Also note that of the radii file does not have the .rad extension like `rad_file_name.rad` the default radii will be used. 
+Also note that of the radii file does not have the .rad extension like `rad_file_name.rad` the default radii will be used.
+
+# Updates version 0.1.6
+Added new command line tools to expedite calculations especially when working on a quite large database.
+
+## compute only deconstruction
+If you wish to only compute the deconstruction of MOFs without having to compute
+their porosity and open metal sites. Then simply run the following command
+```
+mofstructure_building_units  cif_folder
+```
+## compute only porosity
+If you wish to only compute the porosity using default values. i.e
+probe radius = 1.86, number of gcmc cycles = 10000 and default csd atomic radii, then run the following command:
+```
+mofstructure_porosity cif_folder
+```
+However, if you wish to use another probe radius of maybe 1.5 and gcmc cycles of 20000 alongside custom atomic radii in a file called rad.rad,  run the following command:
+```
+mofstructure_porosity cif_folder -pr 1.5 -ns 20000 -rf rad.rad
+```
+
+## compute only open metal sites
+If you are only interested in computing the open metal sites, then running the following command
+```
+mofstructure_oms cif_folder
+```
