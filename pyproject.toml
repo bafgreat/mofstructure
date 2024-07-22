@@ -21,6 +21,9 @@ omsdetector_forked = ">=2024.6.24"
 [tool.poetry.scripts]
 mofstructure = "mofstructure.buildingunits:main"
 mofstructure_database = "mofstructure.collect_data:main"
+mofstructure_building_units = "mofstructure.collect_building_units:main"
+mofstructure_oms = "mofstructure.collect_oms:main"
+mofstructure_porosity = "mofstructure.collect_porosity:main"
 [build-system]
 requires = ["poetry-core", "poetry-dynamic-versioning"]
 build-backend = "poetry.core.masonry.api"

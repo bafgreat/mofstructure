@@ -59,6 +59,7 @@ def write_json(json_obj, file_name):
     with open(file_name, "w", encoding='utf-8') as outfile:
         outfile.write(json_object)
 
+
 def json_to_numpy(json_file):
     '''
     serialised a numpy array to json
@@ -75,6 +76,7 @@ def json_to_ase_atom(data,  encoder, filename):
     with open(filename, 'w', encoding='utf-8') as f_obj:
         json.dump(data, f_obj, indent=4, sort_keys=False, cls=encoder)
     return
+
 
 def append_json_atom(data,  encoder, filename):
     '''
@@ -96,7 +98,6 @@ def append_json_atom(data,  encoder, filename):
         # convert back to json.
 
         json.dump(data, f_obj, indent=4, sort_keys=False, cls=encoder)
-
 
 
 def append_json(new_data, filename):
