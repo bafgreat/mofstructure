@@ -105,6 +105,7 @@ def work_flow(cif_file, save_dir, verbose=False):
         print(f"Saved results to {path_to_file}")
     return
 
+
 def main():
     '''
     Routine runner for CLI

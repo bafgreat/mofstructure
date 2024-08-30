@@ -3,10 +3,8 @@ from __future__ import print_function
 __author__ = "Dr. Dinga Wonanke"
 __status__ = "production"
 import numpy as np
-import shutil
-import json
-from ase.io import read
 import mofstructure.mofdeconstructor as MOF_deconstructor
+
 
 def compute_cof_stacking(ase_atom):
     """
@@ -41,13 +39,12 @@ def compute_cof_stacking(ase_atom):
 
                     layer1_positions = ase_atom[layer1_indices].get_positions()
                     layer2_positions = ase_atom[layer2_indices].get_positions()
-                    center_1 =  np.mean(layer1_positions , axis=0)
-                    center_2 =  np.mean(layer2_positions , axis=0)
+                    center_1 =  np.mean(layer1_positions, axis=0)
+                    center_2 =  np.mean(layer2_positions, axis=0)
 
                     slip_x = round(abs(center_1[0]-center_2[0]), 2)
                     slip_y = round(abs(center_1[1]-center_2[1]), 2)
                     lateral_offsets.append([slip_x, slip_y])
                     interlayer_height.append(round(abs(center_1[2]-center_2[2]), 2))
-
-
         return layers, lateral_offsets, interlayer_height
+    

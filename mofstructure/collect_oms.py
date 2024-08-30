@@ -6,7 +6,6 @@ import os
 import argparse
 import pandas as pd
 import shutil
-import json
 from ase.io import read
 from omsdetector_forked import MofCollection
 import mofstructure.mofdeconstructor as MOF_deconstructor

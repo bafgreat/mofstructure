@@ -4,13 +4,8 @@ __author__ = "Dr. Dinga Wonanke"
 __status__ = "production"
 import os
 import argparse
-import pandas as pd
-import shutil
-import json
 from ase.io import read
-from omsdetector_forked import MofCollection
 import mofstructure.mofdeconstructor as MOF_deconstructor
-from mofstructure.porosity import zeo_calculation
 import mofstructure.filetyper as read_write
 
 
@@ -35,7 +30,8 @@ def sbu_data(ase_atom):
                 atoms_indices_at_breaking_point,
                 ase_atom, porpyrin_checker,
                 all_regions,
-                cheminfo=True
+                cheminfo=True,
+                add_dummy=True
             )
         metal_elt, metal_coordination = MOF_deconstructor.metal_coordination_number(
             ase_atom)
@@ -121,8 +117,7 @@ def ligand_data(ase_atom):
                 cheminfo=True
             )
 
-        metal_elt, metal_coordination = MOF_deconstructor.metal_coordination_number(
-            ase_atom)
+        metal_elt, metal_coordination = MOF_deconstructor.metal_coordination_number(ase_atom)
         data_to_json['n_ligands'] = len(organic_ligands)
         data_to_json['n_clusters'] = len(metal_clusters)
         data_to_json['n_metals'] = len(metal_elt)
