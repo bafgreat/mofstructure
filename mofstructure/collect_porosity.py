@@ -122,7 +122,6 @@ def compile_data(cif_files, result_folder, probe_radius=1.86, number_of_steps=10
             print(f"Error processing {cif_file}")
             if verbose:
                 print(f"Error processing {cif_file}")
-                traceback.print_exc()
                 continue
             else:
                 raise Exception(f"Error processing {cif_file}")
