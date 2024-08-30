@@ -7,13 +7,13 @@ authors = ["Dinga Wonanke <bafgreat@gmail.com>"]
 license = "MIT"
 readme = "README.md"
 
-[tool.poetry.dynamic_versioning]
-enable = true
-vcs = "git"
-style = "pep440"
-format = "{tag}.post{commitcount}"
-dirty = true
-# tag_regex = "v(?P<version>\\d+\\.\\d+\\.\\d+)"
+# [tool.poetry.dynamic_versioning]
+# enable = true
+# vcs = "git"
+# style = "pep440"
+# format = "{tag}.post{commitcount}"
+# dirty = true
+# # tag_regex = "v(?P<version>\\d+\\.\\d+\\.\\d+)"
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.11"
