@@ -36,6 +36,7 @@ mofstructure_porosity = "mofstructure.collect_porosity:main"
 
 [tool.poetry.group.dev.dependencies]
 flake8 = "^7.1.1"
+pytest = "^8.3.2"
 
 [build-system]
 requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning"]
