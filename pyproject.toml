@@ -1,29 +1,39 @@
 [tool.poetry]
 name = "mofstructure"
-version = "0.1.6"
-description = "A python tool to deconstruct MOFs into building units and compute porosity. The code remove guest from MOFs and all porous systems, compute smiles strings and inchikeys of all building units."
-keywords = ["guest removal", "inchikeys", "inchi", "smiles", "pld", "lcd", "MOF", "COF", "zeolites", "accessible surface area", "void fraction", "coordination number", "porosity", "zeo++", "sbu", "point of extension"]
-authors = ["Dinga Wonanke"]
+# version = "0.1.6"  # Commented out since versioning is handled dynamically
+description = "A Python tool to deconstruct MOFs into building units and compute porosity. The code removes guests from MOFs and all porous systems, computes SMILES strings and InChIKeys of all building units."
+keywords = ["guest removal", "InChIKeys", "InChI", "SMILES", "PLD", "LCD", "MOF", "COF", "zeolites", "accessible surface area", "void fraction", "coordination number", "porosity", "zeo++", "SBU", "point of extension"]
+authors = ["Dinga Wonanke <bafgreat@gmail.com>"]
 license = "MIT"
 readme = "README.md"
 
+[tool.poetry.dynamic_versioning] 
+enable = true
+vcs = "git"
+style = "pep440"
+format = "{tag}.post{commitcount}"
+dirty = true
+tag_regex = "v(?P<version>\d+\.\d+\.\d+)"
+
 [tool.poetry.dependencies]
-python = ">=3.9 <3.11"
+python = ">=3.9,<3.11"
 ase = ">=3.19.0"
 networkx = ">=2.6.3"
-numpy = ">=1.21.6 <2"
+numpy = ">=1.21.6,<2"
 openbabel-wheel = "3.1.1.16"
 pandas = ">=1.3.5"
 pymatgen = "==2024.2.20"
 pyzeo = ">=0.1.1"
 rdkit = "==2022.9.5"
 omsdetector_forked = ">=2024.6.24"
+
 [tool.poetry.scripts]
 mofstructure = "mofstructure.buildingunits:main"
 mofstructure_database = "mofstructure.collect_data:main"
 mofstructure_building_units = "mofstructure.collect_building_units:main"
 mofstructure_oms = "mofstructure.collect_oms:main"
 mofstructure_porosity = "mofstructure.collect_porosity:main"
+
 [build-system]
-requires = ["poetry-core", "poetry-dynamic-versioning"]
+requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning"]
 build-backend = "poetry.core.masonry.api"

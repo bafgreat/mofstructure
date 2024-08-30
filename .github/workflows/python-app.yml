@@ -2,9 +2,11 @@ name: CI/CD for mofstructure
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
+    tags:
+      - 'v*.*.*'
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
@@ -16,25 +18,23 @@ env:
 
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        python-version: ["3.9", "3.10"]
-        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up Python ${{ matrix.python-version }}
+    - name: Set up Python 3.10
       uses: actions/setup-python@v5
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: '3.10'
 
-    - name: Install system dependencies on Ubuntu
-      if: matrix.os == 'ubuntu-latest'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libomp-dev
+    - name: Cache Poetry virtual environment
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pypoetry/virtualenvs
+        key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-poetry-
 
     - name: Install Poetry
       run: |
@@ -43,7 +43,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        poetry install
+        poetry install --no-interaction --no-ansi
 
     - name: Lint with flake8
       run: |
@@ -57,7 +57,7 @@ jobs:
     - name: Build & push Docker image
       uses: mr-smithers-excellent/docker-build-push@v6
       with:
-        image: ${{ secrets.DOCKER_IMAGE_NAME || 'dak52/mofstructure-app' }}
+        image: ${{ secrets.DOCKER_IMAGE_NAME }}
         registry: ${{ env.REGISTRY }}
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
@@ -65,6 +65,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     needs: build
+
     steps:
     - uses: actions/checkout@v4
 
@@ -78,23 +79,10 @@ jobs:
         python -m pip install --upgrade pip
         pip install poetry
 
-    - name: Update version in pyproject.toml
-      id: update_version
-      run: |
-        current_version=$(poetry version | awk '{print $2}')
-        IFS='.' read -r -a version_parts <<< "$current_version"
-        major="${version_parts[0]}"
-        minor="${version_parts[1]}"
-        patch="${version_parts[2]}"
-        new_patch=$((patch + 1))
-        new_version="$major.$minor.$new_patch"
-        poetry version "$new_version"
-        echo "New version: $new_version"
-        echo "version=$new_version" >> $GITHUB_ENV
-
     - name: Publish to PyPI
       env:
         POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI }}
       run: |
         poetry config pypi-token.pypi $POETRY_PYPI_TOKEN_PYPI
         poetry publish --build --username __token__ --password $POETRY_PYPI_TOKEN_PYPI
+        
