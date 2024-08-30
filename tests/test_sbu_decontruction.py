@@ -4,21 +4,26 @@ import pytest
 from .load_test import get_test_data
 import mofstructure.mofdeconstructor as MOF_deconstructor
 
+
 @pytest.fixture(scope="module")
 def data():
     return get_test_data()
+
 
 @pytest.fixture(scope="module")
 def mof5(data):
     return data['MOF5']
 
+
 @pytest.fixture(scope="module")
 def uio66(data):
     return data['UIO66']
 
+
 @pytest.fixture(scope="module")
 def dut8(data):
     return data['DUT8']
+
 
 def sbu_data(ase_atom):
     '''
@@ -40,6 +45,7 @@ def sbu_data(ase_atom):
         )
     return metal_sbus, organic_sbus, building_unit_regions, connected_components
 
+
 def test_mof5(mof5):
     metal_sbus, organic_sbus, building_unit_regions, connected_components = sbu_data(mof5)
     assert len(metal_sbus) == 1
@@ -51,6 +57,7 @@ def test_mof5(mof5):
     assert metal_sbus[0].info['sbu_type'] == 'IRMOF_sbu'
     assert len(organic_sbus[0].info['point_of_extension']) == 2
     assert organic_sbus[0].info['inchikey'] == 'AIESRBVWAFETPR-UHFFFAOYSA-N'
+
 
 def test_uio66(uio66):
     metal_sbus, organic_sbus, building_unit_regions, connected_components = sbu_data(uio66)

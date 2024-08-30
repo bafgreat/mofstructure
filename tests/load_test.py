@@ -13,6 +13,7 @@ list_of_files = [
     os.path.join(test_dir, 'test_data/SARSUC.cif')
 ]
 
+
 def load_data(list_of_test_data):
     all_data = []
     for mole_file in list_of_test_data:
@@ -20,14 +21,17 @@ def load_data(list_of_test_data):
         all_data.append(ase_atom)
     return all_data
 
+
 def get_test_data():
     ase_data = load_data(list_of_files)
     data = {'COF1': ase_data[0], 'MOF5': ase_data[1], 'UIO66': ase_data[2], 'DUT8': ase_data[3]}
     return data
 
+
 @pytest.fixture
 def test_data():
     return get_test_data()
+
 
 def test_structure_count(test_data):
     assert len(test_data) == 4
