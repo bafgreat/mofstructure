@@ -85,4 +85,3 @@ jobs:
       run: |
         poetry config pypi-token.pypi $POETRY_PYPI_TOKEN_PYPI
         poetry publish --build --username __token__ --password $POETRY_PYPI_TOKEN_PYPI
-        
