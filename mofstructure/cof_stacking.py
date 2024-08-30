@@ -6,13 +6,20 @@ import numpy as np
 import shutil
 import json
 from ase.io import read
-from omsdetector_forked import MofCollection
 import mofstructure.mofdeconstructor as MOF_deconstructor
 
 def compute_cof_stacking(ase_atom):
     """
     A a simple function to compute the stacking pattern of COFs or
     layered materials like graphene
+    parameter
+    ---------
+    ase_atom : ASE Atoms object
+    Returns
+    -------
+    layers : list of list wherei each list correspond to a layar
+    lateral_offsets : list of list where each list contains the lateral offsets between two layers
+    interlayer_height : list of list where each list contains the interlayer heights between two layers
     """
     indices = MOF_deconstructor.remove_unbound_guest(ase_atom)
 
@@ -31,7 +38,6 @@ def compute_cof_stacking(ase_atom):
 
                     layer1_indices = components[i]
                     layer2_indices = components[j]
-                    # ase_atom[layer1_indices].write('../data/cif/mono.cif')
 
                     layer1_positions = ase_atom[layer1_indices].get_positions()
                     layer2_positions = ase_atom[layer2_indices].get_positions()
@@ -42,14 +48,6 @@ def compute_cof_stacking(ase_atom):
                     slip_y = round(abs(center_1[1]-center_2[1]), 2)
                     lateral_offsets.append([slip_x, slip_y])
                     interlayer_height.append(round(abs(center_1[2]-center_2[2]), 2))
-        print ('cof_layers:', layers )
-        print ('cof_lateral_offset:', lateral_offsets )
-        print ('cof_interlayer_height:', interlayer_height )
+
 
         return layers, lateral_offsets, interlayer_height
-
-ase_atom = read('../data/cif/TPA-TAPT_slipAA.cif')
-compute_cof_stacking(ase_atom)
-
-ase_atom = read('../data/cif/triple_layer.cif')
-compute_cof_stacking(ase_atom)

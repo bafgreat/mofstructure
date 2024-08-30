@@ -2,12 +2,13 @@
 from __future__ import print_function
 __author__ = "Dr. Dinga Wonanke"
 __status__ = "production"
-
+import numpy as np
 from pymatgen.analysis.local_env import JmolNN
 from pymatgen.analysis.graphs import StructureGraph
 from pymatgen.io.ase import AseAtomsAdaptor
 from ase.data import chemical_symbols, covalent_radii, atomic_numbers
 from ase import neighborlist, geometry
+from ase import Atoms
 
 try:
     from openbabel import pybel as pb
@@ -398,7 +399,7 @@ def remove_unbound_guest_and_return_unique(ase_atom):
             if len(pymat_graph) == 1:
                 polymeric_indices.append(i)
         if len(polymeric_indices) > 0:
-            Graphs = [StructureGraph.with_local_env_strategy(AseAtomsAdaptor.get_structure(
+            Graphs = [StructureGraph.from_local_env_strategy(AseAtomsAdaptor.get_structure(
                 ase_atom[fragments[i]]), JmolNN()) for i in polymeric_indices]
             temp_indices = [polymeric_indices[0]]
             unique = [Graphs[0]]
@@ -1050,6 +1051,7 @@ def secondary_building_units(ase_atom):
 
     all_pm_structures = [sorted(ase_atom[i].symbols)
                          for i in list_of_connected_components]
+    len_symbols = [len(i) for i in all_pm_structures]
     for i in range(len(all_pm_structures)):
         temp = []
         for j in range(len(all_pm_structures)):
@@ -1438,18 +1440,30 @@ def rod_manipulation(ase_atom, checker):
     ase_atom.positions = new_position
     return ase_atom, new_cell
 
-
-def find_unique_building_units(list_of_connected_components, atom_pairs_at_breaking_point, ase_atom, porphyrin_checker, all_regions, wrap_system=True, cheminfo=False):
+def find_unique_building_units(list_of_connected_components, atom_pairs_at_breaking_point, ase_atom, porphyrin_checker, all_regions, wrap_system=True, cheminfo=False, add_dummy=False):
     '''
     Find Unique components
-    Returns a list of unique molecules
+    Parameters:
+    -----------
+    list_of_connected_components : list of connected components
+    atom_pairs_at_breaking_point : dictionary of atom pairs at breaking point
+    ase_atom : ASE atoms object
+    porphyrin_checker : list of indices of porphyrins
+    all_regions : dictionary of regions
+    wrap_system : boolean, default True
+    cheminfo : boolean, default False
+    add_dummy: boolean, default False
+    add_dummy keyword enables the addition of dumnmy atoms which can then be replaced
+    by hydrogen to neutralize the building blocks. 
+    Returns
+    ---------
+    A list of unique molecules
     '''
     mof_metal = []
     mof_linker = []
     # concentration = {}
     building_unit_regions = {}
-    print ('this is the region', all_regions)
-    for idx, key in enumerate(all_regions .keys()):
+    for idx, key in enumerate(all_regions.keys()):
         frag = list(all_regions .keys())[idx]
         components = list_of_connected_components[all_regions[frag][0]]
         all_breaking_point = list(atom_pairs_at_breaking_point.keys(
@@ -1458,48 +1472,73 @@ def find_unique_building_units(list_of_connected_components, atom_pairs_at_break
         mapped_indices = dict(
             [(i, j) for i, j in zip(components, range(len(components)))])
         molecule_to_write = ase_atom[components]
-        # molecule_to_write.info.setdefault('concentration', 0)
         molecule_to_write.info['point_of_extension'] = [
             mapped_indices[i] for i in point_of_extension]
-        if wrap_system:
+
+        molecule_for_prop = molecule_to_write
+        if wrap_system and add_dummy:
+            dummy_idx = [find_key_or_value(i, atom_pairs_at_breaking_point) for i in point_of_extension]
+
+            if dummy_idx:
+                dummy_mol = ase_atom[dummy_idx]
+                len_mole_without_dummy = len(molecule_to_write)
+
+
+                molecule_to_write += dummy_mol
+                molecule_to_write = wrap_systems_in_unit_cell(molecule_to_write)
+
+                for i in range(len_mole_without_dummy, len(molecule_to_write)):
+                    molecule_to_write[i].symbol = 'X'
+
+                molecule_for_prop = molecule_to_write[:len_mole_without_dummy]
+
+        if wrap_system is True and add_dummy is False:
             molecule_to_write = wrap_systems_in_unit_cell(molecule_to_write)
 
         if cheminfo:
             smi, chem_inchi, chem_inchiKey = compute_openbabel_cheminformatic(
-                molecule_to_write)
+                molecule_for_prop)
             molecule_to_write.info['smi'] = smi
             molecule_to_write.info['inchi'] = str(chem_inchi)
             molecule_to_write.info['inchikey'] = str(chem_inchiKey)
 
-            # if chem_inchiKey in concentration:
-            #     concentration[chem_inchiKey] +=1
-            # else:
-            #     # concentration.setdefault(chem_inchiKey, 1)
             molecule_to_write.info['inchikey'] = str(chem_inchiKey)
-        molecule_to_write.info['atom_indices_mapping'] = [
+        atom_indices_mapping = [
             list_of_connected_components[i] for i in all_regions[key]]
-        metal = [i.index for i in molecule_to_write if i.symbol in transition_metals(
+        molecule_to_write.info['atom_indices_mapping'] = atom_indices_mapping
+
+        # if add_dummy:
+        #     dummy_idx = [find_key_or_value(i, atom_pairs_at_breaking_point) for i in  point_of_extension]
+        #     dummy_mol = ase_atom[dummy_idx]
+        #     # if wrap_system:
+        #     #     dummy_mol = wrap_systems_in_unit_cell(dummy_mol)
+        #     for atom in dummy_mol:
+        #         atom.symbol = 'X'
+        #     molecule_to_write += dummy_mol
+
+
+        metal = [i.index for i in molecule_for_prop if i.symbol in transition_metals(
         ) and i.index not in porphyrin_checker]
         non_ferocene_metal = []
         if len(metal) > 0:
-            graph_sbu, _ = compute_ase_neighbour(molecule_to_write)
+            graph_sbu, _ = compute_ase_neighbour(molecule_for_prop)
             # Check whether the metal sbu is a rod mof. If is it is rod mof,
             # we rotate and aligne the sbu such that the axis of rotation will be the a-axis.
-            if len(is_rodlike(molecule_to_write)) == 1:
+            if len(is_rodlike(molecule_for_prop)) == 1:
                 molecule_to_write.info['sbu_type'] = 'rodlike'
-            elif is_paddlewheel(molecule_to_write, graph_sbu):
+            elif is_paddlewheel(molecule_for_prop, graph_sbu):
                 molecule_to_write.info['sbu_type'] = 'paddlewheel'
-            elif is_paddlewheel_with_water(molecule_to_write, graph_sbu):
+            elif is_paddlewheel_with_water(molecule_for_prop, graph_sbu):
                 molecule_to_write.info['sbu_type'] = 'paddlewheel_with_water'
-            elif is_uio66(molecule_to_write, graph_sbu):
+            elif is_uio66(molecule_for_prop, graph_sbu):
                 molecule_to_write.info['sbu_type'] = 'UIO66_sbu'
-            elif is_mof32(molecule_to_write, graph_sbu):
+            elif is_mof32(molecule_for_prop, graph_sbu):
                 molecule_to_write.info['sbu_type'] = 'MOF32_sbu'
-            elif is_irmof(molecule_to_write, graph_sbu):
+            elif is_irmof(molecule_for_prop, graph_sbu):
                 molecule_to_write.info['sbu_type'] = 'IRMOF_sbu'
-            elif is_ferrocene(molecule_to_write, graph_sbu):
+            elif is_ferrocene(molecule_for_prop, graph_sbu):
                 molecule_to_write.info['sbu_type'] = 'ferrocenelike'
-                ferocene_metal = all_ferrocene_metals(molecule_to_write, graph_sbu)
+                ferocene_metal = all_ferrocene_metals(molecule_for_prop, graph_sbu)
                 non_ferocene_metal = [
                     i for i in metal if not i in ferocene_metal]
                 if len(non_ferocene_metal) == 0:
@@ -1512,7 +1551,6 @@ def find_unique_building_units(list_of_connected_components, atom_pairs_at_break
         else:
             mof_linker.append(molecule_to_write)
         building_unit_regions[idx] = molecule_to_write.info['atom_indices_mapping']
-    # print ("concentration ",  concentration)
     return mof_metal, mof_linker, building_unit_regions
 
 
@@ -1646,3 +1684,182 @@ def wrap_systems_in_unit_cell(ase_atom, max_iter=30, skin=0.3):
             if number_of_iterations == max_iter:
                 break
         return ase_atom
+
+
+def angle_tolerance_to_rad(angle, tolerance=5):
+    '''
+    Convert angle from degrees to radians with tolerance.
+
+    Parameters
+    ----------
+    angle: float
+        Angle in degrees.
+    tolerance: float
+        Tolerance in degrees, default is 5.
+
+    Returns
+    -------
+    bond_angle_rad: float
+        Adjusted angle in radians.
+    '''
+    angle_variation = np.random.uniform(-tolerance, tolerance)
+    adjusted_bond_angle = angle + angle_variation
+    bond_angle_rad = np.deg2rad(adjusted_bond_angle)
+    return bond_angle_rad
+
+
+def find_key_or_value(key_or_value, dictionary):
+    """
+    Search for a key or value in a dictionary. If the key or value is found, returns the corresponding value or key.
+
+    Parameters:
+    key_or_value : int or str
+    dictionary : dict
+
+    Returns:
+    The corresponding value or key if found, otherwise None.
+    """
+    if key_or_value in dictionary:
+        return dictionary[key_or_value]
+
+    for key, value in dictionary.items():
+        if value == key_or_value:
+            return key
+
+    return None
+# def add_dummy_to_point_of_extension(ase_atom, point_of_extension, mapped_indices):
+#     '''
+#     Add a dummy atom to the point of extension, ensuring that it forms an angle
+#     of approximately 120° with the central atom and its neighbors, and is always
+#     added outward.
+
+#     Parameters
+#     ----------
+#     ase_atom: Atoms object
+#         The original atom structure.
+#     point_of_extension: list
+#         List of indices where dummy atoms are to be added.
+#     mapped_indices: dict
+#         Dictionary mapping internal indices to atomic indices.
+
+#     Returns
+#     -------
+#     new_atom: Atoms object
+#         Atoms object containing the original atoms plus the newly added dummy atoms.
+#     '''
+#     distance = 1.0  # Distance for adding new dummy atom
+#     all_positions = []
+
+#     # Compute neighbor information
+#     graph, bond_matrix = compute_ase_neighbour(ase_atom)
+
+#     for idx in point_of_extension:
+#         atom_idx = mapped_indices[idx]
+#         neighbours = graph[atom_idx].tolist()
+#         x0, y0, z0 = ase_atom[atom_idx].position
+
+#         if len(neighbours) == 1:
+#             # Add the dummy atom directly along the x-axis if there's only one neighbor
+#             x = x0 + distance
+#             y = y0
+#             z = z0
+#             new_position = [x, y, z]
+#             all_positions.append(new_position)
+
+#         elif len(neighbours) == 2:
+#             # Get the positions of the two neighboring atoms
+#             pos1 = ase_atom[neighbours[0]].position
+#             pos2 = ase_atom[neighbours[1]].position
+
+#             # Calculate vectors from the central atom to the neighbors
+#             vec1 = pos1 - np.array([x0, y0, z0])
+#             vec2 = pos2 - np.array([x0, y0, z0])
+
+#             # Normalize the vectors
+#             vec1 /= np.linalg.norm(vec1)
+#             vec2 /= np.linalg.norm(vec2)
+
+#             # Compute the normal to the plane (cross product of vec1 and vec2)
+#             normal = np.cross(vec1, vec2)
+#             normal /= np.linalg.norm(normal)
+
+#             # Calculate the bisector direction (outward)
+#             bisector = (vec1 + vec2) / np.linalg.norm(vec1 + vec2)
+
+#             # Ensure the bisector points outward
+#             if np.dot(bisector, normal) < 0:
+#                 bisector = -bisector
+
+#             # Rotate the bisector by 120 degrees to get the new atom's position
+#             bond_angle_rad = angle_tolerance_to_rad(120)  # Desired angle
+
+#             # Use the rotation matrix for in-plane rotation around the normal
+#             cos_angle = np.cos(bond_angle_rad)
+#             sin_angle = np.sin(bond_angle_rad)
+#             rotation_matrix = np.array([
+#                 [cos_angle + normal[0]**2 * (1 - cos_angle), normal[0] * normal[1] * (1 - cos_angle) - normal[2] * sin_angle, normal[0] * normal[2] * (1 - cos_angle) + normal[1] * sin_angle],
+#                 [normal[1] * normal[0] * (1 - cos_angle) + normal[2] * sin_angle, cos_angle + normal[1]**2 * (1 - cos_angle), normal[1] * normal[2] * (1 - cos_angle) - normal[0] * sin_angle],
+#                 [normal[2] * normal[0] * (1 - cos_angle) - normal[1] * sin_angle, normal[2] * normal[1] * (1 - cos_angle) + normal[0] * sin_angle, cos_angle + normal[2]**2 * (1 - cos_angle)]
+#             ])
+
+#             new_direction = np.dot(rotation_matrix, bisector)
+#             new_position = np.array([x0, y0, z0]) + distance * new_direction
+
+#             all_positions.append(new_position)
+
+#     # Create a new Atoms object for the dummy atoms
+#     symbols = ['X' for _ in all_positions]  # Use 'X' as a placeholder symbol for dummy atoms
+#     new_atom = Atoms(symbols=symbols, positions=all_positions)
+
+#     return new_atom
+
+
+# def calculate_coordinates_atom(atom_type, bond_angle, atom_position, distance=0.9, tolerance=5):
+#     """
+#     Function to calculate to compute the coordinates of atoms to add to a give atoms. This
+#     will mostly be used to add hydrogen atoms or dummies.
+#     Parameters
+#     ----------
+#     atom_type: str
+#     bond_angle: float
+#     atom_position: ndarray
+#     distance: float
+#     tolerance: float
+#     Returns the coordinates of the atoms
+
+#     """
+#     angle_variation = np.random.uniform(-tolerance, tolerance)
+#     adjusted_bond_angle = bond_angle + angle_variation
+#     bond_angle_rad = np.deg2rad(adjusted_bond_angle)
+
+#     x0, y0, z0 = atom_position
+
+#     if atom_type == "sp3":
+#         # Tetrahedral: Place the hydrogen along the x-axis at distance d
+#         x = x0 + distance
+#         y = y0
+#         z = z0
+#     elif atom_type == "sp2":
+#         # Trigonal planar: Place the hydrogen in the xy-plane
+#         x = x0 + distance * np.cos(bond_angle_rad / 2)
+#         y = y0 + distance * np.sin(bond_angle_rad / 2)
+#         z = z0
+#     elif atom_type == "sp":
+#         # Linear: Place the hydrogen along the x-axis at distance d
+#         x = x0 + distance
+#         y = y0
+#         z = z0
+#     elif atom_type == "trigonal_pyramidal":
+#         # Trigonal pyramidal: Place the hydrogen in the xz-plane
+#         x = x0 + distance * np.cos(bond_angle_rad / 2)
+#         y = y0
+#         z = z0 + distance * np.sin(bond_angle_rad / 2)
+#     elif atom_type == "bent":
+#         # Bent: Place the hydrogen in the xz-plane
+#         x = x0 + distance * np.cos(bond_angle_rad / 2)
+#         y = y0
+#         z = z0 + distance * np.sin(bond_angle_rad / 2)
+#     else:
+#         raise ValueError("Unsupported atom type")
+
+#     return [x, y, z]

@@ -259,3 +259,24 @@ If you are only interested in computing the open metal sites, then running the f
 ```
 mofstructure_oms cif_folder
 ```
+# Updates version 0.1.7
+1. Implemented a robust CI/CD using git actions
+2. Included add_dummy key to add dummy atoms to point of extension. This is important to effectively control the breaking point. This dummy atoms can then
+be replaced with hydrogen to fully neutralize the system.
+## N.B.
+Be please don't use add dummy when deconstructing to ligands and clusters. The add dummy argument should be used only for sbus.
+e.g
+```
+connected_components, atoms_indices_at_breaking_point, porpyrin_checker, all_regions = MOF_deconstructor.secondary_building_units(ase_atom)
+metal_sbus, organic_sbus, building_unit_regions = MOF_deconstructor.find_unique_building_units(
+    connected_components,
+    atoms_indices_at_breaking_point,
+    ase_atom,
+    porpyrin_checker,
+    all_regions,
+    cheminfo=True,
+    add_dummy=True
+    )
+
+metal_sbus[0].write('test1.xyz)
+```
