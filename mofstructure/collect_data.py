@@ -221,10 +221,11 @@ def find_oms(cif_file, base_name, ase_atom, result_folder):
 def compile_data(cif_files, result_folder, verbose=False, oms=False):
     '''
     A workflow to remove guest, compute porosity and deconstructure
-    mofs and creates a MOF database. The function starts with checking and removing any unbound
-    guest molecule present in the MOF. After that it computed the porosity
-    of all the MOFs and load them in a single csv. Finally the deconstructs
-    the MOFs into the various building units and creates a three json files
+    mofs and creates a MOF database. The function starts with checking and
+    removing any unbound guest molecule present in the MOF. After that it
+    computed the porosity of all the MOFs and load them in a single csv.
+    Finally the deconstructs the MOFs into the various building units and
+    creates a three json files
 
     1. ase_atoms_building_units.json
     Json file containing ase atom object of all the building uints and for
@@ -256,7 +257,8 @@ def compile_data(cif_files, result_folder, verbose=False, oms=False):
         try:
             ase_atoms_dic = read_write.load_data(
                 result_folder+'/ase_atoms_building_units.json')
-            porosity_dic = json.loads(pd.read_csv(result_folder+'/porosity_data.csv', index_col=False).to_json(orient='records'))
+            porosity_dic = json.loads(pd.read_csv(result_folder+'/porosity_data.csv',\
+                index_col=False).to_json(orient='records'))
             search_data1 = read_write.load_data(
                 result_folder+'/sbus_and_linkers.json')
             search_data2 = read_write.load_data(
@@ -278,7 +280,7 @@ def compile_data(cif_files, result_folder, verbose=False, oms=False):
             if not base_name in seen:
                 #  Run open metal site
                 if oms:
-                    open_metal_sites = find_oms(cif_file, base_name,  ase_atom, result_folder)
+                    open_metal_sites = find_oms(cif_file, base_name, ase_atom, result_folder)
                     metal_info[base_name] = open_metal_sites
                     read_write.append_json(
                     metal_info, result_folder+'/metal_info.json')
@@ -318,8 +320,8 @@ def compile_data(cif_files, result_folder, verbose=False, oms=False):
 
 def main():
     '''
-    Command line interface to deconstruct MOFs to building units, compute porosity
-    and open metal sites
+    Command line interface to deconstruct MOFs to building units,
+    compute porosity and open metal sites
     '''
     parser = argparse.ArgumentParser(
         description='Run work_flow function with optional verbose output')

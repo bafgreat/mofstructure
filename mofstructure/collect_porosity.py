@@ -59,7 +59,8 @@ def merge_two_dicts(dict_1, dict_2):
     return combined_dict
 
 
-def compile_data(cif_files, result_folder, probe_radius=1.86, number_of_steps=10000, rad_file=None, verbose=False):
+def compile_data(cif_files, result_folder, probe_radius=1.86,\
+    number_of_steps=10000, rad_file=None, verbose=False):
     '''
     A workflow to remove guest and compute porosity from any porous periodic system.
     The results is written in both a json format and csv file format.

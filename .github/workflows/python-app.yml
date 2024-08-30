@@ -52,13 +52,13 @@ jobs:
       run: |
         poetry run pytest
 
-    - name: Build & push Docker image
-      uses: mr-smithers-excellent/docker-build-push@v6
-      with:
-        image: ${{ secrets.DOCKER_IMAGE_NAME }}
-        registry: ${{ env.REGISTRY }}
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
+    # - name: Build & push Docker image
+    #   uses: mr-smithers-excellent/docker-build-push@v6
+    #   with:
+    #     image: ${{ secrets.DOCKER_IMAGE_NAME }}
+    #     registry: ${{ env.REGISTRY }}
+    #     username: ${{ secrets.DOCKER_USERNAME }}
+    #     password: ${{ secrets.DOCKER_PASSWORD }}
 
   publish:
     runs-on: ubuntu-latest

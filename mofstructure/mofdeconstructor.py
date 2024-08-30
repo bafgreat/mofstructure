@@ -1328,7 +1328,8 @@ def is_paddlewheel(metal_sbu, graph):
                 metalNeighbours += 1
             if metal_sbu[bondedAtomIndex].symbol == 'O':
                 oxygenNeighbours += 1
-        if metalNeighbours == 1 and oxygenNeighbours == 4 and len(connectivity) >= 5 and len(connectivity) <= 6:
+        if metalNeighbours == 1 and oxygenNeighbours == 4 and len(connectivity) >=\
+            5 and len(connectivity) <= 6:
             verdict = True
         check.append(verdict)
     correct = False
@@ -1349,7 +1350,8 @@ def is_paddlewheel_with_water(ase_atom, graph):
             index = atoms.index
             metal.append(index)
             connectivity = graph[index]
-            if len([ase_atom[i].symbol for i in connectivity if ase_atom[i].symbol == 'O']) == 5:
+            if len([ase_atom[i].symbol for i in connectivity if\
+                ase_atom[i].symbol == 'O']) == 5:
                 verdict = True
                 check.append(verdict)
     correct = False
@@ -1373,7 +1375,8 @@ def is_uio66(ase_atom, graph):
                 metal_neighbours += 1
             if ase_atom[bonded_atom_index].symbol == 'O':
                 oxygen_neighbours += 1
-        if metal_neighbours == 4 and (oxygen_neighbours == 6 or oxygen_neighbours == 8) and (len(connectivity) == 10 or len(connectivity) == 12):
+        if metal_neighbours == 4 and (oxygen_neighbours == 6 or oxygen_neighbours == 8)\
+            and (len(connectivity) == 10 or len(connectivity) == 12):
             verdict = True
         check.append(verdict)
         correct = False
@@ -1392,7 +1395,8 @@ def is_irmof(ase_atom, graph):
         if atoms.symbol == 'O':
             index = atoms.index
             connectivity = graph[index]
-            if len(connectivity) == 4 and len([ase_atom[i].symbol for i in connectivity if ase_atom[i].symbol in transition_metals()]) == 4:
+            if len(connectivity) == 4 and len([ase_atom[i].symbol for i in connectivity if\
+                ase_atom[i].symbol in transition_metals()]) == 4:
 
                 verdict = True
                 check.append(verdict)
@@ -1440,7 +1444,8 @@ def rod_manipulation(ase_atom, checker):
     ase_atom.positions = new_position
     return ase_atom, new_cell
 
-def find_unique_building_units(list_of_connected_components, atom_pairs_at_breaking_point, ase_atom, porphyrin_checker, all_regions, wrap_system=True, cheminfo=False, add_dummy=False):
+def find_unique_building_units(list_of_connected_components, atom_pairs_at_breaking_point,\
+    ase_atom, porphyrin_checker, all_regions, wrap_system=True, cheminfo=False, add_dummy=False):
     '''
     Find Unique components
     Parameters:
@@ -1454,7 +1459,7 @@ def find_unique_building_units(list_of_connected_components, atom_pairs_at_break
     cheminfo : boolean, default False
     add_dummy: boolean, default False
     add_dummy keyword enables the addition of dumnmy atoms which can then be replaced
-    by hydrogen to neutralize the building blocks. 
+    by hydrogen to neutralize the building blocks.
     Returns
     ---------
     A list of unique molecules
@@ -1630,7 +1635,8 @@ def mof_regions(ase_atom, list_of_connected_components, atom_pairs_at_breaking_p
 
 def wrap_systems_in_unit_cell(ase_atom, max_iter=30, skin=0.3):
     '''
-    A simple aglorithm to reconnnect all atoms wrapped in a periodic boundary condition such that all atoms outside the box will appear reconnected.
+    A simple aglorithm to reconnnect all atoms wrapped in a periodic
+    boundary condition such that all atoms outside the box will appear reconnected.
     '''
     if not any(ase_atom.get_pbc()):
         return ase_atom
@@ -1710,7 +1716,8 @@ def angle_tolerance_to_rad(angle, tolerance=5):
 
 def find_key_or_value(key_or_value, dictionary):
     """
-    Search for a key or value in a dictionary. If the key or value is found, returns the corresponding value or key.
+    Search for a key or value in a dictionary. If the key or value is
+    found, returns the corresponding value or key.
 
     Parameters:
     key_or_value : int or str

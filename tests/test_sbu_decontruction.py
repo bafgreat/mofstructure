@@ -47,7 +47,8 @@ def sbu_data(ase_atom):
 
 
 def test_mof5(mof5):
-    metal_sbus, organic_sbus, building_unit_regions, connected_components = sbu_data(mof5)
+    metal_sbus, organic_sbus, building_unit_regions, connected_components =\
+        sbu_data(mof5)
     assert len(metal_sbus) == 1
     assert len(organic_sbus) == 1
     assert len(building_unit_regions) == 2
@@ -60,7 +61,8 @@ def test_mof5(mof5):
 
 
 def test_uio66(uio66):
-    metal_sbus, organic_sbus, building_unit_regions, connected_components = sbu_data(uio66)
+    metal_sbus, organic_sbus, building_unit_regions, connected_components =\
+        sbu_data(uio66)
     # print (len(metal_sbus), len(organic_sbus), len(building_unit_regions), len(connected_components))
     # print (len(metal_sbus[0].info['point_of_extension']), metal_sbus[0].info['inchikey'], metal_sbus[0].info['sbu_type'],  len(organic_sbus[0].info['point_of_extension']), organic_sbus[0].info['inchikey'])
     assert len(metal_sbus) == 1
@@ -75,7 +77,8 @@ def test_uio66(uio66):
 
 
 def test_dut8(dut8):
-    metal_sbus, organic_sbus, building_unit_regions, connected_components = sbu_data(dut8)
+    metal_sbus, organic_sbus, building_unit_regions, connected_components =\
+        sbu_data(dut8)
     # print (len(metal_sbus), len(organic_sbus), len(building_unit_regions), len(connected_components))
     # print (len(metal_sbus[0].info['point_of_extension']), metal_sbus[0].info['inchikey'], metal_sbus[0].info['sbu_type'],  len(organic_sbus[0].info['point_of_extension']), organic_sbus[0].info['inchikey'], len(organic_sbus[1].info['point_of_extension']), organic_sbus[1].info['inchikey'])
     assert len(metal_sbus) == 1
