@@ -34,12 +34,7 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt-get update
-        sudo apt-get install -y libomp-dev openbabel
-
-    - name: Install system dependencies on macOS
-      if: matrix.os == 'macos-latest'
-      run: |
-        brew install openbabel
+        sudo apt-get install -y libomp-dev
 
     - name: Install Poetry
       run: |
