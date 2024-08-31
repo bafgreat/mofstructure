@@ -18,31 +18,26 @@ def zeo_calculation(ase_atom, probe_radius=1.86, number_of_steps=10000, high_acc
     system. The script computes the accesible surface area, accessible volume
     and the pore geometry. There are many more outputs which can be extracted
     from ,vol_str and sa_str. Moreover there are also other computation that can be done.
-    Check out the test directory in dependencies/pyzeo/test. Else contact bafgreat@gmail.com
-    if you need more output and can't figure it out.
-    Main parameter:
+    Check out the test directory in dependencies/pyzeo/test.
+    Else contact bafgreat@gmail.com. if you need more output and can't figure it out.
+
+    **parameter:**
         ase_atom: ase atom object
         probe_radius: The radius of the probe. Here 1.86 is used as default
         number_of_steps: Number of GCMC simulation cycles
         high_accuracy: key to determine where to perform high accuracy computation
 
-    return
-        python dictionary containing
+    **return:**
+        **python dictionary containing**
         1) AV_Volume_fraction: Accessible volume void fraction
         2) AV_A^3: Accessible volume in A^2
-        3) AV_cm^3/g: Accessible volume in cm^3/g. This values is often infinity because
-                      it literatly divides the given value by the avogadro's number
+        3) AV_cm^3/g: Accessible volume in cm^3/g. This values is often infinity because it literatly divides the given value by the avogadro's number
         4) ASA_A^2: Accessible surface area A^2
         5) ASA_m^2/cm^3: Accessible surface area in m^2/cm^3
-        6) Number_of_channels: Number of channels present in the porous system, which correspond to the number of
-                               pores within the system
-        7) LCD_A: The largest cavity diameter is the largest sphere that can be inserted in a porous
-                  system without overlapping with any of the atoms in the system.
-        8) lfpd_A:The largest included sphere along free sphere path is
-                  largest sphere that can be inserted in the pore
-        9)PLD_A:The pore limiting diameter is the largest sphere that can freely
-                 diffuse through the porous network without overlapping with any
-                 of the atoms in the system
+        6) Number_of_channels: Number of channels present in the porous system, which correspond to the number of pores within the system
+        7) LCD_A: The largest cavity diameter is the largest sphere that can be inserted in a porous system without overlapping with any of the atoms in the system.
+        8) lfpd_A:The largest included sphere along free sphere path is largest sphere that can be inserted in the pore
+        9)PLD_A:The pore limiting diameter is the largest sphere that can freely diffuse through the porous network without overlapping with any of the atoms in the system
     '''
     tmp_cssr = 'tmp.cssr'
     tmp_out = 'tmp.res'
@@ -52,9 +47,11 @@ def zeo_calculation(ase_atom, probe_radius=1.86, number_of_steps=10000, high_acc
     # atmnet = AtomNetwork.read_from_CSSR(tmp_cssr)
     if rad_file is not None:
         try:
-            atmnet = AtomNetwork.read_from_CSSR(tmp_cssr, rad_flag=True, rad_file=rad_file)
+            atmnet = AtomNetwork.read_from_CSSR(
+                tmp_cssr, rad_flag=True, rad_file=rad_file)
         except Exception as e:
-            print ("please edit your rad file. In the meantime, default radii will be used.")
+            print(
+                "please edit your rad file. In the meantime, default radii will be used.")
             atmnet = AtomNetwork.read_from_CSSR(tmp_cssr)
     else:
         atmnet = AtomNetwork.read_from_CSSR(tmp_cssr)
@@ -95,10 +92,11 @@ def ase_to_zeoobject(ase_atom):
     Converts an ase atom type to a zeo++ Cssr object
     In zeo++ the xyz coordinate system is rotated to a zyx format.
 
-    Args:
-        ase atom
-    Return:
-        zeo++ cssr object
+    **parameter:**
+        ase_atom: ase atom object
+
+    **returns:**
+        cssr_object: string representing zeo++ cssr object
     '''
     pymol = AseAtomsAdaptor.get_structure(ase_atom)
     a_axis, b_axis, c_axis = ase_atom.cell.lengths()

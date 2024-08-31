@@ -110,11 +110,11 @@ def compile_data(cif_files, result_folder, verbose=False):
     A json file containing all information about the metals in the system.
     This file can easily be converted to csv format.
 
-
-    Parameters
-    ----------
-    cif_file : a cif file or any ase readable file containing a MOF.
-    result_folder : path to output folder
+    ::
+        Parameters
+        ----------
+        cif_file : a cif file or any ase readable file containing a MOF.
+        result_folder : path to output folder
     '''
     metal_info = {}
     seen = []

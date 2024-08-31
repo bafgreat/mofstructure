@@ -10,14 +10,14 @@ def compute_cof_stacking(ase_atom):
     """
     A a simple function to compute the stacking pattern of COFs or
     layered materials like graphene
-    parameter
-    ---------
-    ase_atom : ASE Atoms object
-    Returns
-    -------
-    layers : list of list wherei each list correspond to a layar
-    lateral_offsets : list of list where each list contains the lateral offsets between two layers
-    interlayer_height : list of list where each list contains the interlayer heights between two layers
+
+    **parameter:**
+        ase_atom : ASE Atoms object
+        
+    **returns**
+        layers : list of list wherei each list correspond to a layar
+        lateral_offsets : list of list where each list contains the lateral offsets between two layers
+        interlayer_height : list of list where each list contains the interlayer heights between two layers
     """
     indices = MOF_deconstructor.remove_unbound_guest(ase_atom)
 
@@ -47,4 +47,3 @@ def compute_cof_stacking(ase_atom):
                     lateral_offsets.append([slip_x, slip_y])
                     interlayer_height.append(round(abs(center_1[2]-center_2[2]), 2))
         return layers, lateral_offsets, interlayer_height
-    

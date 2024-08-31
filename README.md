@@ -1,8 +1,9 @@
-![intro](images/Rotation.gif)
 
-# Generalities
+# mofstructure
 
-This is an elaborate python module that provides simple fucntions for
+![intro](source/images/Rotation.gif)
+
+This is an elaborate python module that provides simple functions for
 manipulation metal-organic frameworks and other porous systems such as
 COFs and Zeolites. Some uses of the module involves
 
@@ -20,13 +21,13 @@ COFs and Zeolites. Some uses of the module involves
 
 ## Option 1
 
-```
+```bash
 pip install mofstructure
 ```
 
 ## Option 2
 
-```
+```bash
   git clone https://github.com/bafgreat/mofstructure.git mofstructure
   cd mofstructure
   pip install .
@@ -40,19 +41,19 @@ pip install mofstructure
 
 Simply run the following command on a cif file or any ase readable file format containing a MOF.
 
-```
+```bash
 mofstructure cif_file
 ```
 
 The script will deconstruct the MOF present in the cif file and load the output in a folder called 'MOF_building_units' in the current directory/folder. If you wish to load the output in a specific folder, simply add the path to the folder as follows:
 
-```
+```bash
 mofstructure cif_file path_to_result_folder
 ```
 
 For multiple cif files. Simply run a loop and all the Results will be saved in the
 
-```
+```bash
 for cifs in ciffiles:
     mofstructure cifs path_to_result
 ```
@@ -61,54 +62,43 @@ for cifs in ciffiles:
 
 If you have a folder containg many cif files for different MOF, you could easily create a database. To create such a database, simply run the following command.
 
-```
+```bash
 mofstructure_database ciffolder
 ```
 
 Here the 'ciffolder' is the folder containing the cif files. The ouput will be saved in the default folder called 'MOFDb' in the current folder. Again you can choose the path to the save folder by simply listing it at the end of the command.
 
-```
+```bash
 mofstructure_database ciffolder path_to_result
 ```
 
 ## Use as a libray
 
-1. Importing module
-
-```
+```Python
 from  mofstructure import mofdeconstructor
 from  mofstructure import porosity
 from  mofstructure import buildingunits
 from ase.io import read, write
 import pandas as pd
-```
 
-2. Read using ase
-
-```
+# Read cif file using ase
 ase_atom = read(cif_file)
-```
 
-3. Removal of unbound guest
-   ![guest removal](images/guest_removal.gif)
-
-```
+# check and remove unbound guest molecules
 no_guest_indices = mofdeconstructor.remove_unbound_guest(ase_atom)
 no_guest_atom = ase_atom[no_guest_indices]
-```
 
-4. Computing porosity
-
-```
+# compute porosit and write output to csv
 pores = porosity.zeo_calculation(ase_ato, probe_radius=1.86, number_of_steps=5000)
 df = pd.DataFrame(pores, index=[0])
 df.to_csv('pore.csv')
 ```
 
-5. sbus and ligands
-   ![MOF deconstruction](images/deconstruction.gif)
+### sbus and linkers
 
-```
+Compute sbus and linkers
+
+```Python
 connected_components, atoms_indices_at_breaking_point, porpyrin_checker, all_regions = MOF_deconstructor.secondary_building_units(ase_atom)
 
 metal_sbus, organic_sbus, building_unit_regions = MOF_deconstructor.find_unique_building_units(
@@ -131,7 +121,7 @@ metal_sbus and organic_sbus list that contains all the unique instances of the m
 
 For each instance in a building unit the various chemiformatic informations are as follows.
 
-```
+```Python
 for i,  sbu in enumerate(metal_sbu):
     smi = sbu.info['smi]
     inchi = sbu.info['inchi']
@@ -150,14 +140,14 @@ All of above codes can be run by a single function found mofstructure.buildingun
 
 ## for a single cif file
 
-```
+```Python
 from  mofstructure import buildingunits
 buildingunits.work_flow(ciffile, result_folder)
 ```
 
 ## for multiple cif files
 
-```
+```Python
 from  mofstructure import buildingunits
 import glob
 all_cifs = glob.glob(folder/*cif)
@@ -167,14 +157,6 @@ for cif_files in all_cifs:
 # Note that result_folder can be any path. If the path does not exist, it will create one and populate it with all the data.
 ```
 
-# Support
-
-The module contains much more functionalities. If you are struggling or if you wish to compute a new quantity that is not yet present, feel free to send me an email. dak52@uclive.ac.nz
-
-<object data="doc/how-to-doc.html" width="100%" height="600">
-  <p>Click <a href="doc/how-to-doc.html">here</a> how-to-tutorial.</p>
-</object>
-
 # Roadmap
 
 In the future the code should be able to:
@@ -183,11 +165,11 @@ In the future the code should be able to:
 2. Subsitutue building units in a MOF to enable framework functionalisation
 3. Automatic curation of cifs
 4. Decontsruction of COFs into their building units
-   ![process](images/decon.jpeg)
+   <!-- ![process](source/images/decon.jpeg) -->
 
-![proccess](images/guest.png)
+<!-- ![proccess]source/(images/guest.png) -->
 
-# Updates version 0.1.4
+<!-- # Updates version 0.1.4
 
 The new update enables the computation of open metal sites in cifs
 To use this functionality run the following on the command line
@@ -201,19 +183,24 @@ Here ciffolder corresponse to the directory/folder containing the cif files.
 After the computation the metal information will be found in a json file called `metal_info.json`. This file is found in the output folder that defaults to `MOFDb` incase none is provided.
 
 # NB
+
 Note that computing open metal sites is computationally expensive, especially if you intend to
 run it on a folder with many cif files. There I recommend that if you are not interested in computing the open metal sites simply run command without the --oms option.
+
 ```
 mofstructure_database ciffolder
 ```
+
 This command will generate a MOFDb folder without the `metal_info.json` file. But the code will run very fast.
 
 Also note that the `--oms` option is provided on for the `mofstructure_database` command. This is not available for `mofstructure` command which targets a single cif file. If you have a single cif file wish to compute open metal sites, simply put the cif file in a folder and rin `mofstructure_database` command on the folder (`mofstructure_database ciffolder --oms`).
 
 # Updates version 0.1.5
+
 The new update enables users to include a Rad file when computing porosity using pyzeo. This allows users to specify the type of radii to use. If omitted, the default pyzeo radii will be used, which are covalent radii obtained from the CSD.
 
 Currently, this functionality can only be used when using mofstructure as a library. This can be done as follows:
+
 ```
 from mofstructure.porosity import zeo_calculation
 from ase.io import read
@@ -222,50 +209,71 @@ ase_atom = read(filename)
 
 pore_data = zeo_calculation(ase_atom, rad_file='rad_file_name.rad')
 ```
+
 # NB
+
 Note that filename is any ASE-readable crystal structure file, ideally a CIF file. Moreover, rad_file_name.rad is a file containing the radii of each element present in the structure file. This should be formatted as follows:
+
 ```
 element radii
 ```
+
 For example, for an MgO system, your Rad file should look like this:
+
 ```
 Mg 0.66
 O 1.84
 ```
+
 Also note that of the radii file does not have the .rad extension like `rad_file_name.rad` the default radii will be used.
 
 # Updates version 0.1.6
+
 Added new command line tools to expedite calculations especially when working on a quite large database.
 
 ## compute only deconstruction
+
 If you wish to only compute the deconstruction of MOFs without having to compute
 their porosity and open metal sites. Then simply run the following command
+
 ```
 mofstructure_building_units  cif_folder
 ```
+
 ## compute only porosity
+
 If you wish to only compute the porosity using default values. i.e
 probe radius = 1.86, number of gcmc cycles = 10000 and default csd atomic radii, then run the following command:
+
 ```
 mofstructure_porosity cif_folder
 ```
-However, if you wish to use another probe radius of maybe 1.5 and gcmc cycles of 20000 alongside custom atomic radii in a file called rad.rad,  run the following command:
+
+However, if you wish to use another probe radius of maybe 1.5 and gcmc cycles of 20000 alongside custom atomic radii in a file called rad.rad, run the following command:
+
 ```
 mofstructure_porosity cif_folder -pr 1.5 -ns 20000 -rf rad.rad
 ```
 
 ## compute only open metal sites
+
 If you are only interested in computing the open metal sites, then running the following command
+
 ```
 mofstructure_oms cif_folder
 ```
+
 # Updates version 0.1.7
+
 1. Implemented a robust CI/CD using git actions
 2. Included add_dummy key to add dummy atoms to point of extension. This is important to effectively control the breaking point. This dummy atoms can then
-be replaced with hydrogen to fully neutralize the system.
+   be replaced with hydrogen to fully neutralize the system.
+
 ## N.B.
+
 Be please don't use add dummy when deconstructing to ligands and clusters. The add dummy argument should be used only for sbus.
 e.g
+
 ```
 connected_components, atoms_indices_at_breaking_point, porpyrin_checker, all_regions = MOF_deconstructor.secondary_building_units(ase_atom)
 metal_sbus, organic_sbus, building_unit_regions = MOF_deconstructor.find_unique_building_units(
@@ -279,4 +287,4 @@ metal_sbus, organic_sbus, building_unit_regions = MOF_deconstructor.find_unique_
     )
 
 metal_sbus[0].write('test1.xyz)
-```
+``` -->

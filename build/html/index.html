@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>mofstructure documentation &#8212; mofstructure 0.1.7 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=12dfc556" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="_static/style.css?v=22a50566" />
+    <script src="_static/documentation_options.js?v=ca7ad2ea"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="_static/copybutton.js?v=f281be69"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Installation" href="installation.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="mofstructure-documentation">
+<h1>mofstructure documentation<a class="headerlink" href="#mofstructure-documentation" title="Link to this heading">¶</a></h1>
+</section>
+<section id="introduction">
+<h1>Introduction<a class="headerlink" href="#introduction" title="Link to this heading">¶</a></h1>
+<p><cite>mofstructure</cite> is a powerful and user-friendly Python module designed for the manipulation and analysis of metal-organic frameworks (MOFs) and other porous materials, including covalent organic frameworks (COFs) and zeolites. The module offers a range of functions that streamline complex tasks related to the study and modification of these structures. Whether you are a researcher, scientist, or student working in the field of materials science, <cite>mofstructure</cite> provides the tools you need to efficiently analyze and manipulate these intricate frameworks.</p>
+<section id="key-features-of-mofstructure">
+<h2>Key Features of <cite>mofstructure</cite><a class="headerlink" href="#key-features-of-mofstructure" title="Link to this heading">¶</a></h2>
+<p>The <cite>mofstructure</cite> module includes a variety of features that simplify common operations and enhance the workflow for users working with MOFs and similar materials. Some of the key functionalities include:</p>
+<ol class="arabic simple">
+<li><p><strong>Computation of Geometric Properties of MOFs:</strong>
+- <cite>mofstructure</cite> integrates seamlessly with the <cite>zeo++</cite> software in the background to enable quick and accurate computation of all porosity-related properties. Users can easily obtain essential metrics such as Pore Limiting Diameter (PLD), Largest Cavity Diameter (LCD), Accessible Surface Area (ASA), and other geometric characteristics critical to the analysis of MOFs.</p></li>
+<li><p><strong>Automated Removal of Unbound Guest Molecules:</strong>
+- The module offers an automated process for identifying and removing unbound guest molecules from the framework. This feature is particularly useful when preparing structures for simulations or other computational analyses where the presence of unbound molecules could skew results.</p></li>
+<li><p><strong>Deconstruction of Metal-Organic Frameworks into Building Units:</strong>
+- <cite>mofstructure</cite> allows users to deconstruct MOFs into their constituent building units, including organic ligands, metal clusters, organic secondary building units (SBUs), and metal SBUs. For each building unit, the module computes important cheminformatic identifiers such as SMILES strings, InChI, and InChIKey. Additionally, it identifies the type of metal SBU and determines the coordination number of the central metal atom, which is crucial for understanding the structural properties of the framework.</p></li>
+<li><p><strong>Wrapping Systems Around Unit Cells to Remove the Effect of Periodic Boundary Conditions (PBC):</strong>
+- When visualizing CIF files or converting CIF files to XYZ format, systems may appear uncoordinated due to the effects of periodic boundary conditions. <cite>mofstructure</cite> provides a solution by wrapping systems around their unit cells, ensuring a more accurate and visually coherent representation of the structure.</p></li>
+<li><p><strong>Separation of Building Units into Regions:</strong>
+- This feature is essential for users who need to substitute specific ligands or building units within a framework. By separating building units into distinct regions, <cite>mofstructure</cite> enables targeted modifications, allowing for precise customization of the framework’s properties.</p></li>
+</ol>
+<img alt="Generalities" src="_images/Rotation.gif" />
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#option-1-installing-via-pip">Option 1: Installing via pip</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#option-2-installing-via-github-repository">Option 2: Installing via GitHub Repository</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#running-on-the-command-line">Running on the Command Line</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#example-1-deconstructing-a-mof-into-building-units">Example 1: Deconstructing a MOF into Building Units</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#example-2-specifying-an-output-directory">Example 2: Specifying an Output Directory</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#example-3-creating-a-database-from-multiple-cif-files">Example 3: Creating a Database from Multiple CIF Files</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#using-mofstructure-as-a-library">Using <cite>mofstructure</cite> as a Library</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#example-1-importing-the-module-and-reading-a-cif-file">Example 1: Importing the Module and Reading a CIF File</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="usage.html#example-2-removing-unbound-guest-molecules">Example 2: Removing Unbound Guest Molecules</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#example-3-computing-porosity">Example 3: Computing Porosity</a></li>
+<li class="toctree-l2"><a class="reference internal" href="usage.html#example-4-deconstructing-mofs-into-sbus-and-linkers">Example 4: Deconstructing MOFs into SBUs and linkers</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">How to Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html#run-on-the-command-line">Run on the Command Line</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#building-units">Building Units</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#custom-output-directory">Custom Output Directory</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html#processing-multiple-cif-files">Processing Multiple CIF Files</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#creating-a-database">Creating a Database</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#custom-database-output-directory">Custom Database Output Directory</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html#use-as-a-library">Use as a Library</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#extracting-cheminformatic-information">Extracting Cheminformatic Information</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api_reference.html">API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api_reference.html#module-mofstructure.mofdeconstructor">MOF Deconstructions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.all_ferrocene_metals"><code class="docutils literal notranslate"><span class="pre">all_ferrocene_metals()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.angle_tolerance_to_rad"><code class="docutils literal notranslate"><span class="pre">angle_tolerance_to_rad()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.ase_2_pybel"><code class="docutils literal notranslate"><span class="pre">ase_2_pybel()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.ase_2_xyz"><code class="docutils literal notranslate"><span class="pre">ase_2_xyz()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.check_planarity"><code class="docutils literal notranslate"><span class="pre">check_planarity()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.compute_ase_neighbour"><code class="docutils literal notranslate"><span class="pre">compute_ase_neighbour()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.compute_cheminformatic_from_rdkit"><code class="docutils literal notranslate"><span class="pre">compute_cheminformatic_from_rdkit()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.compute_inchis"><code class="docutils literal notranslate"><span class="pre">compute_inchis()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.compute_openbabel_cheminformatic"><code class="docutils literal notranslate"><span class="pre">compute_openbabel_cheminformatic()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.compute_smi"><code class="docutils literal notranslate"><span class="pre">compute_smi()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.connected_components"><code class="docutils literal notranslate"><span class="pre">connected_components()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.covalent_radius"><code class="docutils literal notranslate"><span class="pre">covalent_radius()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.dfsutil_graph_method"><code class="docutils literal notranslate"><span class="pre">dfsutil_graph_method()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.find_COS"><code class="docutils literal notranslate"><span class="pre">find_COS()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.find_carbonyl_sulphate"><code class="docutils literal notranslate"><span class="pre">find_carbonyl_sulphate()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.find_carboxylates"><code class="docutils literal notranslate"><span class="pre">find_carboxylates()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.find_key_or_value"><code class="docutils literal notranslate"><span class="pre">find_key_or_value()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.find_phosphate"><code class="docutils literal notranslate"><span class="pre">find_phosphate()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.find_phosphite"><code class="docutils literal notranslate"><span class="pre">find_phosphite()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.find_sulfides"><code class="docutils literal notranslate"><span class="pre">find_sulfides()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.find_unique_building_units"><code class="docutils literal notranslate"><span class="pre">find_unique_building_units()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.inter_atomic_distance_check"><code class="docutils literal notranslate"><span class="pre">inter_atomic_distance_check()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.is_ferrocene"><code class="docutils literal notranslate"><span class="pre">is_ferrocene()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.is_irmof"><code class="docutils literal notranslate"><span class="pre">is_irmof()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.is_mof32"><code class="docutils literal notranslate"><span class="pre">is_mof32()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.is_paddlewheel"><code class="docutils literal notranslate"><span class="pre">is_paddlewheel()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.is_paddlewheel_with_water"><code class="docutils literal notranslate"><span class="pre">is_paddlewheel_with_water()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.is_rodlike"><code class="docutils literal notranslate"><span class="pre">is_rodlike()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.is_uio66"><code class="docutils literal notranslate"><span class="pre">is_uio66()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.ligands_and_metal_clusters"><code class="docutils literal notranslate"><span class="pre">ligands_and_metal_clusters()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.longest_list"><code class="docutils literal notranslate"><span class="pre">longest_list()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.matrix2dict"><code class="docutils literal notranslate"><span class="pre">matrix2dict()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.max_index"><code class="docutils literal notranslate"><span class="pre">max_index()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.metal_coordination_enviroment"><code class="docutils literal notranslate"><span class="pre">metal_coordination_enviroment()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.metal_coordination_number"><code class="docutils literal notranslate"><span class="pre">metal_coordination_number()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.metal_in_porphyrin"><code class="docutils literal notranslate"><span class="pre">metal_in_porphyrin()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.metal_in_porphyrin2"><code class="docutils literal notranslate"><span class="pre">metal_in_porphyrin2()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.mof_regions"><code class="docutils literal notranslate"><span class="pre">mof_regions()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.move2front"><code class="docutils literal notranslate"><span class="pre">move2front()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.obmol_2_rdkit"><code class="docutils literal notranslate"><span class="pre">obmol_2_rdkit()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.remove_unbound_guest"><code class="docutils literal notranslate"><span class="pre">remove_unbound_guest()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.remove_unbound_guest_and_return_unique"><code class="docutils literal notranslate"><span class="pre">remove_unbound_guest_and_return_unique()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.rod_manipulation"><code class="docutils literal notranslate"><span class="pre">rod_manipulation()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.secondary_building_units"><code class="docutils literal notranslate"><span class="pre">secondary_building_units()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.transition_metals"><code class="docutils literal notranslate"><span class="pre">transition_metals()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.mofdeconstructor.wrap_systems_in_unit_cell"><code class="docutils literal notranslate"><span class="pre">wrap_systems_in_unit_cell()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api_reference.html#module-mofstructure.porosity">Computing Porosity</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.porosity.ase_to_zeoobject"><code class="docutils literal notranslate"><span class="pre">ase_to_zeoobject()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.porosity.zeo_calculation"><code class="docutils literal notranslate"><span class="pre">zeo_calculation()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api_reference.html#module-mofstructure.cof_stacking">Computing stacking in 2D systems and inter-layer height</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api_reference.html#mofstructure.cof_stacking.compute_cof_stacking"><code class="docutils literal notranslate"><span class="pre">compute_cof_stacking()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="updates.html">Updates Version 0.1.4</a></li>
+<li class="toctree-l1"><a class="reference internal" href="updates.html#updates-version-0-1-5">Updates Version 0.1.5</a></li>
+<li class="toctree-l1"><a class="reference internal" href="updates.html#updates-version-0-1-6">Updates Version 0.1.6</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="updates.html#compute-only-deconstruction">Compute Only Deconstruction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="updates.html#compute-only-porosity">Compute Only Porosity</a></li>
+<li class="toctree-l2"><a class="reference internal" href="updates.html#compute-only-open-metal-sites">Compute Only Open Metal Sites</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="updates.html#updates-version-0-1-7">Updates Version 0.1.7</a></li>
+</ul>
+</div>
+</section>
+</section>
+<section id="support">
+<h1>Support<a class="headerlink" href="#support" title="Link to this heading">¶</a></h1>
+<p>The module contains much more functionalities. If you are struggling or wish to compute a new quantity that is not yet present, feel free to send me an email: <a class="reference external" href="mailto:bafgreat&#37;&#52;&#48;gamil&#46;com">bafgreat<span>&#64;</span>gamil<span>&#46;</span>com</a>.</p>
+<object data="doc/how-to-doc.html" width="100%" height="600">
+  <p>Click <a href="doc/how-to-doc.html">here</a> for a how-to tutorial.</p>
+</object></section>
+<section id="roadmap">
+<h1>Roadmap<a class="headerlink" href="#roadmap" title="Link to this heading">¶</a></h1>
+<p>In the future, the code should be able to:</p>
+<ol class="arabic simple">
+<li><p>Compute RCSR topological code</p></li>
+<li><p>Substitute building units in a MOF to enable framework functionalization</p></li>
+<li><p>Automatically curate CIFs</p></li>
+<li><p>Deconstruct COFs into their building units</p></li>
+</ol>
+<ul class="simple">
+<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
+<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
+<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
+</ul>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="#">mofstructure</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#running-on-the-command-line">Running on the Command Line</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#using-mofstructure-as-a-library">Using <cite>mofstructure</cite> as a Library</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">How to Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html#run-on-the-command-line">Run on the Command Line</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html#processing-multiple-cif-files">Processing Multiple CIF Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html#use-as-a-library">Use as a Library</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api_reference.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="updates.html">Updates Version 0.1.4</a></li>
+<li class="toctree-l1"><a class="reference internal" href="updates.html#updates-version-0-1-5">Updates Version 0.1.5</a></li>
+<li class="toctree-l1"><a class="reference internal" href="updates.html#updates-version-0-1-6">Updates Version 0.1.6</a></li>
+<li class="toctree-l1"><a class="reference internal" href="updates.html#updates-version-0-1-7">Updates Version 0.1.7</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="#">Documentation overview</a><ul>
+      <li>Next: <a href="installation.html" title="next chapter">Installation</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024, Dinga Wonanke.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.2.6</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
+      
+      |
+      <a href="_sources/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

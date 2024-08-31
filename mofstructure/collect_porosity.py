@@ -80,11 +80,11 @@ def compile_data(cif_files, result_folder, probe_radius=1.86,\
     3. cluster_and_ligands.json
     A json file containing all the information about the ligands and metal
     cluster.
-
-    Parameters
-    ----------
-    cif_file : a cif file or any ase readable file containing a MOF.
-    result_folder : path to output folder
+    ::
+        Parameters
+        ----------
+        cif_file : a cif file or any ase readable file containing a MOF.
+        result_folder : path to output folder
     '''
     porosity_dic = {}
     ase_atoms_dic = {}

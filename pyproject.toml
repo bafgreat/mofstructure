@@ -26,6 +26,9 @@ pymatgen = "==2024.2.20"
 pyzeo = ">=0.1.1"
 rdkit = "==2022.9.5"
 omsdetector_forked = ">=2024.6.24"
+sphinx = "<8.0.2"
+sphinxcontrib-mermaid = "^0.9.2"
+sphinx-copybutton = "^0.5.2"
 
 [tool.poetry.scripts]
 mofstructure = "mofstructure.buildingunits:main"
@@ -37,6 +40,7 @@ mofstructure_porosity = "mofstructure.collect_porosity:main"
 [tool.poetry.group.dev.dependencies]
 flake8 = "^7.1.1"
 pytest = "^8.3.2"
+sphinx = "<8.0.2"
 
 [build-system]
 requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning"]

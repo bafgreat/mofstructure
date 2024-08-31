@@ -34,16 +34,13 @@ def transition_metals():
 
 def inter_atomic_distance_check(ase_atom):
     '''
-    Check that no two atoms are within a distance of 1.0 Amstrong unless it is an X-H bond
+    A function that checks whether two atoms are within a distance 1.0 Amstrong unless it is an R-H bond
 
-    As simple script to convert from ase atom object to pybel
-    Parameters
-    ----------
-    ase_atom : ASE atoms object
+    **parameters:**
+        ase_atom : ASE atoms object
 
-    Returns
-    -------
-    boolean
+    **returns**
+        boolean :
     '''
     valid = True
     distances = ase_atom.get_all_distances(mic=True)
@@ -59,16 +56,16 @@ def inter_atomic_distance_check(ase_atom):
 
 def covalent_radius(element):
     '''
-    A function tha returns
-    Parameters
-    ----------
-    element: chemical symbol of an atom
-    type.string
+    A function that returns the covalent radius from the chemical symbol
+    of an element.
 
-    Returns
-    -------
-    covalent_radii: covalent radius of the elements.
-    type.float
+    **parameters:**
+        element: chemical symbol of an atom
+        type.string
+
+    **returns:**
+        covalent_radii: covalent radius of the elements.
+        type.float
     '''
     a_n = atomic_numbers[element]
     return covalent_radii[a_n]
@@ -78,13 +75,12 @@ def ase_2_xyz(atoms):
     """
     Create an xyz string from an ase atom object to be compatible with
     pybel in order to perfom some cheminformatics.
-    Parameters
-    ----------
-    atoms : ASE atoms object
 
-    Returns
-    -------
-    a_str : string block of the atom object in xyz format
+    **parameters:**
+        atoms : ASE atoms object
+
+    **returns:**
+        a_str : string block of the atom object in xyz format
 
     """
     if any(atoms.get_pbc()):
@@ -111,13 +107,11 @@ def obmol_2_rdkit(obmol):
     openbabel molecule object that can then be used to convert to the
     rdkit molecule object.
 
-    parameters
-    ----------
-    obmol : openbabel molecule object
+    **parameters:**
+        obmol : openbabel molecule object
 
-    Returns
-    -------
-    rdmol : rdkit molecule object.
+    **returns:**
+        rdmol : rdkit molecule object.
 
     '''
     obconverted = ob.OBConversion()
@@ -135,15 +129,14 @@ def compute_inchis(obmol):
     For MOFs, this is quite important to search for different secondary building units
     (sbu) and ligands found in the MOF.
     More about inchi can be found in the following link
-    https://iupac.org/who-we-are/divisions/division-details/inchi/
 
-    parameters
-    ----------
-    obmol : openbabel molecule object
+    https://iupac.org/who-we-are/divisions/division-details/inchi
 
-    Returns
-    -------
-    inChi,  inChiKey : iupac inchi  and inchikeys for thesame molecule.
+    **parameters:**
+        obmol: openbabel molecule object
+
+    **returns:**
+        inChi, inChiKey: iupac inchi and inchikeys for thesame molecule.
     '''
     conv = ob.OBConversion()
     conv.SetOutFormat("inchi")
@@ -161,13 +154,11 @@ def compute_smi(obmol):
     molecules. More about SMILES can be found in the following link
     https://en.wikipedia.org/wiki/Simplified_molecular-input_line-entry_system
 
-    parameters
-    ----------
-    obmol : openbabel molecule object
+    **parameters:**
+        obmol : openbabel molecule object
 
-    Returns
-    -------
-    smi: SMILES notatation of the molecule.
+    **returns:**
+        smi: SMILES notatation of the molecule.
     '''
     conv = ob.OBConversion()
     conv.SetOutFormat("smi")
@@ -181,18 +172,16 @@ def ase_2_pybel(atoms):
     many functionalities like atom typing, bond typing and autmatic addition of
     hydrogen that can be performed on a pybel molecule object, which can not be
     directly performed on an ase atom object.
-    E.g
-    add_hygrogen = pybel.addh()
-    remove_hydrogen = pybel.removeh()
+    E.g\n
+    add_hygrogen = pybel.addh()\n
+    remove_hydrogen = pybel.removeh()\n
     https://openbabel.org/docs/dev/UseTheLibrary/Python_Pybel.html
 
-    Parameters
-    ----------
-    atoms : ASE atoms object
+    **parameters:**
+        atoms : ASE atoms object
 
-    Returns
-    -------
-    pybel: pybel molecular object.
+    **returns:**
+        pybel: pybel molecular object.
     """
     a_str = ase_2_xyz(atoms)
     pybel_mol = pb.readstring("xyz", a_str)
@@ -218,13 +207,11 @@ def compute_openbabel_cheminformatic(ase_atom):
     at random positions. The wrap functions coordinates all the
     atoms together.
 
-    Parameters
-    ----------
-    atoms : ASE atoms object
+    **parameters:**
+        atoms : ASE atoms object
 
-    Returns
-    -------
-    smi, inChi, inChiKey
+    **returns:**
+        smi, inChi, inChiKey
     '''
 
     new_ase_atom = wrap_systems_in_unit_cell(ase_atom)
@@ -249,13 +236,11 @@ def compute_cheminformatic_from_rdkit(ase_atom):
     rdDetermineBonds.DetermineBonds(bond_moll,charge=0)
     https://github.com/rdkit/UGM_2022/blob/main/Notebooks/Landrum_WhatsNew.ipynb
 
-    Parameters:
-    -----------
-    ASE atoms
+    **parameters:**
+        ASE atoms
 
-    Returns
-    -------
-    smile string, inchi, inchikey
+    **returns:**
+        smile string, inchi, inchikey
     '''
     if any(ase_atom.get_pbc()):
         ase_atom.set_pbc(False)
@@ -275,23 +260,21 @@ def compute_ase_neighbour(ase_atom):
     '''
     Create a connectivity graph using ASE neigbour list.
 
-    Parameters:
-    -----------
-    ASE atoms
+    **parameters:**
+        ASE atoms
 
-    Returns
-    -------
-    1.  atom_neighbors:
-        A python dictionary, wherein each atom index
-        is key and the value are the indices of it neigbours.
-        e.g.
-        atom_neighbors ={0:[1,2,3,4], 1:[3,4,5]...}
+    **returns:**
+        1.  atom_neighbors:
+            A python dictionary, wherein each atom index
+            is key and the value are the indices of it neigbours.
+            e.g.
+            atom_neighbors ={0:[1,2,3,4], 1:[3,4,5]...}
 
-    2.  matrix:
-        An adjacency matrix that wherein each row correspond to
-        to an atom index and the colums correspond to the interaction
-        between that atom to the other atoms. The entries in the
-        matrix are 1 or 0. 1 implies bonded and 0 implies not bonded.
+        2.  matrix:
+            An adjacency matrix that wherein each row correspond to
+            to an atom index and the colums correspond to the interaction
+            between that atom to the other atoms. The entries in the
+            matrix are 1 or 0. 1 implies bonded and 0 implies not bonded.
 
     '''
     atom_neighbors = {}
@@ -315,13 +298,11 @@ def matrix2dict(bond_matrix):
     A simple procedure to convert an adjacency matrix into
     a python dictionary.
 
-    Parameters:
-    -----------
-    bond matrix : adjacency matrix, type: nxn ndarray
+    **parameters:**
+        bond matrix : adjacency matrix, type: nxn ndarray
 
-    Returns
-    -------
-    graph: python dictionary
+    **returns:**
+        graph: python dictionary
     '''
     graph = {}
     for idx, row in enumerate(bond_matrix):
@@ -339,16 +320,15 @@ def dfsutil_graph_method(graph, temp, node, visited):
     I starts at the root 'node' and explores as far as possible along
     each branch before backtracking.
     It is used here a a util for searching connected components in the MOF graph
-    Parameters:
-    -----------
-    graph: any python dictionary
-    temp: a python list to hold nodes that have been visited
-    node: a key in the python dictionary (graph), which is used as the starting or root node
-    visited: python list containing nodes that have been traversed.
 
-    Returns
-    -------
-    python dictionary
+    **parameters:**
+        graph: any python dictionary
+        temp: a python list to hold nodes that have been visited
+        node: a key in the python dictionary (graph), which is used as the starting or root node
+        visited: python list containing nodes that have been traversed.
+
+    **returns:**
+        python dictionary
     '''
     visited[node] = True
     temp.append(node)
@@ -372,19 +352,15 @@ def remove_unbound_guest_and_return_unique(ase_atom):
     using ASE neighbour list.
     2) Secondly it selects indicies of connected components which contain a metal
     3)if the there are two or more components, we create a pytmagen graph for each components and filter out all components that are not polymeric
-    4) If there are two or more polymeric components, we check wether these systems there are identical or different
-    and select only unique polymeric components
+    4) If there are two or more polymeric components, we check wether these systems there are identical or different and select only unique polymeric components
 
-    Parameters:
-    -----------
-    ASE atoms
+    **parameters:**
+        ASE atoms
 
-    Returns
-    -------
-    mof_indices : indinces of the guest free system. The guest free ase_atom object
-    can be obtain as follows;
-    E.g.
-    guest_free_system = ase_atom[mof_indices]
+    **returns:**
+
+        mof_indices : indinces of the guest free system. The guest free ase_atom object
+        can be obtain as follows; E.g. guest_free_system = ase_atom[mof_indices]
     '''
     atom_neighbors, _ = compute_ase_neighbour(ase_atom)
     fragments = connected_components(atom_neighbors)
@@ -418,26 +394,21 @@ def remove_unbound_guest_and_return_unique(ase_atom):
         else:
             return sum(fragments, [])
 
+
 def remove_unbound_guest(ase_atom):
     '''
     A simple script to remove guest from a metal organic framework.
-    1) It begins by computing a connected graph component of all the fragments in the system
-    using ASE neighbour list.
+    1) It begins by computing a connected graph component of all the fragments in the system using ASE neighbour list.
     2) Secondly it selects indices of connected components which contain a metal
     3) if the there are two or more components, we create a pytmagen graph for each components and filter out all components that are not polymeric
-    4) If there are two or more polymeric components, we check whether these systems there are identical or different
-    and select all polymeric components
+    4) If there are two or more polymeric components, we check whether these systems there are identical or different and select all polymeric components
 
-    Parameters:
-    -----------
-    ASE atoms
+    **parameters:**
+        ASE atoms
 
-    Returns
-    -------
-    mof_indices : indices of the guest-free system. The guest-free ase_atom object
-    can be obtained as follows;
-    E.g.
-    guest_free_system = ase_atom[mof_indices]
+    **returns:**
+        mof_indices: indices of the guest-free system. The guest-free ase_atom object
+        can be obtained as follows; E.g.:: guest_free_system = ase_atom[mof_indices]
     '''
     atom_neighbors, _ = compute_ase_neighbour(ase_atom)
     fragments = connected_components(atom_neighbors)
@@ -466,17 +437,15 @@ def remove_unbound_guest(ase_atom):
 def connected_components(graph):
     '''
     Find the connected fragments in a graph. Should work for any graph defined as a dictionary
-    Parameters:
-    -----------
-    A graph in the form of dictionary
-    e.g.
-    graph = {1:[0,1,3], 2:[2,4,5]}
 
-    Returns
-    -------
-    Returns a python list of list of connected components
-    These correspond to individual molecular fragments.
-    list_of_connected_components = [[1,2],[1,3,4]]
+    **parameters:**
+        A graph in the form of dictionary e.g.::
+        graph = {1:[0,1,3], 2:[2,4,5]}
+
+    **returns:**
+        returns a python list of list of connected components
+        These correspond to individual molecular fragments.
+        list_of_connected_components = [[1,2],[1,3,4]]
     '''
     visited = []
     list_of_connected_components = []
@@ -494,15 +463,14 @@ def check_planarity(p1, p2, p3, p4):
     '''
     A simple procedure to check whether a point is planar to three other points.
     Important to distinguish porphyrin type metals
-    Parameters:
-    -----------
-    p1, p2, p3, p4 : ndarray containing x,y,z values
 
-    Returns
-    -------
-    Boolean
-    True: planar
-    False: noneplanar
+    **parameters:**
+        p1, p2, p3, p4 : ndarray containing x,y,z values
+
+    **returns:**
+        Boolean
+        True: planar
+        False: noneplanar
     '''
     planar = False
     a1 = p2[0] - p1[0]
@@ -511,15 +479,15 @@ def check_planarity(p1, p2, p3, p4):
     a2 = p3[0] - p1[0]
     b2 = p3[1] - p1[1]
     c2 = p3[2] - p1[2]
-    # ------------------------------------------------
+    # \------------------------------------------------
     a = b1 * c2 - b2 * c1
     b = a2 * c1 - a1 * c2
     c = a1 * b2 - b1 * a2
     d = round((-a * p1[0] - b * p1[1] - c * p1[2]), 0)
-    # ------------------------------------------------
+    # \------------------------------------------------
     factor = round((a * p4[0] + b * p4[1] + c * p4[2]), 0)
     verify = factor + d
-    # ------------------------------------------------
+    # \------------------------------------------------
     if verify == 0:
         planar = True
     return planar
@@ -527,17 +495,19 @@ def check_planarity(p1, p2, p3, p4):
 
 def metal_in_porphyrin(ase_atom, graph):
     '''
+    A funtion to check whether a metal is found at the centre of a phorphirin.
+    The function specifically identifies metal atoms that
+    are coordinated with four nitrogen atoms, as typically seen in porphyrin complexes.
+    These atoms must also satisfy the planarity condition of the porphyrin structure.
+
     https://en.wikipedia.org/wiki/Transition_metal_porphyrin_complexes
-    Check whether a metal is found at the centre of a phorphirin
 
-    Parameters:
-    -----------
-    ase_atom: ASE atom
-    graph: python dictionary containing neigbours
+    **parameters:**
+        ase_atom: ASE atom
+        graph: python dictionary containing neigbours
 
-    Returns
-    -------
-    list of indices consisting of index of metal atoms found in the ASE atom
+    **returns:**
+        list of indices consisting of index of metal atoms found in the ASE atom
     '''
     all_porphyrin = []
     all_metal_symbols = [
@@ -561,14 +531,12 @@ def metal_in_porphyrin2(ase_atom, graph):
     https://en.wikipedia.org/wiki/Transition_metal_porphyrin_complexes
     Check whether a metal is found at the centre of a phorphirin
 
-    Parameters:
-    -----------
-    ase_atom: ASE atom
-    graph: python dictionary containing neigbours
+    **parameters:**
+        ase_atom: ASE atom
+        graph: python dictionary containing neigbours
 
-    Returns
-    -------
-    list of indices consisting of index of metal atoms found in the ASE atom
+    **returns:**
+        list of indices consisting of index of metal atoms found in the ASE atom
     '''
     old_list_of_connected_components = connected_components(graph)
     all_porphyrin = []
@@ -593,16 +561,15 @@ def metal_in_porphyrin2(ase_atom, graph):
 
 def move2front(index_value, coords):
     '''
-    Parameters:
-    -----------
-    index_value: index of item to move to the from
-    coords: list of coords
-
-    Returns
-    -------
     Move an index from any position in the list to the front
-    The function is important to set the cell of a rodmof to point in the
-    a-axis. Such that the system can be grow along this axis
+    The function is important to set the cell of a rodmof to point in thea-axis. Such that the system can be grow along this axis
+
+    **parameters:**
+        index_value: index of item to move to the from
+        coords: list of coords
+
+    **returns:**
+        list of coords
     '''
     if any(isinstance(el, list) for el in coords):
         for data in coords:
@@ -615,13 +582,12 @@ def move2front(index_value, coords):
 def find_carboxylates(ase_atom, graph):
     '''
     A simple aglorimth to search for carboxylates found in the system.
-    Parameters:
-    -----------
-    ase_atom: ASE atom
 
-    Returns
-    -------
-    dictionary of key = carbon index and values = oxygen index
+    **parameters:**
+        ase_atom: ASE atom
+
+    **returns:**
+        dictionary of key = carbon index and values = oxygen index
     '''
     carboxyl = {}
     for atoms in ase_atom:
@@ -637,21 +603,21 @@ def find_carboxylates(ase_atom, graph):
 
 
 def find_carbonyl_sulphate(ase_atom, graph):
-    '''
+    """
     A simple aglorimth to search for Carbonyl sulphate  found in the system.
-       O
-       |
-    -C-S
-       |
-       O
-    Parameters:
-    -----------
-    ase_atom: ASE atom
+    ::
+        O
+        |
+     -C-S
+        |
+        O
+        
+    **parameters:**
+        ase_atom: ASE atom
 
-    Returns
-    -------
-    dictionary of key = carbon index and values = oxygen index
-    '''
+    **returns:**
+        dictionary of key = carbon index and values = oxygen index
+    """
     sulphate = {}
     for atoms in ase_atom:
         if atoms.symbol == 'S':
@@ -668,22 +634,21 @@ def find_carbonyl_sulphate(ase_atom, graph):
 
 
 def find_sulfides(ase_atom, graph):
-    '''
+    """
     A simple aglorimth to search for sulfides.
-     S
-     |
-    -C
-     |
-     S
+    ::
+        S
+        |
+       -C
+        |
+        S
 
-    Parameters:
-    -----------
-    ase_atom: ASE atom
+    **parameters:**
+        ase_atom: ASE atom
 
-    Returns
-    -------
-    dictionary of key = carbon index and values = sulphur index
-    '''
+    **returns:**
+        dictionary of key = carbon index and values = sulphur index
+    """
     sulfides = {}
     metals = {}
     for atoms in ase_atom:
@@ -703,19 +668,18 @@ def find_sulfides(ase_atom, graph):
 def find_phosphite(ase_atom, graph):
     '''
     A simple aglorimth to search for sulfides.
-     P
-     |
-    -C
-     |
-     P
+    ::
+        P
+        |
+       -C
+        |
+        P
 
-    Parameters:
-    -----------
-    ase_atom: ASE atom
+    **parameters:**
+        ase_atom: ASE atom
 
-    Returns
-    -------
-    dictionary of key = carbon index and values = phosphorous index
+    **returns:**
+        dictionary of key = carbon index and values = phosphorous index
     '''
     phosphorous = {}
     for atoms in ase_atom:
@@ -734,19 +698,18 @@ def find_phosphite(ase_atom, graph):
 def find_COS(ase_atom, graph):
     '''
     A simple aglorimth to search for COS.
-     O
-     |
-    -C
-     |
-     S
+    ::
+        O
+        |
+       -C
+        |
+        S
 
-    Parameters:
-    -----------
-    ase_atom: ASE atom
+    **parameters:**
+        ase_atom: ASE atom
 
-    Returns
-    -------
-    dictionary of key = carbon index and values = sulphur index
+    **returns:**
+        dictionary of key = carbon index and values = sulphur index
     '''
     sulfides = {}
     for atoms in ase_atom:
@@ -770,18 +733,18 @@ def find_COS(ase_atom, graph):
 def find_phosphate(ase_atom, graph):
     '''
     A simple algorithm to search for Carbonyl sulphate found in the system.
+    ::
        O
        |
       -P-o
        |
        O
-    Parameters:
-    -----------
-    ase_atom: ASE atom
 
-    Returns
-    -------
-    dictionary of key = carbon index and values = oxygen index
+    **parameters:**
+        ase_atom: ASE atom
+
+    **returns**
+        dictionary of key = carbon index and values = oxygen index
     '''
     phosphate = {}
     for atoms in ase_atom:
@@ -803,17 +766,14 @@ def secondary_building_units(ase_atom):
     2) Find all Nitrogen connected to metal. Check whether the nitrogen is in the
        centre of a porphirin ring. If no, cut at nitrogen metal bond.
     3) Look for oxygen that is connected to metal and two carbon. cut at metal oxygen bond
-    Parameters:
-    -----------
-    ase_atom: ASE atom
 
-    Returns
-    -------
-     list_of_connected_components : list of connected components,in which
-     each list contains atom indices
-     atom_pairs_at_breaking_point  : Dictionary containing point of disconnection
-     Porphyrin_checker : Boolean showing whether the metal is in the centre of a porpherin
-     Regions : Dictionary of regions.
+    **parameters:**
+        ase_atom: ASE atom
+
+    **returns:**
+        list_of_connected_components: list of connected components,in which each list contains atom indices
+        atom_pairs_at_breaking_point : Dictionary containing point of disconnection Porphyrin_checker: Boolean showing whether the metal is in the centre of a porpherin
+        Regions: Dictionary of regions.
     """
     graph, bond_matrix = compute_ase_neighbour(ase_atom)
     porphyrin_checker = metal_in_porphyrin2(ase_atom, graph)
@@ -1071,16 +1031,15 @@ def ligands_and_metal_clusters(ase_atom):
     Start by checking whether there are more than 2 layers
     if yes, select one
     Here we select the largest connected component
-    Parameters:
-    -----------
-    ase_atom: ASE atom
 
-    Returns
-    -------
-    list_of_connected_components  : list of connected components, in which each list contains atom indices
-     atom_pairs_at_breaking_point  : Dictionary containing point of disconnection
-     Porpyrin_checker : Boolean showing whether the metal is in the centre of a porpherin
-     Regions : Dictionary of regions.
+    **parameters:**
+        ase_atom: ASE atom
+
+    **returns:**
+        list_of_connected_components: list of connected components, in which each list contains atom indices
+        atom_pairs_at_breaking_point: Dictionary containing point of disconnection
+        Porpyrin_checker: Boolean showing whether the metal is in the centre of a porpherin
+        Regions: Dictionary of regions.
     '''
     graph, bond_matrix = compute_ase_neighbour(ase_atom)
 
@@ -1254,6 +1213,12 @@ def ligands_and_metal_clusters(ase_atom):
 def is_rodlike(metal_sbu):
     '''
     Simple test to check whether a metal sbu is a rodlike MOF
+
+    **parameter:**
+        metal_sbu : ase_atom
+
+    **returns:**
+        bool : True if the metal sbu is a rodlike MOF, False otherwise
     '''
     rod_check = []
     cells = [(2, 1, 1), (1, 2, 1), (1, 1, 2)]
@@ -1271,10 +1236,12 @@ def all_ferrocene_metals(ase_atom, graph):
     A function to find metals corresponding to ferrocene.
     These metals should not be considered during mof-constructions
 
-    Parameters:
-    -----------
-    ase_atom: ASE atom
-    graph : dictionary containing neigbour lists
+    **parameters:**
+        ase_atom: ASE atom
+        graph : dictionary containing neigbour lists
+
+    **returns:**
+        list_of_metals: list of indices of ferrocene metals
     '''
     list_of_metals = []
     graph, _ = compute_ase_neighbour(ase_atom)
@@ -1294,6 +1261,13 @@ def all_ferrocene_metals(ase_atom, graph):
 def is_ferrocene(metal_sbu, graph):
     '''
     A simple script to check whether a metal_sbu is ferrocene
+
+    **parameter:**
+        metal_sbu : ase_atom
+        graph : dictionary containing neigbour lists
+
+    **returns:**
+        bool : True if the metal_sbu is ferrocene, False otherwise
     '''
     check = []
     verdict = False
@@ -1315,7 +1289,14 @@ def is_ferrocene(metal_sbu, graph):
 
 def is_paddlewheel(metal_sbu, graph):
     """
-    Returns True if the atom is part of a paddlewheel motif
+    returns True if the atom is part of a paddlewheel motif
+
+    **parameter:**
+        metal_sbu : ase_atom
+        graph : dictionary containing neigbour lists
+
+    **returns:**
+        bool : True if the metal_sbu is part of a paddlewheel motif, False otherwise
     """
     check = []
     verdict = False
@@ -1329,7 +1310,7 @@ def is_paddlewheel(metal_sbu, graph):
             if metal_sbu[bondedAtomIndex].symbol == 'O':
                 oxygenNeighbours += 1
         if metalNeighbours == 1 and oxygenNeighbours == 4 and len(connectivity) >=\
-            5 and len(connectivity) <= 6:
+                5 and len(connectivity) <= 6:
             verdict = True
         check.append(verdict)
     correct = False
@@ -1340,7 +1321,14 @@ def is_paddlewheel(metal_sbu, graph):
 
 def is_paddlewheel_with_water(ase_atom, graph):
     """
-    Returns True if the atom is part of a paddle wheel with water motif
+    returns True if the atom is part of a paddle wheel with water motif
+
+    **parameter:**
+        ase_atom : ase_atom
+        graph : dictionary containing neigbour lists
+
+    **returns:**
+        bool : True if the metal_sbu is part of a paddle wheel with water motif, False otherwise
     """
     check = []
     metal = []
@@ -1350,8 +1338,8 @@ def is_paddlewheel_with_water(ase_atom, graph):
             index = atoms.index
             metal.append(index)
             connectivity = graph[index]
-            if len([ase_atom[i].symbol for i in connectivity if\
-                ase_atom[i].symbol == 'O']) == 5:
+            if len([ase_atom[i].symbol for i in connectivity if
+                    ase_atom[i].symbol == 'O']) == 5:
                 verdict = True
                 check.append(verdict)
     correct = False
@@ -1362,7 +1350,14 @@ def is_paddlewheel_with_water(ase_atom, graph):
 
 def is_uio66(ase_atom, graph):
     """
-    Returns True if the atom is part of a UIO66 motif
+    returns True if the atom is part of a UIO66 motif
+
+    **parameter:**
+        ase_atom : ase_atom
+        graph : dictionary containing neigbour lists
+
+    **returns:**
+        bool : True if the metal_sbu is part of a UIO66 motif, False otherwise
     """
     check = []
     verdict = False
@@ -1376,7 +1371,7 @@ def is_uio66(ase_atom, graph):
             if ase_atom[bonded_atom_index].symbol == 'O':
                 oxygen_neighbours += 1
         if metal_neighbours == 4 and (oxygen_neighbours == 6 or oxygen_neighbours == 8)\
-            and (len(connectivity) == 10 or len(connectivity) == 12):
+                and (len(connectivity) == 10 or len(connectivity) == 12):
             verdict = True
         check.append(verdict)
         correct = False
@@ -1387,7 +1382,14 @@ def is_uio66(ase_atom, graph):
 
 def is_irmof(ase_atom, graph):
     """
-    Returns True if the atom is part of a IRMOF motif
+    returns True if the atom is part of a IRMOF motif
+
+    **parameter:**
+        ase_atom : ase_atom
+        graph : dictionary containing neigbour lists
+
+    **returns:**
+        bool : True if the metal_sbu is part of a IRMOF motif, False otherwise
     """
     check = []
     verdict = False
@@ -1395,8 +1397,8 @@ def is_irmof(ase_atom, graph):
         if atoms.symbol == 'O':
             index = atoms.index
             connectivity = graph[index]
-            if len(connectivity) == 4 and len([ase_atom[i].symbol for i in connectivity if\
-                ase_atom[i].symbol in transition_metals()]) == 4:
+            if len(connectivity) == 4 and len([ase_atom[i].symbol for i in connectivity if
+                                               ase_atom[i].symbol in transition_metals()]) == 4:
 
                 verdict = True
                 check.append(verdict)
@@ -1408,7 +1410,14 @@ def is_irmof(ase_atom, graph):
 
 def is_mof32(ase_atom, graph):
     """
-    Returns True if the atom is part of a MOF32 motif
+    returns True if the atom is part of a MOF32 motif
+
+    **parameter:**
+        ase_atom : ase_atom
+        graph : dictionary containing neigbour lists
+
+    **returns:**
+        bool : True if the metal_sbu is part of a MOF32 motif, False otherwise
     """
     check = []
     metal = []
@@ -1433,6 +1442,13 @@ def rod_manipulation(ase_atom, checker):
     1) Its collects the axis responsible for expanding the rod
     2) It shifts all coordinates to the axis
     3) It rotates the rod to lie in the directions of expansion,
+
+    **parameter:**
+        ase_atom : ASE atoms object
+        checker : list of indices of atoms responsible for rod expansion
+
+    **returns:**
+        ase_atom : ASE atoms object with adjusted coordinates
     '''
 
     cell = ase_atom.get_cell().tolist()
@@ -1444,25 +1460,33 @@ def rod_manipulation(ase_atom, checker):
     ase_atom.positions = new_position
     return ase_atom, new_cell
 
-def find_unique_building_units(list_of_connected_components, atom_pairs_at_breaking_point,\
-    ase_atom, porphyrin_checker, all_regions, wrap_system=True, cheminfo=False, add_dummy=False):
+
+def find_unique_building_units(list_of_connected_components, atom_pairs_at_breaking_point,
+                               ase_atom, porphyrin_checker, all_regions, wrap_system=True, cheminfo=False, add_dummy=False):
     '''
-    Find Unique components
-    Parameters:
-    -----------
-    list_of_connected_components : list of connected components
-    atom_pairs_at_breaking_point : dictionary of atom pairs at breaking point
-    ase_atom : ASE atoms object
-    porphyrin_checker : list of indices of porphyrins
-    all_regions : dictionary of regions
-    wrap_system : boolean, default True
-    cheminfo : boolean, default False
-    add_dummy: boolean, default False
-    add_dummy keyword enables the addition of dumnmy atoms which can then be replaced
-    by hydrogen to neutralize the building blocks.
-    Returns
-    ---------
-    A list of unique molecules
+    A function that identifies and processes unique building units within a MOF.
+    This function deconstructs a MOF into its constituent building unit and identifies
+    unique building units. It can also
+    1. wrap the system into the unit cell,
+    2. add dummy atoms to neutralize the building units,
+    3. compute cheminformatics data using Open Babel.
+
+    **parameters:**
+        list_of_connected_components : list of connected components
+        atom_pairs_at_breaking_point : dictionary of atom pairs at breaking point
+        ase_atom : ASE atoms object
+        porphyrin_checker : list of indices of porphyrins
+        all_regions : dictionary of regions
+        wrap_system : boolean, default True
+        cheminfo : boolean, default False
+        add_dummy: boolean, default False
+        add_dummy keyword enables the addition of dumnmy atoms which can then be replaced
+        by hydrogen to neutralize the building blocks.
+
+    **returns:**
+        mof_metal: list of metal indices
+        mof_linker: list of linker indices
+        concentration: dictionary of concentration of building units
     '''
     mof_metal = []
     mof_linker = []
@@ -1482,15 +1506,16 @@ def find_unique_building_units(list_of_connected_components, atom_pairs_at_break
 
         molecule_for_prop = molecule_to_write
         if wrap_system and add_dummy:
-            dummy_idx = [find_key_or_value(i, atom_pairs_at_breaking_point) for i in point_of_extension]
+            dummy_idx = [find_key_or_value(
+                i, atom_pairs_at_breaking_point) for i in point_of_extension]
 
             if dummy_idx:
                 dummy_mol = ase_atom[dummy_idx]
                 len_mole_without_dummy = len(molecule_to_write)
 
-
                 molecule_to_write += dummy_mol
-                molecule_to_write = wrap_systems_in_unit_cell(molecule_to_write)
+                molecule_to_write = wrap_systems_in_unit_cell(
+                    molecule_to_write)
 
                 for i in range(len_mole_without_dummy, len(molecule_to_write)):
                     molecule_to_write[i].symbol = 'X'
@@ -1521,7 +1546,6 @@ def find_unique_building_units(list_of_connected_components, atom_pairs_at_break
         #         atom.symbol = 'X'
         #     molecule_to_write += dummy_mol
 
-
         metal = [i.index for i in molecule_for_prop if i.symbol in transition_metals(
         ) and i.index not in porphyrin_checker]
         non_ferocene_metal = []
@@ -1543,7 +1567,8 @@ def find_unique_building_units(list_of_connected_components, atom_pairs_at_break
                 molecule_to_write.info['sbu_type'] = 'IRMOF_sbu'
             elif is_ferrocene(molecule_for_prop, graph_sbu):
                 molecule_to_write.info['sbu_type'] = 'ferrocenelike'
-                ferocene_metal = all_ferrocene_metals(molecule_for_prop, graph_sbu)
+                ferocene_metal = all_ferrocene_metals(
+                    molecule_for_prop, graph_sbu)
                 non_ferocene_metal = [
                     i for i in metal if not i in ferocene_metal]
                 if len(non_ferocene_metal) == 0:
@@ -1562,6 +1587,12 @@ def find_unique_building_units(list_of_connected_components, atom_pairs_at_break
 def metal_coordination_number(ase_atom):
     '''
     Extract coordination number of central metal
+
+    **paramters:**
+        ase_atom : ASE atoms object
+
+    **returns:**
+        metal_elt : list of metal elements
     '''
     metal_coordination = {}
     graph, _ = compute_ase_neighbour(ase_atom)
@@ -1579,6 +1610,13 @@ def metal_coordination_number(ase_atom):
 def metal_coordination_enviroment(ase_atom):
     '''
     Find the enviroment of a metal
+
+    **paramters:**
+        ase_atom : ASE atoms object
+
+    **returns:**
+        metal_elt : list of metal elements
+        metal_enviroment : dict where key is metal element and value is list of neighboring elements
     '''
     metal_enviroment = {}
     seen = []
@@ -1589,8 +1627,9 @@ def metal_coordination_enviroment(ase_atom):
     for i in metal_indices:
         if i not in porph_indices and i not in seen:
             seen.append(ase_atom[i].symbol)
-            metal_enviroment[ase_atom[i].symbol] = [ase_atom[j].symbol for j in graph[i]]
-    return  metal_enviroment
+            metal_enviroment[ase_atom[i].symbol] = [
+                ase_atom[j].symbol for j in graph[i]]
+    return metal_enviroment
 
 
 def mof_regions(ase_atom, list_of_connected_components, atom_pairs_at_breaking_point):
@@ -1599,18 +1638,15 @@ def mof_regions(ase_atom, list_of_connected_components, atom_pairs_at_breaking_p
     This function is used to partition a MOF into regions that correspond to unique
     unique building units.
 
-    Parameters:
-    -----------
-    ase_atom: ASE atom
-    list_of_connected_components : list of list, wherein each list correspond to atom indices of a specific building unit
-    atom_pairs_at_breaking_point: dictionary containing pairs of atoms from which the bonds were broken
+    **parameters:**
+        ase_atom: ASE atom
+        list_of_connected_components : list of list, wherein each list correspond to atom indices of a specific building unit
+        atom_pairs_at_breaking_point: dictionary containing pairs of atoms from which the bonds were broken
 
-    Returns
-    -------
-    Move an index from any position in the list to the front
-    The function is important to set the cell of a rodmof to point in the
-    a-axis. Such that the system can be grow along this axis
-
+    **returns:**
+        Move an index from any position in the list to the front
+        The function is important to set the cell of a rodmof to point in the
+        a-axis. Such that the system can be grow along this axis
     '''
     all_regions = {}
     xis_regions = {}
@@ -1637,6 +1673,14 @@ def wrap_systems_in_unit_cell(ase_atom, max_iter=30, skin=0.3):
     '''
     A simple aglorithm to reconnnect all atoms wrapped in a periodic
     boundary condition such that all atoms outside the box will appear reconnected.
+
+    **parameters:**
+        ase_atom : ASE atoms object
+        max_iter : int, optional (default=30) Maximum number of iterations for reconnection
+        skin : float, optional (default=0.3) Skin distance for bond reconnection
+
+    **returns:**
+        ase_atom : ASE atoms object with reconnected atoms wrapped in a periodic boundary condition
     '''
     if not any(ase_atom.get_pbc()):
         return ase_atom
@@ -1696,16 +1740,14 @@ def angle_tolerance_to_rad(angle, tolerance=5):
     '''
     Convert angle from degrees to radians with tolerance.
 
-    Parameters
-    ----------
-    angle: float
-        Angle in degrees.
-    tolerance: float
-        Tolerance in degrees, default is 5.
+    **parameters:**
+        angle: float
+            Angle in degrees.
+        tolerance: float
+            Tolerance in degrees, default is 5.
 
-    Returns
-    -------
-    bond_angle_rad: float
+    **returns:**
+        bond_angle_rad: float
         Adjusted angle in radians.
     '''
     angle_variation = np.random.uniform(-tolerance, tolerance)
@@ -1719,12 +1761,12 @@ def find_key_or_value(key_or_value, dictionary):
     Search for a key or value in a dictionary. If the key or value is
     found, returns the corresponding value or key.
 
-    Parameters:
-    key_or_value : int or str
-    dictionary : dict
+    **parameters:**
+        key_or_value : int or str
+        dictionary : dict
 
-    Returns:
-    The corresponding value or key if found, otherwise None.
+    **returns:**
+        The corresponding value or key if found, otherwise None.
     """
     if key_or_value in dictionary:
         return dictionary[key_or_value]
@@ -1740,7 +1782,7 @@ def find_key_or_value(key_or_value, dictionary):
 #     of approximately 120° with the central atom and its neighbors, and is always
 #     added outward.
 
-#     Parameters
+#     parameters
 #     ----------
 #     ase_atom: Atoms object
 #         The original atom structure.
@@ -1749,7 +1791,7 @@ def find_key_or_value(key_or_value, dictionary):
 #     mapped_indices: dict
 #         Dictionary mapping internal indices to atomic indices.
 
-#     Returns
+#     returns
 #     -------
 #     new_atom: Atoms object
 #         Atoms object containing the original atoms plus the newly added dummy atoms.
@@ -1825,14 +1867,14 @@ def find_key_or_value(key_or_value, dictionary):
 #     """
 #     Function to calculate to compute the coordinates of atoms to add to a give atoms. This
 #     will mostly be used to add hydrogen atoms or dummies.
-#     Parameters
+#     parameters
 #     ----------
 #     atom_type: str
 #     bond_angle: float
 #     atom_position: ndarray
 #     distance: float
 #     tolerance: float
-#     Returns the coordinates of the atoms
+#     returns the coordinates of the atoms
 
 #     """
 #     angle_variation = np.random.uniform(-tolerance, tolerance)
