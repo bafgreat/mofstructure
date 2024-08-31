@@ -1,4 +1,3 @@
-
 # mofstructure
 
 ![intro](source/images/Rotation.gif)
@@ -33,7 +32,7 @@ pip install mofstructure
   pip install .
 ```
 
-# How to: Quick start
+# Quick start
 
 ## Run on the commandline
 
@@ -123,7 +122,7 @@ For each instance in a building unit the various chemiformatic informations are 
 
 ```Python
 for i,  sbu in enumerate(metal_sbu):
-    smi = sbu.info['smi]
+    smi = sbu.info['smi']
     inchi = sbu.info['inchi']
     inchikey = sbu.info['inchikey]
     # for sbus only
@@ -157,7 +156,13 @@ for cif_files in all_cifs:
 # Note that result_folder can be any path. If the path does not exist, it will create one and populate it with all the data.
 ```
 
-# Roadmap
+## How-to Tutorial
+
+<iframe src="source/doc/how-to-doc.html" width="100%" height="600">
+  Click <a href="source/doc/how-to-doc.html">here</a> for a how-to tutorial.
+</iframe>
+
+## Roadmap
 
 In the future the code should be able to:
 

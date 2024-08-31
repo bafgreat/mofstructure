@@ -48,11 +48,11 @@ Support
 
 The module contains much more functionalities. If you are struggling or wish to compute a new quantity that is not yet present, feel free to send me an email: bafgreat@gamil.com.
 
-.. raw:: html
+.. .. raw:: html
 
-   <object data="doc/how-to-doc.html" width="100%" height="600">
-     <p>Click <a href="doc/how-to-doc.html">here</a> for a how-to tutorial.</p>
-   </object>
+..    <iframe src="./doc/how-to-doc.html" width="100%" height="600">
+..      <p>Click <a href="./doc/how-to-doc.html">here</a> for a how-to tutorial.</p>
+..    </iframe>
 
 Roadmap
 =======
