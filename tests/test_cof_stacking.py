@@ -16,8 +16,7 @@ def cof1(data):
 
 
 def test_stacking_configuration(cof1):
-    layers, lateral_offsets, interlayer_height =\
-        compute_cof_stacking(cof1)
+    layers, lateral_offsets, interlayer_height = compute_cof_stacking(cof1)
     assert layers == [[1, 2]]
     assert lateral_offsets == [[0.0, 0.0]]
     assert interlayer_height == [4.0]
