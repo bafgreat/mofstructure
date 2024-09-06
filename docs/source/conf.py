@@ -18,7 +18,7 @@ release = '0.1.7'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
-
+html_logo = "_static/logo.png"
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
@@ -39,10 +39,6 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 html_allow_unicode = True
-html_logo = "_static/logo.png"
-html_theme_options = {
-    'logo_only': True,
-}
 
 
 html_theme = 'alabaster'
