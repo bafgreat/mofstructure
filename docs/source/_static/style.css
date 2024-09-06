@@ -139,11 +139,22 @@ blockquote {
     box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
 }
 
+
+div.sphinxsidebar {
+    width: 300px; /* Adjust this value to set the desired width */
+}
+
+
+div.document {
+    margin-left: 320px;
+}
+
+
 .sidebar a {
     display: block;
     color: #333;
     padding: 10px 0;
-    font-weight: 300;
+    font-weight: 200;
     text-transform: uppercase;
     letter-spacing: 0.2px;
 }

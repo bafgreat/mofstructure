@@ -19,12 +19,6 @@ release = '0.1.7'
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-html_allow_unicode = True
-html_logo ='./images/logo.png'
-html_theme_options = {
-    'logo_only': True,
-}
-
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
@@ -44,8 +38,22 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
+html_allow_unicode = True
+# html_logo ='./images/logo.png'
+# html_theme_options = {
+#     'logo_only': True,
+# }
 
-html_theme = 'alabaster'
+html_theme_options = {
+    'logo': './images/logo.png',
+    'logo_name': True,
+    'description': 'A module for manipulating MOFs',
+    'sidebar_width': '250px',
+    'page_width': '960px',
+    'fixed_sidebar': True,      
+}
+
+# html_theme = 'alabaster'
 
 master_doc = 'index'
 
