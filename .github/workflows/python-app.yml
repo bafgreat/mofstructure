@@ -70,8 +70,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Create .nojekyll file
+      - name: Ensure build directory exists and create .nojekyll file
         run: |
+          mkdir -p docs/source/_build/html
           echo "" > docs/source/_build/html/.nojekyll
 
       - name: Deploy to GitHub Pages
