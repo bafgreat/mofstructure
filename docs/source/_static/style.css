@@ -36,13 +36,13 @@ pre {
 
 h1, h2, h3, h4, h5, h6 {
     color: #2E3A46;
-    font-weight: 700;
+    font-weight: 500;
     margin-bottom: 10px;
     line-height: 2;
 }
 
 h1 {
-    font-size: 2.5rem;
+    font-size: 2.2rem;
     border-bottom: 3px solid #007ACC;
     padding-bottom: 10px;
 }
@@ -130,25 +130,14 @@ blockquote {
 /* Sidebar styles */
 .sidebar {
     background-color: #f4f5f7;
-    padding: 20px;
+    padding: 10px;
     border-right: 1px solid #ddd;
     position: fixed;
-    width: 400px;
+    width: 500px;
     height: 100%;
     overflow-y: auto;
     box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
 }
-
-
-div.sphinxsidebar {
-    width: 300px; /* Adjust this value to set the desired width */
-}
-
-
-div.document {
-    margin-left: 320px;
-}
-
 
 .sidebar a {
     display: block;
