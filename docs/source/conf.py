@@ -19,6 +19,8 @@ release = '0.1.7'
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
+html_allow_unicode = True
+
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
@@ -26,6 +28,7 @@ extensions = [
     'sphinxcontrib.mermaid',
     'sphinx.ext.autosectionlabel',
     'sphinx_copybutton',
+    'sphinx.ext.imgconverter'
 ]
 html_static_path = ['_static']
 html_css_files = [
