@@ -217,3 +217,15 @@ blockquote {
         margin: 10px 0;
     }
 }
+
+.logo img {
+    display: block;
+    margin: 0 auto;
+    max-width: 100%;
+ }
+
+ .logo img[alt="mofstructure logo"]:not([src]) {
+    content: "Logo not found!";
+    color: red;
+    text-align: center;
+ }
