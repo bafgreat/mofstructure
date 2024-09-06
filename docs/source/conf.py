@@ -20,7 +20,7 @@ release = '0.1.7'
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 html_allow_unicode = True
-html_logo ='_static/logo.png'
+html_logo ='logo.png'
 html_theme_options = {
     'logo_only': True,
 }
