@@ -56,35 +56,24 @@ jobs:
 
     - name: Build Sphinx Documentation
       run: |
-        poetry run sphinx-build -b html docs/source docs/build/html
-
-    - name: Check build output directory structure
-      run: |
-        ls -R docs/build/html
+        poetry run sphinx-build -b html docs/ docs/build/html
 
     - name: Upload Sphinx Documentation Artifact
       uses: actions/upload-pages-artifact@v3
       with:
         path: docs/build/html
-        name: sphinx-docs
 
   deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Ensure build directory exists and create .nojekyll file
-        run: |
-          mkdir -p docs/build/html
-          echo "" > docs/build/html/.nojekyll
-
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v3
-        with:
-          artifact-name: sphinx-docs
+        uses: actions/deploy-pages@v4
+
 
 
   # publish:
