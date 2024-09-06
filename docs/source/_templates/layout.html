@@ -8,3 +8,12 @@
     <meta name="description" content="module for structural manipulation of MOFs">
     {{ super() }}
 {% endblock %}
+
+<!-- _templates/layout.html -->
+{% extends "!layout.html" %}
+
+{% block sidebarlogo %}
+<a href="{{ pathto(master_doc) }}" class="logo">
+   <img src="{{ pathto('../images/logo.png', 1) }}" alt="mofstructure logo">
+</a>
+{% endblock %}

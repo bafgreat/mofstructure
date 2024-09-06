@@ -21,6 +21,9 @@ release = '0.1.7'
 
 html_allow_unicode = True
 html_logo ='./images/logo.png'
+html_theme_options = {
+    'logo_only': True, 
+}
 
 extensions = [
     'sphinx.ext.autodoc',
