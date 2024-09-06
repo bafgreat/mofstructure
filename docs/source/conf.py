@@ -9,7 +9,7 @@
 import os
 import sys
 
-sys.path.insert(0, os.path.abspath('../mofstructure'))
+sys.path.insert(0, os.path.abspath('../../mofstructure'))
 
 project = 'mofstructure'
 copyright = '2024, Dinga Wonanke'
