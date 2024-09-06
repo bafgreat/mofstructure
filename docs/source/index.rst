@@ -9,7 +9,12 @@ Introduction
 ============
 
 `mofstructure` is a powerful and user-friendly Python module designed for the manipulation and analysis of metal-organic frameworks (MOFs) and other porous materials, including covalent organic frameworks (COFs) and zeolites. The module offers a range of functions that streamline complex tasks related to the study and modification of these structures. Whether you are a researcher, scientist, or student working in the field of materials science, `mofstructure` provides the tools you need to efficiently analyze and manipulate these intricate frameworks.
-
+.. video:: images/movie3.mp4
+   :alt: Generalities
+   :width: 600
+   :height: 400
+   :autoplay: True
+   :loop: True
 Key Features of `mofstructure`
 ------------------------------
 
@@ -30,8 +35,8 @@ The `mofstructure` module includes a variety of features that simplify common op
 5. **Separation of Building Units into Regions:**
    - This feature is essential for users who need to substitute specific ligands or building units within a framework. By separating building units into distinct regions, `mofstructure` enables targeted modifications, allowing for precise customization of the framework's properties.
 
-.. image:: images/Rotation.gif
-   :alt: Generalities
+.. .. image:: images/Rotation.gif
+..    :alt: Generalities
 
 .. toctree::
    :maxdepth: 3
