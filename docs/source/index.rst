@@ -9,12 +9,14 @@ Introduction
 ============
 
 `mofstructure` is a powerful and user-friendly Python module designed for the manipulation and analysis of metal-organic frameworks (MOFs) and other porous materials, including covalent organic frameworks (COFs) and zeolites. The module offers a range of functions that streamline complex tasks related to the study and modification of these structures. Whether you are a researcher, scientist, or student working in the field of materials science, `mofstructure` provides the tools you need to efficiently analyze and manipulate these intricate frameworks.
+
 .. raw:: html
 
    <video width="600" height="400" autoplay loop muted controls>
       <source src="_static/movie3.mp4" type="video/mp4">
       Your browser does not support the video tag.
    </video>
+   
 Key Features of `mofstructure`
 ------------------------------
 

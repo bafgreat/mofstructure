@@ -158,7 +158,7 @@ for cif_files in all_cifs:
 
 ## Documentation
 
-You can access the full project documentation on [docs](https://bafgreat.github.io/mofstructure/docs/)
+You can access the full project documentation on [docs](https://bafgreat.github.io/mofstructure/)
 
 ## Roadmap
 
