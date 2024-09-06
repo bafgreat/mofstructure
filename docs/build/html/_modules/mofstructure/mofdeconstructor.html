@@ -492,11 +492,12 @@
 <span class="sd">    4) If there are two or more polymeric components, we check whether these systems there are identical or different and select all polymeric components</span>
 
 <span class="sd">    **parameters:**</span>
-<span class="sd">        - ASE atoms</span>
+<span class="sd">        ASE atoms</span>
 
 <span class="sd">    **returns:**</span>
-<span class="sd">        - mof_indices: indices of the guest-free system. The guest-free ase_atom object</span>
-<span class="sd">        can be obtained as follows; E.g.:: guest_free_system = ase_atom[mof_indices]</span>
+<span class="sd">        mof_indices: indices of the guest-free system. The guest-free ase_atom object</span>
+<span class="sd">        can be obtained as follows; E.g.</span>
+<span class="sd">        guest_free_system = ase_atom[mof_indices]</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">atom_neighbors</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">compute_ase_neighbour</span><span class="p">(</span><span class="n">ase_atom</span><span class="p">)</span>
     <span class="n">fragments</span> <span class="o">=</span> <span class="n">connected_components</span><span class="p">(</span><span class="n">atom_neighbors</span><span class="p">)</span>
@@ -530,8 +531,8 @@
 <span class="sd">    Find the connected fragments in a graph. Should work for any graph defined as a dictionary</span>
 
 <span class="sd">    **parameters:**</span>
-<span class="sd">        - A graph in the form of dictionary e.g.::</span>
-<span class="sd">        - graph = {1:[0,1,3], 2:[2,4,5]}</span>
+<span class="sd">        A graph in the form of dictionary e.g.::</span>
+<span class="sd">        graph = {1:[0,1,3], 2:[2,4,5]}</span>
 
 <span class="sd">    **returns:**</span>
 <span class="sd">        returns a python list of list of connected components</span>
@@ -559,7 +560,7 @@
 <span class="sd">    Important to distinguish porphyrin type metals</span>
 
 <span class="sd">    **parameters:**</span>
-<span class="sd">        - p1, p2, p3, p4 : ndarray containing x,y,z values</span>
+<span class="sd">        p1, p2, p3, p4 : ndarray containing x,y,z values</span>
 
 <span class="sd">    **returns:**</span>
 <span class="sd">        Boolean</span>
@@ -600,8 +601,8 @@
 <span class="sd">    https://en.wikipedia.org/wiki/Transition_metal_porphyrin_complexes</span>
 
 <span class="sd">    **parameters:**</span>
-<span class="sd">        - ase_atom: ASE atom</span>
-<span class="sd">        - graph: python dictionary containing neigbours</span>
+<span class="sd">        ase_atom: ASE atom</span>
+<span class="sd">        graph: python dictionary containing neigbours</span>
 
 <span class="sd">    **returns:**</span>
 <span class="sd">        list of indices consisting of index of metal atoms found in the ASE atom</span>
@@ -632,8 +633,8 @@
 <span class="sd">    Check whether a metal is found at the centre of a phorphirin</span>
 
 <span class="sd">    **parameters:**</span>
-<span class="sd">        - ase_atom: ASE atom</span>
-<span class="sd">        - graph: python dictionary containing neigbours</span>
+<span class="sd">        ase_atom: ASE atom</span>
+<span class="sd">        graph: python dictionary containing neigbours</span>
 
 <span class="sd">    **returns:**</span>
 <span class="sd">        list of indices consisting of index of metal atoms found in the ASE atom</span>
@@ -723,10 +724,10 @@
 <span class="sd">        O</span>
 
 <span class="sd">    **parameters:**</span>
-<span class="sd">        - ase_atom: ASE atom</span>
+<span class="sd">        ase_atom: ASE atom</span>
 
 <span class="sd">    **returns:**</span>
-<span class="sd">        - dictionary of key = carbon index and values = oxygen index</span>
+<span class="sd">        dictionary of key = carbon index and values = oxygen index</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">sulphate</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="k">for</span> <span class="n">atoms</span> <span class="ow">in</span> <span class="n">ase_atom</span><span class="p">:</span>
@@ -758,10 +759,10 @@
 <span class="sd">        S</span>
 
 <span class="sd">    **parameters:**</span>
-<span class="sd">        - ase_atom: ASE atom</span>
+<span class="sd">        ase_atom: ASE atom</span>
 
 <span class="sd">    **returns:**</span>
-<span class="sd">        - dictionary of key = carbon index and values = sulphur index</span>
+<span class="sd">        dictionary of key = carbon index and values = sulphur index</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">sulfides</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="n">metals</span> <span class="o">=</span> <span class="p">{}</span>
@@ -794,10 +795,10 @@
 <span class="sd">        P</span>
 
 <span class="sd">    **parameters:**</span>
-<span class="sd">        - ase_atom: ASE atom</span>
+<span class="sd">        ase_atom: ASE atom</span>
 
 <span class="sd">    **returns:**</span>
-<span class="sd">        - dictionary of key = carbon index and values = phosphorous index</span>
+<span class="sd">        dictionary of key = carbon index and values = phosphorous index</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">phosphorous</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="k">for</span> <span class="n">atoms</span> <span class="ow">in</span> <span class="n">ase_atom</span><span class="p">:</span>
@@ -828,10 +829,10 @@
 <span class="sd">        S</span>
 
 <span class="sd">    **parameters:**</span>
-<span class="sd">        - ase_atom: ASE atom</span>
+<span class="sd">        ase_atom: ASE atom</span>
 
 <span class="sd">    **returns:**</span>
-<span class="sd">        - dictionary of key = carbon index and values = sulphur index</span>
+<span class="sd">        dictionary of key = carbon index and values = sulphur index</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">sulfides</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="k">for</span> <span class="n">atoms</span> <span class="ow">in</span> <span class="n">ase_atom</span><span class="p">:</span>
@@ -867,10 +868,10 @@
 <span class="sd">       O</span>
 
 <span class="sd">    **parameters:**</span>
-<span class="sd">        - ase_atom: ASE atom</span>
+<span class="sd">        ase_atom: ASE atom</span>
 
 <span class="sd">    **returns**</span>
-<span class="sd">        - dictionary of key = carbon index and values = oxygen index</span>
+<span class="sd">        dictionary of key = carbon index and values = oxygen index</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">phosphate</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="k">for</span> <span class="n">atoms</span> <span class="ow">in</span> <span class="n">ase_atom</span><span class="p">:</span>
@@ -897,12 +898,12 @@
 <span class="sd">    3) Look for oxygen that is connected to metal and two carbon. cut at metal oxygen bond</span>
 
 <span class="sd">    **parameters:**</span>
-<span class="sd">        - ase_atom: ASE atom</span>
+<span class="sd">        ase_atom: ASE atom</span>
 
 <span class="sd">    **returns:**</span>
-<span class="sd">        - list_of_connected_components: list of connected components,in which each list contains atom indices</span>
-<span class="sd">        - atom_pairs_at_breaking_point : Dictionary containing point of disconnection Porphyrin_checker: Boolean showing whether the metal is in the centre of a porpherin</span>
-<span class="sd">        - Regions: Dictionary of regions.</span>
+<span class="sd">        list_of_connected_components: list of connected components,in which each list contains atom indices</span>
+<span class="sd">        atom_pairs_at_breaking_point : Dictionary containing point of disconnection Porphyrin_checker: Boolean showing whether the metal is in the centre of a porpherin</span>
+<span class="sd">        Regions: Dictionary of regions.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">graph</span><span class="p">,</span> <span class="n">bond_matrix</span> <span class="o">=</span> <span class="n">compute_ase_neighbour</span><span class="p">(</span><span class="n">ase_atom</span><span class="p">)</span>
     <span class="n">porphyrin_checker</span> <span class="o">=</span> <span class="n">metal_in_porphyrin2</span><span class="p">(</span><span class="n">ase_atom</span><span class="p">,</span> <span class="n">graph</span><span class="p">)</span>
@@ -1165,13 +1166,13 @@
 <span class="sd">    Here we select the largest connected component</span>
 
 <span class="sd">    **parameters:**</span>
-<span class="sd">        - ase_atom: ASE atom</span>
+<span class="sd">        ase_atom: ASE atom</span>
 
 <span class="sd">    **returns:**</span>
-<span class="sd">        - list_of_connected_components: list of connected components, in which each list contains atom indices</span>
-<span class="sd">        - atom_pairs_at_breaking_point: Dictionary containing point of disconnection</span>
-<span class="sd">        - Porpyrin_checker: Boolean showing whether the metal is in the centre of a porpherin</span>
-<span class="sd">        - Regions: Dictionary of regions.</span>
+<span class="sd">        list_of_connected_components: list of connected components, in which each list contains atom indices</span>
+<span class="sd">        atom_pairs_at_breaking_point: Dictionary containing point of disconnection</span>
+<span class="sd">        Porpyrin_checker: Boolean showing whether the metal is in the centre of a porpherin</span>
+<span class="sd">        Regions: Dictionary of regions.</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">graph</span><span class="p">,</span> <span class="n">bond_matrix</span> <span class="o">=</span> <span class="n">compute_ase_neighbour</span><span class="p">(</span><span class="n">ase_atom</span><span class="p">)</span>
 
@@ -1350,10 +1351,10 @@
 <span class="sd">    Simple test to check whether a metal sbu is a rodlike MOF</span>
 
 <span class="sd">    **parameter:**</span>
-<span class="sd">        - metal_sbu : ase_atom</span>
+<span class="sd">        metal_sbu : ase_atom</span>
 
 <span class="sd">    **returns:**</span>
-<span class="sd">        - bool : True if the metal sbu is a rodlike MOF, False otherwise</span>
+<span class="sd">        bool : True if the metal sbu is a rodlike MOF, False otherwise</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">rod_check</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">cells</span> <span class="o">=</span> <span class="p">[(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)]</span>
@@ -1375,11 +1376,11 @@
 <span class="sd">    These metals should not be considered during mof-constructions</span>
 
 <span class="sd">    **parameters:**</span>
-<span class="sd">        - ase_atom: ASE atom</span>
-<span class="sd">        - graph : dictionary containing neigbour lists</span>
+<span class="sd">        ase_atom: ASE atom</span>
+<span class="sd">        graph : dictionary containing neigbour lists</span>
 
 <span class="sd">    **returns:**</span>
-<span class="sd">        - list_of_metals: list of indices of ferrocene metals</span>
+<span class="sd">        list_of_metals: list of indices of ferrocene metals</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">list_of_metals</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">graph</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">compute_ase_neighbour</span><span class="p">(</span><span class="n">ase_atom</span><span class="p">)</span>
@@ -1404,11 +1405,11 @@
 <span class="sd">    A simple script to check whether a metal_sbu is ferrocene</span>
 
 <span class="sd">    **parameter:**</span>
-<span class="sd">        - metal_sbu : ase_atom</span>
-<span class="sd">        - graph : dictionary containing neigbour lists</span>
+<span class="sd">        metal_sbu : ase_atom</span>
+<span class="sd">        graph : dictionary containing neigbour lists</span>
 
 <span class="sd">    **returns:**</span>
-<span class="sd">        - bool : True if the metal_sbu is ferrocene, False otherwise</span>
+<span class="sd">        bool : True if the metal_sbu is ferrocene, False otherwise</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">check</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">verdict</span> <span class="o">=</span> <span class="kc">False</span>
@@ -1436,11 +1437,11 @@
 <span class="sd">    returns True if the atom is part of a paddlewheel motif</span>
 
 <span class="sd">    **parameter:**</span>
-<span class="sd">        - metal_sbu : ase_atom</span>
-<span class="sd">        - graph : dictionary containing neigbour lists</span>
+<span class="sd">        metal_sbu : ase_atom</span>
+<span class="sd">        graph : dictionary containing neigbour lists</span>
 
 <span class="sd">    **returns:**</span>
-<span class="sd">        - bool : True if the metal_sbu is part of a paddlewheel motif, False otherwise</span>
+<span class="sd">        bool : True if the metal_sbu is part of a paddlewheel motif, False otherwise</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">check</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">verdict</span> <span class="o">=</span> <span class="kc">False</span>
@@ -1471,8 +1472,8 @@
 <span class="sd">    returns True if the atom is part of a paddle wheel with water motif</span>
 
 <span class="sd">    **parameter:**</span>
-<span class="sd">        - ase_atom : ase_atom</span>
-<span class="sd">        - graph : dictionary containing neigbour lists</span>
+<span class="sd">        ase_atom : ase_atom</span>
+<span class="sd">        graph : dictionary containing neigbour lists</span>
 
 <span class="sd">    **returns:**</span>
 <span class="sd">        bool : True if the metal_sbu is part of a paddle wheel with water motif, False otherwise</span>
@@ -1503,11 +1504,11 @@
 <span class="sd">    returns True if the atom is part of a UIO66 motif</span>
 
 <span class="sd">    **parameter:**</span>
-<span class="sd">        - ase_atom : ase_atom</span>
-<span class="sd">        - graph : dictionary containing neigbour lists</span>
+<span class="sd">        ase_atom : ase_atom</span>
+<span class="sd">        graph : dictionary containing neigbour lists</span>
 
 <span class="sd">    **returns:**</span>
-<span class="sd">        - bool : True if the metal_sbu is part of a UIO66 motif, False otherwise</span>
+<span class="sd">        bool : True if the metal_sbu is part of a UIO66 motif, False otherwise</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">check</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">verdict</span> <span class="o">=</span> <span class="kc">False</span>
@@ -1538,11 +1539,11 @@
 <span class="sd">    returns True if the atom is part of a IRMOF motif</span>
 
 <span class="sd">    **parameter:**</span>
-<span class="sd">        - ase_atom : ase_atom</span>
-<span class="sd">        - graph : dictionary containing neigbour lists</span>
+<span class="sd">        ase_atom : ase_atom</span>
+<span class="sd">        graph : dictionary containing neigbour lists</span>
 
 <span class="sd">    **returns:**</span>
-<span class="sd">        - bool : True if the metal_sbu is part of a IRMOF motif, False otherwise</span>
+<span class="sd">        bool : True if the metal_sbu is part of a IRMOF motif, False otherwise</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">check</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">verdict</span> <span class="o">=</span> <span class="kc">False</span>
@@ -1569,11 +1570,11 @@
 <span class="sd">    returns True if the atom is part of a MOF32 motif</span>
 
 <span class="sd">    **parameter:**</span>
-<span class="sd">        - ase_atom : ase_atom</span>
-<span class="sd">        - graph : dictionary containing neigbour lists</span>
+<span class="sd">        ase_atom : ase_atom</span>
+<span class="sd">        graph : dictionary containing neigbour lists</span>
 
 <span class="sd">    **returns:**</span>
-<span class="sd">        - bool : True if the metal_sbu is part of a MOF32 motif, False otherwise</span>
+<span class="sd">        bool : True if the metal_sbu is part of a MOF32 motif, False otherwise</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">check</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">metal</span> <span class="o">=</span> <span class="p">[]</span>
@@ -1603,11 +1604,11 @@
 <span class="sd">    3) It rotates the rod to lie in the directions of expansion,</span>
 
 <span class="sd">    **parameter:**</span>
-<span class="sd">        - ase_atom : ASE atoms object</span>
-<span class="sd">        - checker : list of indices of atoms responsible for rod expansion</span>
+<span class="sd">        ase_atom : ASE atoms object</span>
+<span class="sd">        checker : list of indices of atoms responsible for rod expansion</span>
 
 <span class="sd">    **returns:**</span>
-<span class="sd">        - ase_atom : ASE atoms object with adjusted coordinates</span>
+<span class="sd">        ase_atom : ASE atoms object with adjusted coordinates</span>
 <span class="sd">    &#39;&#39;&#39;</span>
 
     <span class="n">cell</span> <span class="o">=</span> <span class="n">ase_atom</span><span class="o">.</span><span class="n">get_cell</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
@@ -1634,21 +1635,21 @@
 <span class="sd">    3. compute cheminformatics data using Open Babel.</span>
 
 <span class="sd">    **parameters:**</span>
-<span class="sd">        - list_of_connected_components : list of connected components</span>
-<span class="sd">        - atom_pairs_at_breaking_point : dictionary of atom pairs at breaking point</span>
-<span class="sd">        - ase_atom : ASE atoms object</span>
-<span class="sd">        - porphyrin_checker : list of indices of porphyrins</span>
-<span class="sd">        - all_regions : dictionary of regions</span>
-<span class="sd">        - wrap_system : boolean, default True</span>
-<span class="sd">        - cheminfo : boolean, default False</span>
-<span class="sd">        - add_dummy: boolean, default False</span>
+<span class="sd">        list_of_connected_components : list of connected components</span>
+<span class="sd">        atom_pairs_at_breaking_point : dictionary of atom pairs at breaking point</span>
+<span class="sd">        ase_atom : ASE atoms object</span>
+<span class="sd">        porphyrin_checker : list of indices of porphyrins</span>
+<span class="sd">        all_regions : dictionary of regions</span>
+<span class="sd">        wrap_system : boolean, default True</span>
+<span class="sd">        cheminfo : boolean, default False</span>
+<span class="sd">        add_dummy: boolean, default False</span>
 <span class="sd">        add_dummy keyword enables the addition of dumnmy atoms which can then be replaced</span>
 <span class="sd">        by hydrogen to neutralize the building blocks.</span>
 
 <span class="sd">    **returns:**</span>
-<span class="sd">        - mof_metal: list of metal indices</span>
-<span class="sd">        - mof_linker: list of linker indices</span>
-<span class="sd">        - concentration: dictionary of concentration of building units</span>
+<span class="sd">        mof_metal: list of metal indices</span>
+<span class="sd">        mof_linker: list of linker indices</span>
+<span class="sd">        concentration: dictionary of concentration of building units</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">mof_metal</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">mof_linker</span> <span class="o">=</span> <span class="p">[]</span>
@@ -1754,10 +1755,10 @@
 <span class="sd">    Extract coordination number of central metal</span>
 
 <span class="sd">    **paramters:**</span>
-<span class="sd">        - ase_atom : ASE atoms object</span>
+<span class="sd">        ase_atom : ASE atoms object</span>
 
 <span class="sd">    **returns:**</span>
-<span class="sd">        - metal_elt : list of metal elements</span>
+<span class="sd">        metal_elt : list of metal elements</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">metal_coordination</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="n">graph</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">compute_ase_neighbour</span><span class="p">(</span><span class="n">ase_atom</span><span class="p">)</span>
@@ -1780,11 +1781,11 @@
 <span class="sd">    Find the enviroment of a metal</span>
 
 <span class="sd">    **paramters:**</span>
-<span class="sd">        - ase_atom : ASE atoms object</span>
+<span class="sd">        ase_atom : ASE atoms object</span>
 
 <span class="sd">    **returns:**</span>
-<span class="sd">        - metal_elt : list of metal elements</span>
-<span class="sd">        - metal_enviroment : dict where key is metal element and value is list of neighboring elements</span>
+<span class="sd">        metal_elt : list of metal elements</span>
+<span class="sd">        metal_enviroment : dict where key is metal element and value is list of neighboring elements</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">metal_enviroment</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="n">seen</span> <span class="o">=</span> <span class="p">[]</span>
@@ -1810,9 +1811,9 @@
 <span class="sd">    unique building units.</span>
 
 <span class="sd">    **parameters:**</span>
-<span class="sd">        - ase_atom: ASE atom</span>
-<span class="sd">        - list_of_connected_components : list of list, wherein each list correspond to atom indices of a specific building unit</span>
-<span class="sd">        - atom_pairs_at_breaking_point: dictionary containing pairs of atoms from which the bonds were broken</span>
+<span class="sd">        ase_atom: ASE atom</span>
+<span class="sd">        list_of_connected_components : list of list, wherein each list correspond to atom indices of a specific building unit</span>
+<span class="sd">        atom_pairs_at_breaking_point: dictionary containing pairs of atoms from which the bonds were broken</span>
 
 <span class="sd">    **returns:**</span>
 <span class="sd">        Move an index from any position in the list to the front</span>
@@ -1849,9 +1850,9 @@
 <span class="sd">    boundary condition such that all atoms outside the box will appear reconnected.</span>
 
 <span class="sd">    **parameters:**</span>
-<span class="sd">        - ase_atom : ASE atoms object</span>
-<span class="sd">        - max_iter : int, optional (default=30) Maximum number of iterations for reconnection</span>
-<span class="sd">        - skin : float, optional (default=0.3) Skin distance for bond reconnection</span>
+<span class="sd">        ase_atom : ASE atoms object</span>
+<span class="sd">        max_iter : int, optional (default=30) Maximum number of iterations for reconnection</span>
+<span class="sd">        skin : float, optional (default=0.3) Skin distance for bond reconnection</span>
 
 <span class="sd">    **returns:**</span>
 <span class="sd">        - ase_atom : ASE atoms object with reconnected atoms wrapped in a periodic boundary condition</span>
@@ -1924,7 +1925,7 @@
 <span class="sd">            Tolerance in degrees, default is 5.</span>
 
 <span class="sd">    **returns:**</span>
-<span class="sd">        - bond_angle_rad: float</span>
+<span class="sd">        bond_angle_rad: float</span>
 <span class="sd">        Adjusted angle in radians.</span>
 <span class="sd">    &#39;&#39;&#39;</span>
     <span class="n">angle_variation</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">-</span><span class="n">tolerance</span><span class="p">,</span> <span class="n">tolerance</span><span class="p">)</span>

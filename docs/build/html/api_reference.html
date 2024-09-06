@@ -40,6 +40,731 @@
 <h1>API Reference<a class="headerlink" href="#api-reference" title="Link to this heading">¶</a></h1>
 <section id="module-mofstructure.mofdeconstructor">
 <span id="mof-deconstructions"></span><h2>MOF Deconstructions<a class="headerlink" href="#module-mofstructure.mofdeconstructor" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.all_ferrocene_metals">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">all_ferrocene_metals</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ase_atom</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">graph</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#all_ferrocene_metals"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.all_ferrocene_metals" title="Link to this definition">¶</a></dt>
+<dd><p>A function to find metals corresponding to ferrocene.
+These metals should not be considered during mof-constructions</p>
+<dl class="simple">
+<dt><strong>parameters:</strong></dt><dd><p>ase_atom: ASE atom
+graph : dictionary containing neigbour lists</p>
+</dd>
+<dt><strong>returns:</strong></dt><dd><p>list_of_metals: list of indices of ferrocene metals</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.angle_tolerance_to_rad">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">angle_tolerance_to_rad</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">angle</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tolerance</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#angle_tolerance_to_rad"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.angle_tolerance_to_rad" title="Link to this definition">¶</a></dt>
+<dd><p>Convert angle from degrees to radians with tolerance.</p>
+<dl class="simple">
+<dt><strong>parameters:</strong></dt><dd><dl class="simple">
+<dt>angle: float</dt><dd><p>Angle in degrees.</p>
+</dd>
+<dt>tolerance: float</dt><dd><p>Tolerance in degrees, default is 5.</p>
+</dd>
+</dl>
+</dd>
+<dt><strong>returns:</strong></dt><dd><p>bond_angle_rad: float
+Adjusted angle in radians.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.ase_2_pybel">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">ase_2_pybel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">atoms</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#ase_2_pybel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.ase_2_pybel" title="Link to this definition">¶</a></dt>
+<dd><p>As simple script to convert from ase atom object to pybel. There are
+many functionalities like atom typing, bond typing and autmatic addition of
+hydrogen that can be performed on a pybel molecule object, which can not be
+directly performed on an ase atom object.
+E.g</p>
+<p>add_hygrogen = pybel.addh()</p>
+<p>remove_hydrogen = pybel.removeh()</p>
+<p><a class="reference external" href="https://openbabel.org/docs/dev/UseTheLibrary/Python_Pybel.html">https://openbabel.org/docs/dev/UseTheLibrary/Python_Pybel.html</a></p>
+<dl class="simple">
+<dt><strong>parameters:</strong></dt><dd><p>atoms : ASE atoms object</p>
+</dd>
+<dt><strong>returns:</strong></dt><dd><p>pybel: pybel molecular object.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.ase_2_xyz">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">ase_2_xyz</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">atoms</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#ase_2_xyz"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.ase_2_xyz" title="Link to this definition">¶</a></dt>
+<dd><p>Create an xyz string from an ase atom object to be compatible with
+pybel in order to perfom some cheminformatics.</p>
+<dl class="simple">
+<dt><strong>parameters:</strong></dt><dd><p>atoms : ASE atoms object</p>
+</dd>
+<dt><strong>returns:</strong></dt><dd><p>a_str : string block of the atom object in xyz format</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.check_planarity">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">check_planarity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">p1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">p2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">p3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">p4</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#check_planarity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.check_planarity" title="Link to this definition">¶</a></dt>
+<dd><p>A simple procedure to check whether a point is planar to three other points.
+Important to distinguish porphyrin type metals</p>
+<dl class="simple">
+<dt><strong>parameters:</strong></dt><dd><p>p1, p2, p3, p4 : ndarray containing x,y,z values</p>
+</dd>
+<dt><strong>returns:</strong></dt><dd><p>Boolean
+True: planar
+False: noneplanar</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.compute_ase_neighbour">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">compute_ase_neighbour</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ase_atom</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#compute_ase_neighbour"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.compute_ase_neighbour" title="Link to this definition">¶</a></dt>
+<dd><p>Create a connectivity graph using ASE neigbour list.</p>
+<dl class="simple">
+<dt><strong>parameters:</strong></dt><dd><p>ASE atoms</p>
+</dd>
+<dt><strong>returns:</strong></dt><dd><ol class="arabic simple">
+<li><p>atom_neighbors:
+A python dictionary, wherein each atom index
+is key and the value are the indices of it neigbours.
+e.g.
+atom_neighbors ={0:[1,2,3,4], 1:[3,4,5]…}</p></li>
+<li><p>matrix:
+An adjacency matrix that wherein each row correspond to
+to an atom index and the colums correspond to the interaction
+between that atom to the other atoms. The entries in the
+matrix are 1 or 0. 1 implies bonded and 0 implies not bonded.</p></li>
+</ol>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.compute_cheminformatic_from_rdkit">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">compute_cheminformatic_from_rdkit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ase_atom</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#compute_cheminformatic_from_rdkit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.compute_cheminformatic_from_rdkit" title="Link to this definition">¶</a></dt>
+<dd><p>A function that converts and ase atom into rkdit mol to extract some cheminformatic
+information.The script begins by taking an ase atom an creating an xyz string
+of the molecule, which is stored to memory. The xyz string is then read using
+the MolFromXYZBlock function in rdkit, which reads an xyz string of the molecule.
+However, this does not include any of the bonding information. To do this the following
+commands are parsed to the rdkit mol,bond_moll = Chem.Mol(rdmol)
+rdDetermineBonds.DetermineBonds(bond_moll,charge=0)
+<a class="reference external" href="https://github.com/rdkit/UGM_2022/blob/main/Notebooks/Landrum_WhatsNew.ipynb">https://github.com/rdkit/UGM_2022/blob/main/Notebooks/Landrum_WhatsNew.ipynb</a></p>
+<dl class="simple">
+<dt><strong>parameters:</strong></dt><dd><p>ASE atoms</p>
+</dd>
+<dt><strong>returns:</strong></dt><dd><p>smile string, inchi, inchikey</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.compute_inchis">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">compute_inchis</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obmol</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#compute_inchis"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.compute_inchis" title="Link to this definition">¶</a></dt>
+<dd><p>A function to compute the cheminformatic inchi and inchikey using
+openbabel. The inchi and inchikey are IUPAC cheminformatic identifiers
+of molecules. They are important to easily search for molecules in databases.
+For MOFs, this is quite important to search for different secondary building units
+(sbu) and ligands found in the MOF.
+More about inchi can be found in the following link</p>
+<p><a class="reference external" href="https://iupac.org/who-we-are/divisions/division-details/inchi">https://iupac.org/who-we-are/divisions/division-details/inchi</a></p>
+<dl class="simple">
+<dt><strong>parameters:</strong></dt><dd><p>obmol: openbabel molecule object</p>
+</dd>
+<dt><strong>returns:</strong></dt><dd><p>inChi, inChiKey: iupac inchi and inchikeys for thesame molecule.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.compute_openbabel_cheminformatic">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">compute_openbabel_cheminformatic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ase_atom</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#compute_openbabel_cheminformatic"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.compute_openbabel_cheminformatic" title="Link to this definition">¶</a></dt>
+<dd><p>A function the returns all smiles, inchi and inchikeys
+from an ase_atom object. The function starts by wrapping
+the system, which is important for systems in which minimum
+image convertion has made atoms appear to be uncoordinated
+at random positions. The wrap functions coordinates all the
+atoms together.</p>
+<dl class="simple">
+<dt><strong>parameters:</strong></dt><dd><p>atoms : ASE atoms object</p>
+</dd>
+<dt><strong>returns:</strong></dt><dd><p>smi, inChi, inChiKey</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.compute_smi">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">compute_smi</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obmol</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#compute_smi"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.compute_smi" title="Link to this definition">¶</a></dt>
+<dd><p>A function to compute the SMILES (Simplified molecular-input line-entry system) notation
+of a molecule using openbabel. The SMILES is a line notation method that uses ASCII strings to represent
+molecules. More about SMILES can be found in the following link
+<a class="reference external" href="https://en.wikipedia.org/wiki/Simplified_molecular-input_line-entry_system">https://en.wikipedia.org/wiki/Simplified_molecular-input_line-entry_system</a></p>
+<dl class="simple">
+<dt><strong>parameters:</strong></dt><dd><p>obmol : openbabel molecule object</p>
+</dd>
+<dt><strong>returns:</strong></dt><dd><p>smi: SMILES notatation of the molecule.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.connected_components">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">connected_components</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">graph</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#connected_components"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.connected_components" title="Link to this definition">¶</a></dt>
+<dd><p>Find the connected fragments in a graph. Should work for any graph defined as a dictionary</p>
+<dl class="simple">
+<dt><strong>parameters:</strong></dt><dd><p>A graph in the form of dictionary e.g.::
+graph = {1:[0,1,3], 2:[2,4,5]}</p>
+</dd>
+<dt><strong>returns:</strong></dt><dd><p>returns a python list of list of connected components
+These correspond to individual molecular fragments.
+list_of_connected_components = [[1,2],[1,3,4]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.covalent_radius">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">covalent_radius</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">element</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#covalent_radius"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.covalent_radius" title="Link to this definition">¶</a></dt>
+<dd><p>A function that returns the covalent radius from the chemical symbol
+of an element.</p>
+<dl class="simple">
+<dt><strong>parameters:</strong></dt><dd><p>element: chemical symbol of an atom
+type.string</p>
+</dd>
+<dt><strong>returns:</strong></dt><dd><p>covalent_radii: covalent radius of the elements.
+type.float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.dfsutil_graph_method">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">dfsutil_graph_method</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">graph</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">temp</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">node</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">visited</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#dfsutil_graph_method"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.dfsutil_graph_method" title="Link to this definition">¶</a></dt>
+<dd><p>Depth-first search graph algorithm for traversing graph data structures.
+I starts at the root ‘node’ and explores as far as possible along
+each branch before backtracking.
+It is used here a a util for searching connected components in the MOF graph</p>
+<dl class="simple">
+<dt><strong>parameters:</strong></dt><dd><p>graph: any python dictionary
+temp: a python list to hold nodes that have been visited
+node: a key in the python dictionary (graph), which is used as the starting or root node
+visited: python list containing nodes that have been traversed.</p>
+</dd>
+<dt><strong>returns:</strong></dt><dd><p>python dictionary</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.find_COS">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">find_COS</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ase_atom</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">graph</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#find_COS"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.find_COS" title="Link to this definition">¶</a></dt>
+<dd><p>A simple aglorimth to search for COS.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">O</span>
+<span class="o">|</span>
+<span class="o">-</span><span class="n">C</span>
+<span class="o">|</span>
+<span class="n">S</span>
+</pre></div>
+</div>
+<dl class="simple">
+<dt><strong>parameters:</strong></dt><dd><p>ase_atom: ASE atom</p>
+</dd>
+<dt><strong>returns:</strong></dt><dd><p>dictionary of key = carbon index and values = sulphur index</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.find_carbonyl_sulphate">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">find_carbonyl_sulphate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ase_atom</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">graph</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#find_carbonyl_sulphate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.find_carbonyl_sulphate" title="Link to this definition">¶</a></dt>
+<dd><p>A simple aglorimth to search for Carbonyl sulphate  found in the system.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>   <span class="n">O</span>
+   <span class="o">|</span>
+<span class="o">-</span><span class="n">C</span><span class="o">-</span><span class="n">S</span>
+   <span class="o">|</span>
+   <span class="n">O</span>
+</pre></div>
+</div>
+<dl class="simple">
+<dt><strong>parameters:</strong></dt><dd><p>ase_atom: ASE atom</p>
+</dd>
+<dt><strong>returns:</strong></dt><dd><p>dictionary of key = carbon index and values = oxygen index</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.find_carboxylates">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">find_carboxylates</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ase_atom</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">graph</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#find_carboxylates"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.find_carboxylates" title="Link to this definition">¶</a></dt>
+<dd><p>A simple aglorimth to search for carboxylates found in the system.</p>
+<dl class="simple">
+<dt><strong>parameters:</strong></dt><dd><ul class="simple">
+<li><p>ase_atom: ASE atom</p></li>
+</ul>
+</dd>
+<dt><strong>returns:</strong></dt><dd><ul class="simple">
+<li><p>dictionary of key = carbon index and values = oxygen index</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.find_key_or_value">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">find_key_or_value</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key_or_value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dictionary</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#find_key_or_value"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.find_key_or_value" title="Link to this definition">¶</a></dt>
+<dd><p>Search for a key or value in a dictionary. If the key or value is
+found, returns the corresponding value or key.</p>
+<dl class="simple">
+<dt><strong>parameters:</strong></dt><dd><p>key_or_value : int or str
+dictionary : dict</p>
+</dd>
+<dt><strong>returns:</strong></dt><dd><p>The corresponding value or key if found, otherwise None.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.find_phosphate">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">find_phosphate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ase_atom</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">graph</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#find_phosphate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.find_phosphate" title="Link to this definition">¶</a></dt>
+<dd><p>A simple algorithm to search for Carbonyl sulphate found in the system.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span> <span class="n">O</span>
+ <span class="o">|</span>
+<span class="o">-</span><span class="n">P</span><span class="o">-</span><span class="n">o</span>
+ <span class="o">|</span>
+ <span class="n">O</span>
+</pre></div>
+</div>
+<dl class="simple">
+<dt><strong>parameters:</strong></dt><dd><p>ase_atom: ASE atom</p>
+</dd>
+<dt><strong>returns</strong></dt><dd><p>dictionary of key = carbon index and values = oxygen index</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.find_phosphite">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">find_phosphite</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ase_atom</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">graph</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#find_phosphite"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.find_phosphite" title="Link to this definition">¶</a></dt>
+<dd><p>A simple aglorimth to search for sulfides.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span> <span class="n">P</span>
+ <span class="o">|</span>
+<span class="o">-</span><span class="n">C</span>
+ <span class="o">|</span>
+ <span class="n">P</span>
+</pre></div>
+</div>
+<dl class="simple">
+<dt><strong>parameters:</strong></dt><dd><p>ase_atom: ASE atom</p>
+</dd>
+<dt><strong>returns:</strong></dt><dd><p>dictionary of key = carbon index and values = phosphorous index</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.find_sulfides">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">find_sulfides</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ase_atom</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">graph</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#find_sulfides"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.find_sulfides" title="Link to this definition">¶</a></dt>
+<dd><p>A simple aglorimth to search for sulfides.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span> <span class="n">S</span>
+ <span class="o">|</span>
+<span class="o">-</span><span class="n">C</span>
+ <span class="o">|</span>
+ <span class="n">S</span>
+</pre></div>
+</div>
+<dl class="simple">
+<dt><strong>parameters:</strong></dt><dd><p>ase_atom: ASE atom</p>
+</dd>
+<dt><strong>returns:</strong></dt><dd><p>dictionary of key = carbon index and values = sulphur index</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.find_unique_building_units">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">find_unique_building_units</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">list_of_connected_components</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">atom_pairs_at_breaking_point</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ase_atom</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">porphyrin_checker</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">all_regions</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wrap_system</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cheminfo</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">add_dummy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#find_unique_building_units"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.find_unique_building_units" title="Link to this definition">¶</a></dt>
+<dd><p>A function that identifies and processes unique building units within a MOF.
+This function deconstructs a MOF into its constituent building unit and identifies
+unique building units. It can also
+1. wrap the system into the unit cell,
+2. add dummy atoms to neutralize the building units,
+3. compute cheminformatics data using Open Babel.</p>
+<dl class="simple">
+<dt><strong>parameters:</strong></dt><dd><p>list_of_connected_components : list of connected components
+atom_pairs_at_breaking_point : dictionary of atom pairs at breaking point
+ase_atom : ASE atoms object
+porphyrin_checker : list of indices of porphyrins
+all_regions : dictionary of regions
+wrap_system : boolean, default True
+cheminfo : boolean, default False
+add_dummy: boolean, default False
+add_dummy keyword enables the addition of dumnmy atoms which can then be replaced
+by hydrogen to neutralize the building blocks.</p>
+</dd>
+<dt><strong>returns:</strong></dt><dd><p>mof_metal: list of metal indices
+mof_linker: list of linker indices
+concentration: dictionary of concentration of building units</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.inter_atomic_distance_check">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">inter_atomic_distance_check</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ase_atom</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#inter_atomic_distance_check"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.inter_atomic_distance_check" title="Link to this definition">¶</a></dt>
+<dd><p>A function that checks whether two atoms are within a distance 1.0 Amstrong unless it is an R-H bond</p>
+<dl class="simple">
+<dt><strong>parameters:</strong></dt><dd><p>ase_atom : ASE atoms object</p>
+</dd>
+<dt><strong>returns</strong></dt><dd><p>boolean :</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.is_ferrocene">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">is_ferrocene</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">metal_sbu</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">graph</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#is_ferrocene"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.is_ferrocene" title="Link to this definition">¶</a></dt>
+<dd><p>A simple script to check whether a metal_sbu is ferrocene</p>
+<dl class="simple">
+<dt><strong>parameter:</strong></dt><dd><p>metal_sbu : ase_atom
+graph : dictionary containing neigbour lists</p>
+</dd>
+<dt><strong>returns:</strong></dt><dd><p>bool : True if the metal_sbu is ferrocene, False otherwise</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.is_irmof">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">is_irmof</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ase_atom</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">graph</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#is_irmof"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.is_irmof" title="Link to this definition">¶</a></dt>
+<dd><p>returns True if the atom is part of a IRMOF motif</p>
+<dl class="simple">
+<dt><strong>parameter:</strong></dt><dd><p>ase_atom : ase_atom
+graph : dictionary containing neigbour lists</p>
+</dd>
+<dt><strong>returns:</strong></dt><dd><p>bool : True if the metal_sbu is part of a IRMOF motif, False otherwise</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.is_mof32">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">is_mof32</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ase_atom</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">graph</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#is_mof32"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.is_mof32" title="Link to this definition">¶</a></dt>
+<dd><p>returns True if the atom is part of a MOF32 motif</p>
+<dl class="simple">
+<dt><strong>parameter:</strong></dt><dd><p>ase_atom : ase_atom
+graph : dictionary containing neigbour lists</p>
+</dd>
+<dt><strong>returns:</strong></dt><dd><p>bool : True if the metal_sbu is part of a MOF32 motif, False otherwise</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.is_paddlewheel">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">is_paddlewheel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">metal_sbu</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">graph</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#is_paddlewheel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.is_paddlewheel" title="Link to this definition">¶</a></dt>
+<dd><p>returns True if the atom is part of a paddlewheel motif</p>
+<dl class="simple">
+<dt><strong>parameter:</strong></dt><dd><p>metal_sbu : ase_atom
+graph : dictionary containing neigbour lists</p>
+</dd>
+<dt><strong>returns:</strong></dt><dd><p>bool : True if the metal_sbu is part of a paddlewheel motif, False otherwise</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.is_paddlewheel_with_water">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">is_paddlewheel_with_water</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ase_atom</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">graph</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#is_paddlewheel_with_water"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.is_paddlewheel_with_water" title="Link to this definition">¶</a></dt>
+<dd><p>returns True if the atom is part of a paddle wheel with water motif</p>
+<dl class="simple">
+<dt><strong>parameter:</strong></dt><dd><p>ase_atom : ase_atom
+graph : dictionary containing neigbour lists</p>
+</dd>
+<dt><strong>returns:</strong></dt><dd><p>bool : True if the metal_sbu is part of a paddle wheel with water motif, False otherwise</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.is_rodlike">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">is_rodlike</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">metal_sbu</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#is_rodlike"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.is_rodlike" title="Link to this definition">¶</a></dt>
+<dd><p>Simple test to check whether a metal sbu is a rodlike MOF</p>
+<dl class="simple">
+<dt><strong>parameter:</strong></dt><dd><p>metal_sbu : ase_atom</p>
+</dd>
+<dt><strong>returns:</strong></dt><dd><p>bool : True if the metal sbu is a rodlike MOF, False otherwise</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.is_uio66">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">is_uio66</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ase_atom</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">graph</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#is_uio66"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.is_uio66" title="Link to this definition">¶</a></dt>
+<dd><p>returns True if the atom is part of a UIO66 motif</p>
+<dl class="simple">
+<dt><strong>parameter:</strong></dt><dd><p>ase_atom : ase_atom
+graph : dictionary containing neigbour lists</p>
+</dd>
+<dt><strong>returns:</strong></dt><dd><p>bool : True if the metal_sbu is part of a UIO66 motif, False otherwise</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.ligands_and_metal_clusters">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">ligands_and_metal_clusters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ase_atom</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#ligands_and_metal_clusters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.ligands_and_metal_clusters" title="Link to this definition">¶</a></dt>
+<dd><p>Start by checking whether there are more than 2 layers
+if yes, select one
+Here we select the largest connected component</p>
+<dl class="simple">
+<dt><strong>parameters:</strong></dt><dd><p>ase_atom: ASE atom</p>
+</dd>
+<dt><strong>returns:</strong></dt><dd><p>list_of_connected_components: list of connected components, in which each list contains atom indices
+atom_pairs_at_breaking_point: Dictionary containing point of disconnection
+Porpyrin_checker: Boolean showing whether the metal is in the centre of a porpherin
+Regions: Dictionary of regions.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.longest_list">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">longest_list</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lst</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#longest_list"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.longest_list" title="Link to this definition">¶</a></dt>
+<dd><p>return longest list in list of list</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.matrix2dict">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">matrix2dict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bond_matrix</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#matrix2dict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.matrix2dict" title="Link to this definition">¶</a></dt>
+<dd><p>A simple procedure to convert an adjacency matrix into
+a python dictionary.</p>
+<dl class="simple">
+<dt><strong>parameters:</strong></dt><dd><p>bond matrix : adjacency matrix, type: nxn ndarray</p>
+</dd>
+<dt><strong>returns:</strong></dt><dd><p>graph: python dictionary</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.max_index">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">max_index</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lists</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#max_index"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.max_index" title="Link to this definition">¶</a></dt>
+<dd><p>Extract index of list with the maximum element</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.metal_coordination_enviroment">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">metal_coordination_enviroment</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ase_atom</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#metal_coordination_enviroment"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.metal_coordination_enviroment" title="Link to this definition">¶</a></dt>
+<dd><p>Find the enviroment of a metal</p>
+<dl class="simple">
+<dt><strong>paramters:</strong></dt><dd><p>ase_atom : ASE atoms object</p>
+</dd>
+<dt><strong>returns:</strong></dt><dd><p>metal_elt : list of metal elements
+metal_enviroment : dict where key is metal element and value is list of neighboring elements</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.metal_coordination_number">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">metal_coordination_number</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ase_atom</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#metal_coordination_number"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.metal_coordination_number" title="Link to this definition">¶</a></dt>
+<dd><p>Extract coordination number of central metal</p>
+<dl class="simple">
+<dt><strong>paramters:</strong></dt><dd><p>ase_atom : ASE atoms object</p>
+</dd>
+<dt><strong>returns:</strong></dt><dd><p>metal_elt : list of metal elements</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.metal_in_porphyrin">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">metal_in_porphyrin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ase_atom</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">graph</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#metal_in_porphyrin"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.metal_in_porphyrin" title="Link to this definition">¶</a></dt>
+<dd><p>A funtion to check whether a metal is found at the centre of a phorphirin.
+The function specifically identifies metal atoms that
+are coordinated with four nitrogen atoms, as typically seen in porphyrin complexes.
+These atoms must also satisfy the planarity condition of the porphyrin structure.</p>
+<p><a class="reference external" href="https://en.wikipedia.org/wiki/Transition_metal_porphyrin_complexes">https://en.wikipedia.org/wiki/Transition_metal_porphyrin_complexes</a></p>
+<dl class="simple">
+<dt><strong>parameters:</strong></dt><dd><p>ase_atom: ASE atom
+graph: python dictionary containing neigbours</p>
+</dd>
+<dt><strong>returns:</strong></dt><dd><p>list of indices consisting of index of metal atoms found in the ASE atom</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.metal_in_porphyrin2">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">metal_in_porphyrin2</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ase_atom</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">graph</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#metal_in_porphyrin2"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.metal_in_porphyrin2" title="Link to this definition">¶</a></dt>
+<dd><p><a class="reference external" href="https://en.wikipedia.org/wiki/Transition_metal_porphyrin_complexes">https://en.wikipedia.org/wiki/Transition_metal_porphyrin_complexes</a>
+Check whether a metal is found at the centre of a phorphirin</p>
+<dl class="simple">
+<dt><strong>parameters:</strong></dt><dd><p>ase_atom: ASE atom
+graph: python dictionary containing neigbours</p>
+</dd>
+<dt><strong>returns:</strong></dt><dd><p>list of indices consisting of index of metal atoms found in the ASE atom</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.mof_regions">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">mof_regions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ase_atom</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">list_of_connected_components</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">atom_pairs_at_breaking_point</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#mof_regions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.mof_regions" title="Link to this definition">¶</a></dt>
+<dd><p>A function to map all atom indices to exact position in which the find themselves in the MOF.
+This function is used to partition a MOF into regions that correspond to unique
+unique building units.</p>
+<dl class="simple">
+<dt><strong>parameters:</strong></dt><dd><p>ase_atom: ASE atom
+list_of_connected_components : list of list, wherein each list correspond to atom indices of a specific building unit
+atom_pairs_at_breaking_point: dictionary containing pairs of atoms from which the bonds were broken</p>
+</dd>
+<dt><strong>returns:</strong></dt><dd><p>Move an index from any position in the list to the front
+The function is important to set the cell of a rodmof to point in the
+a-axis. Such that the system can be grow along this axis</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.move2front">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">move2front</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index_value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coords</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#move2front"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.move2front" title="Link to this definition">¶</a></dt>
+<dd><p>Move an index from any position in the list to the front
+The function is important to set the cell of a rodmof to point in thea-axis. Such that the system can be grow along this axis</p>
+<dl class="simple">
+<dt><strong>parameters:</strong></dt><dd><ul class="simple">
+<li><p>index_value: index of item to move to the from</p></li>
+<li><p>coords: list of coords</p></li>
+</ul>
+</dd>
+<dt><strong>returns:</strong></dt><dd><p>list of coords</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.obmol_2_rdkit">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">obmol_2_rdkit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">obmol</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#obmol_2_rdkit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.obmol_2_rdkit" title="Link to this definition">¶</a></dt>
+<dd><p>A simple function to convert openbabel mol to RDkit mol
+A function that takes an openbabel molecule object and
+converts it to an RDkit molecule object. The importance of this
+function lies in the fact that there is no direct were to convert from
+an ase atom type to an rdkit molecule object. Consequently, the easiest
+approach it is firt convert the system to an openbabel molecule object
+using the function ase_2_pybel to convert to the pybel molecule object.
+Then using the following code obmol = pybel_mol.OBMol to obtain the
+openbabel molecule object that can then be used to convert to the
+rdkit molecule object.</p>
+<dl class="simple">
+<dt><strong>parameters:</strong></dt><dd><p>obmol : openbabel molecule object</p>
+</dd>
+<dt><strong>returns:</strong></dt><dd><p>rdmol : rdkit molecule object.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.remove_unbound_guest">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">remove_unbound_guest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ase_atom</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#remove_unbound_guest"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.remove_unbound_guest" title="Link to this definition">¶</a></dt>
+<dd><p>A simple script to remove guest from a metal organic framework.
+1) It begins by computing a connected graph component of all the fragments in the system using ASE neighbour list.
+2) Secondly it selects indices of connected components which contain a metal
+3) if the there are two or more components, we create a pytmagen graph for each components and filter out all components that are not polymeric
+4) If there are two or more polymeric components, we check whether these systems there are identical or different and select all polymeric components</p>
+<dl class="simple">
+<dt><strong>parameters:</strong></dt><dd><p>ASE atoms</p>
+</dd>
+<dt><strong>returns:</strong></dt><dd><p>mof_indices: indices of the guest-free system. The guest-free ase_atom object
+can be obtained as follows; E.g.
+guest_free_system = ase_atom[mof_indices]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.remove_unbound_guest_and_return_unique">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">remove_unbound_guest_and_return_unique</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ase_atom</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#remove_unbound_guest_and_return_unique"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.remove_unbound_guest_and_return_unique" title="Link to this definition">¶</a></dt>
+<dd><p>A simple script to remove guest from a metal organic framework.
+1)It begins by computing a connected graph component of all the fragments in the system
+using ASE neighbour list.
+2) Secondly it selects indicies of connected components which contain a metal
+3)if the there are two or more components, we create a pytmagen graph for each components and filter out all components that are not polymeric
+4) If there are two or more polymeric components, we check wether these systems there are identical or different and select only unique polymeric components</p>
+<dl class="simple">
+<dt><strong>parameters:</strong></dt><dd><p>ASE atoms</p>
+</dd>
+</dl>
+<p><strong>returns:</strong></p>
+<blockquote>
+<div><p>mof_indices : indinces of the guest free system. The guest free ase_atom object
+can be obtain as follows; E.g. guest_free_system = ase_atom[mof_indices]</p>
+</div></blockquote>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.rod_manipulation">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">rod_manipulation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ase_atom</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">checker</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#rod_manipulation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.rod_manipulation" title="Link to this definition">¶</a></dt>
+<dd><p>Script to adjust Rodlike sbus.
+1) Its collects the axis responsible for expanding the rod
+2) It shifts all coordinates to the axis
+3) It rotates the rod to lie in the directions of expansion,</p>
+<dl class="simple">
+<dt><strong>parameter:</strong></dt><dd><p>ase_atom : ASE atoms object
+checker : list of indices of atoms responsible for rod expansion</p>
+</dd>
+<dt><strong>returns:</strong></dt><dd><p>ase_atom : ASE atoms object with adjusted coordinates</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.secondary_building_units">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">secondary_building_units</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ase_atom</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#secondary_building_units"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.secondary_building_units" title="Link to this definition">¶</a></dt>
+<dd><ol class="arabic simple">
+<li><p>Search for all carboxylate that are connected to a metal.
+Cut at the position between the carboxylate carbon and the adjecent carbon.</p></li>
+<li><p>Find all Nitrogen connected to metal. Check whether the nitrogen is in the
+centre of a porphirin ring. If no, cut at nitrogen metal bond.</p></li>
+<li><p>Look for oxygen that is connected to metal and two carbon. cut at metal oxygen bond</p></li>
+</ol>
+<dl class="simple">
+<dt><strong>parameters:</strong></dt><dd><p>ase_atom: ASE atom</p>
+</dd>
+<dt><strong>returns:</strong></dt><dd><p>list_of_connected_components: list of connected components,in which each list contains atom indices
+atom_pairs_at_breaking_point : Dictionary containing point of disconnection Porphyrin_checker: Boolean showing whether the metal is in the centre of a porpherin
+Regions: Dictionary of regions.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.transition_metals">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">transition_metals</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#transition_metals"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.transition_metals" title="Link to this definition">¶</a></dt>
+<dd><p>A function that returns the list of all chemical symbols of
+metallic elements present in the periodic table</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.mofdeconstructor.wrap_systems_in_unit_cell">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.mofdeconstructor.</span></span><span class="sig-name descname"><span class="pre">wrap_systems_in_unit_cell</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ase_atom</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_iter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">30</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">skin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.3</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/mofdeconstructor.html#wrap_systems_in_unit_cell"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.mofdeconstructor.wrap_systems_in_unit_cell" title="Link to this definition">¶</a></dt>
+<dd><p>A simple aglorithm to reconnnect all atoms wrapped in a periodic
+boundary condition such that all atoms outside the box will appear reconnected.</p>
+<dl class="simple">
+<dt><strong>parameters:</strong></dt><dd><p>ase_atom : ASE atoms object
+max_iter : int, optional (default=30) Maximum number of iterations for reconnection
+skin : float, optional (default=0.3) Skin distance for bond reconnection</p>
+</dd>
+<dt><strong>returns:</strong></dt><dd><ul class="simple">
+<li><p>ase_atom : ASE atoms object with reconnected atoms wrapped in a periodic boundary condition</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
 </section>
 <section id="module-mofstructure.porosity">
 <span id="computing-porosity"></span><h2>Computing Porosity<a class="headerlink" href="#module-mofstructure.porosity" title="Link to this heading">¶</a></h2>
@@ -135,7 +860,55 @@ interlayer_height : list of list where each list contains the interlayer heights
 <li class="toctree-l1"><a class="reference internal" href="examples.html#processing-multiple-cif-files">Processing Multiple CIF Files</a></li>
 <li class="toctree-l1"><a class="reference internal" href="examples.html#use-as-a-library">Use as a Library</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">API Reference</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#module-mofstructure.mofdeconstructor">MOF Deconstructions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-mofstructure.mofdeconstructor">MOF Deconstructions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.all_ferrocene_metals"><code class="docutils literal notranslate"><span class="pre">all_ferrocene_metals()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.angle_tolerance_to_rad"><code class="docutils literal notranslate"><span class="pre">angle_tolerance_to_rad()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.ase_2_pybel"><code class="docutils literal notranslate"><span class="pre">ase_2_pybel()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.ase_2_xyz"><code class="docutils literal notranslate"><span class="pre">ase_2_xyz()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.check_planarity"><code class="docutils literal notranslate"><span class="pre">check_planarity()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.compute_ase_neighbour"><code class="docutils literal notranslate"><span class="pre">compute_ase_neighbour()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.compute_cheminformatic_from_rdkit"><code class="docutils literal notranslate"><span class="pre">compute_cheminformatic_from_rdkit()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.compute_inchis"><code class="docutils literal notranslate"><span class="pre">compute_inchis()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.compute_openbabel_cheminformatic"><code class="docutils literal notranslate"><span class="pre">compute_openbabel_cheminformatic()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.compute_smi"><code class="docutils literal notranslate"><span class="pre">compute_smi()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.connected_components"><code class="docutils literal notranslate"><span class="pre">connected_components()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.covalent_radius"><code class="docutils literal notranslate"><span class="pre">covalent_radius()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.dfsutil_graph_method"><code class="docutils literal notranslate"><span class="pre">dfsutil_graph_method()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.find_COS"><code class="docutils literal notranslate"><span class="pre">find_COS()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.find_carbonyl_sulphate"><code class="docutils literal notranslate"><span class="pre">find_carbonyl_sulphate()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.find_carboxylates"><code class="docutils literal notranslate"><span class="pre">find_carboxylates()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.find_key_or_value"><code class="docutils literal notranslate"><span class="pre">find_key_or_value()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.find_phosphate"><code class="docutils literal notranslate"><span class="pre">find_phosphate()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.find_phosphite"><code class="docutils literal notranslate"><span class="pre">find_phosphite()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.find_sulfides"><code class="docutils literal notranslate"><span class="pre">find_sulfides()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.find_unique_building_units"><code class="docutils literal notranslate"><span class="pre">find_unique_building_units()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.inter_atomic_distance_check"><code class="docutils literal notranslate"><span class="pre">inter_atomic_distance_check()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.is_ferrocene"><code class="docutils literal notranslate"><span class="pre">is_ferrocene()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.is_irmof"><code class="docutils literal notranslate"><span class="pre">is_irmof()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.is_mof32"><code class="docutils literal notranslate"><span class="pre">is_mof32()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.is_paddlewheel"><code class="docutils literal notranslate"><span class="pre">is_paddlewheel()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.is_paddlewheel_with_water"><code class="docutils literal notranslate"><span class="pre">is_paddlewheel_with_water()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.is_rodlike"><code class="docutils literal notranslate"><span class="pre">is_rodlike()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.is_uio66"><code class="docutils literal notranslate"><span class="pre">is_uio66()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.ligands_and_metal_clusters"><code class="docutils literal notranslate"><span class="pre">ligands_and_metal_clusters()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.longest_list"><code class="docutils literal notranslate"><span class="pre">longest_list()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.matrix2dict"><code class="docutils literal notranslate"><span class="pre">matrix2dict()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.max_index"><code class="docutils literal notranslate"><span class="pre">max_index()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.metal_coordination_enviroment"><code class="docutils literal notranslate"><span class="pre">metal_coordination_enviroment()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.metal_coordination_number"><code class="docutils literal notranslate"><span class="pre">metal_coordination_number()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.metal_in_porphyrin"><code class="docutils literal notranslate"><span class="pre">metal_in_porphyrin()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.metal_in_porphyrin2"><code class="docutils literal notranslate"><span class="pre">metal_in_porphyrin2()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.mof_regions"><code class="docutils literal notranslate"><span class="pre">mof_regions()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.move2front"><code class="docutils literal notranslate"><span class="pre">move2front()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.obmol_2_rdkit"><code class="docutils literal notranslate"><span class="pre">obmol_2_rdkit()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.remove_unbound_guest"><code class="docutils literal notranslate"><span class="pre">remove_unbound_guest()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.remove_unbound_guest_and_return_unique"><code class="docutils literal notranslate"><span class="pre">remove_unbound_guest_and_return_unique()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.rod_manipulation"><code class="docutils literal notranslate"><span class="pre">rod_manipulation()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.secondary_building_units"><code class="docutils literal notranslate"><span class="pre">secondary_building_units()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.transition_metals"><code class="docutils literal notranslate"><span class="pre">transition_metals()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.mofdeconstructor.wrap_systems_in_unit_cell"><code class="docutils literal notranslate"><span class="pre">wrap_systems_in_unit_cell()</span></code></a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="#module-mofstructure.porosity">Computing Porosity</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#mofstructure.porosity.ase_to_zeoobject"><code class="docutils literal notranslate"><span class="pre">ase_to_zeoobject()</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#mofstructure.porosity.zeo_calculation"><code class="docutils literal notranslate"><span class="pre">zeo_calculation()</span></code></a></li>

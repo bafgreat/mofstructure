@@ -1753,7 +1753,7 @@ def angle_tolerance_to_rad(angle, tolerance=5):
             Tolerance in degrees, default is 5.
 
     **returns:**
-        - bond_angle_rad: float
+        bond_angle_rad: float
         Adjusted angle in radians.
     '''
     angle_variation = np.random.uniform(-tolerance, tolerance)
