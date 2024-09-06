@@ -9,8 +9,8 @@ on:
 
 permissions:
   contents: write
-  pages: write        # This is required for deploying to GitHub Pages
-  id-token: write     # Required for the deploy-pages action to work
+  pages: write
+  id-token: write
 
 env:
   REGISTRY: docker.io
@@ -58,6 +58,10 @@ jobs:
       run: |
         poetry run sphinx-build -b html docs/source docs/source/_build/html
 
+    - name: Verify build output
+      run: |
+        ls -la docs/source/_build/html
+
     - name: Upload Sphinx Documentation Artifact
       uses: actions/upload-pages-artifact@v3
       with:
@@ -78,7 +82,7 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v3
-
+        
   # publish:
   #   runs-on: ubuntu-latest
   #   needs: build
