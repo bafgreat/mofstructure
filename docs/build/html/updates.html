@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Updates Version 0.1.4 &#8212; mofstructure 0.1.7 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=12dfc556" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="_static/style.css?v=22a50566" />
+    <script src="_static/documentation_options.js?v=ca7ad2ea"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="_static/copybutton.js?v=f281be69"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="API Reference" href="api_reference.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="updates-version-0-1-4">
+<span id="updates-0-1-4"></span><h1>Updates Version 0.1.4<a class="headerlink" href="#updates-version-0-1-4" title="Link to this heading">¶</a></h1>
+<p>The new update enables the computation of open metal sites in CIFs. To use this functionality, run the following on the command line:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>mofstructure_database<span class="w"> </span>ciffolder<span class="w"> </span>--oms
+</pre></div>
+</div>
+<p>Here, <cite>ciffolder</cite> corresponds to the directory/folder containing the CIF files.</p>
+<p>After computation, the metal information will be found in a JSON file called <cite>metal_info.json</cite>. This file is located in the output folder that defaults to <cite>MOFDb</cite> if no other folder is provided.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Computing open metal sites is computationally expensive, especially if you intend to run it on a folder with many CIF files. If you are not interested in computing the open metal sites, simply run the command without the <cite>–oms</cite> option:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>mofstructure_database<span class="w"> </span>ciffolder
+</pre></div>
+</div>
+<p>This command will generate a <cite>MOFDb</cite> folder without the <cite>metal_info.json</cite> file, but the code will run much faster.</p>
+</div>
+<p>Also, note that the <cite>–oms</cite> option is only provided for the <cite>mofstructure_database</cite> command and is not available for the <cite>mofstructure</cite> command, which targets a single CIF file. If you have a single CIF file and wish to compute open metal sites, simply put the CIF file in a folder and run the <cite>mofstructure_database</cite> command on that folder:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>mofstructure_database<span class="w"> </span>ciffolder<span class="w"> </span>--oms
+
+..<span class="w"> </span>_updates-0.1.5:
+</pre></div>
+</div>
+</section>
+<section id="updates-version-0-1-5">
+<h1>Updates Version 0.1.5<a class="headerlink" href="#updates-version-0-1-5" title="Link to this heading">¶</a></h1>
+<p>The new update enables users to include a RAD file when computing porosity using PyZeo. This allows users to specify the type of radii to use. If omitted, the default PyZeo radii will be used, which are covalent radii obtained from the CSD.</p>
+<p>Currently, this functionality can only be used when using <cite>mofstructure</cite> as a library. This can be done as follows:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">mofstructure.porosity</span> <span class="kn">import</span> <span class="n">zeo_calculation</span>
+<span class="kn">from</span> <span class="nn">ase.io</span> <span class="kn">import</span> <span class="n">read</span>
+
+<span class="n">ase_atom</span> <span class="o">=</span> <span class="n">read</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+
+<span class="n">pore_data</span> <span class="o">=</span> <span class="n">zeo_calculation</span><span class="p">(</span><span class="n">ase_atom</span><span class="p">,</span> <span class="n">rad_file</span><span class="o">=</span><span class="s1">&#39;rad_file_name.rad&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><cite>filename</cite> is any ASE-readable crystal structure file, ideally a CIF file. Moreover, <cite>rad_file_name.rad</cite> is a file containing the radii of each element present in the structure file. This should be formatted as follows:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>element radii
+</pre></div>
+</div>
+<p>For example, for an MgO system, your RAD file should look like this:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Mg 0.66
+O 1.84
+</pre></div>
+</div>
+<p>Also, note that if the radii file does not have the <cite>.rad</cite> extension like <cite>rad_file_name.rad</cite>, the default radii will be used.</p>
+</div>
+</section>
+<section id="updates-version-0-1-6">
+<span id="updates-0-1-6"></span><h1>Updates Version 0.1.6<a class="headerlink" href="#updates-version-0-1-6" title="Link to this heading">¶</a></h1>
+<p>Added new command line tools to expedite calculations, especially when working on a large database.</p>
+<section id="compute-only-deconstruction">
+<h2>Compute Only Deconstruction<a class="headerlink" href="#compute-only-deconstruction" title="Link to this heading">¶</a></h2>
+<p>If you wish to only compute the deconstruction of MOFs without having to compute their porosity and open metal sites, then simply run the following command:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>mofstructure_building_units<span class="w">  </span>cif_folder
+</pre></div>
+</div>
+</section>
+<section id="compute-only-porosity">
+<h2>Compute Only Porosity<a class="headerlink" href="#compute-only-porosity" title="Link to this heading">¶</a></h2>
+<p>If you wish to only compute the porosity using default values (i.e., probe radius = 1.86, number of GCMC cycles = 10,000, and default CSD atomic radii), then run the following command:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>mofstructure_porosity<span class="w"> </span>cif_folder
+</pre></div>
+</div>
+<p>However, if you wish to use another probe radius (e.g., 1.5) and GCMC cycles of 20,000, alongside custom atomic radii in a file called <cite>rad.rad</cite>, run the following command:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>mofstructure_porosity<span class="w"> </span>cif_folder<span class="w"> </span>-pr<span class="w"> </span><span class="m">1</span>.5<span class="w"> </span>-ns<span class="w"> </span><span class="m">20000</span><span class="w"> </span>-rf<span class="w"> </span>rad.rad
+</pre></div>
+</div>
+</section>
+<section id="compute-only-open-metal-sites">
+<h2>Compute Only Open Metal Sites<a class="headerlink" href="#compute-only-open-metal-sites" title="Link to this heading">¶</a></h2>
+<p>If you are only interested in computing the open metal sites, then run the following command:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>mofstructure_oms<span class="w"> </span>cif_folder
+</pre></div>
+</div>
+</section>
+</section>
+<section id="updates-version-0-1-7">
+<span id="updates-0-1-7"></span><h1>Updates Version 0.1.7<a class="headerlink" href="#updates-version-0-1-7" title="Link to this heading">¶</a></h1>
+<ol class="arabic simple">
+<li><p>Implemented a robust CI/CD using Git Actions.</p></li>
+<li><p>Included <cite>add_dummy</cite> key to add dummy atoms to points of extension. This is important to effectively control the breaking point. These dummy atoms can then be replaced with hydrogen to fully neutralize the system.</p></li>
+</ol>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Please don’t use <cite>add_dummy</cite> when deconstructing to ligands and clusters. The <cite>add_dummy</cite> argument should be used only for SBUs, e.g.,</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">connected_components</span><span class="p">,</span> <span class="n">atoms_indices_at_breaking_point</span><span class="p">,</span> <span class="n">porpyrin_checker</span><span class="p">,</span> <span class="n">all_regions</span> <span class="o">=</span> <span class="n">MOF_deconstructor</span><span class="o">.</span><span class="n">secondary_building_units</span><span class="p">(</span><span class="n">ase_atom</span><span class="p">)</span>
+<span class="n">metal_sbus</span><span class="p">,</span> <span class="n">organic_sbus</span><span class="p">,</span> <span class="n">building_unit_regions</span> <span class="o">=</span> <span class="n">MOF_deconstructor</span><span class="o">.</span><span class="n">find_unique_building_units</span><span class="p">(</span>
+    <span class="n">connected_components</span><span class="p">,</span>
+    <span class="n">atoms_indices_at_breaking_point</span><span class="p">,</span>
+    <span class="n">ase_atom</span><span class="p">,</span>
+    <span class="n">porpyrin_checker</span><span class="p">,</span>
+    <span class="n">all_regions</span><span class="p">,</span>
+    <span class="n">cheminfo</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">add_dummy</span><span class="o">=</span><span class="kc">True</span>
+    <span class="p">)</span>
+
+<span class="n">metal_sbus</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;test1.xyz&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">mofstructure</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#running-on-the-command-line">Running on the Command Line</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#using-mofstructure-as-a-library">Using <cite>mofstructure</cite> as a Library</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">How to Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html#run-on-the-command-line">Run on the Command Line</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html#processing-multiple-cif-files">Processing Multiple CIF Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html#use-as-a-library">Use as a Library</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api_reference.html">API Reference</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Updates Version 0.1.4</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#updates-version-0-1-5">Updates Version 0.1.5</a></li>
+<li class="toctree-l1"><a class="reference internal" href="#updates-version-0-1-6">Updates Version 0.1.6</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#compute-only-deconstruction">Compute Only Deconstruction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#compute-only-porosity">Compute Only Porosity</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#compute-only-open-metal-sites">Compute Only Open Metal Sites</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="#updates-version-0-1-7">Updates Version 0.1.7</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="api_reference.html" title="previous chapter">API Reference</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024, Dinga Wonanke.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.2.6</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
+      
+      |
+      <a href="_sources/updates.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

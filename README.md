@@ -16,15 +16,15 @@ COFs and Zeolites. Some uses of the module involves
 
 5. Seperation of building units into regions. This is essential when on wishes to subsitute a specific ligand or building unit.
 
-# Installation
+## Installation
 
-## Option 1
+### Option 1
 
 ```bash
 pip install mofstructure
 ```
 
-## Option 2
+### Option 2
 
 ```bash
   git clone https://github.com/bafgreat/mofstructure.git mofstructure
@@ -32,11 +32,11 @@ pip install mofstructure
   pip install .
 ```
 
-# Quick start
+## Quick start
 
-## Run on the commandline
+### Run on the commandline
 
-### Building units
+#### Building units
 
 Simply run the following command on a cif file or any ase readable file format containing a MOF.
 
@@ -57,7 +57,7 @@ for cifs in ciffiles:
     mofstructure cifs path_to_result
 ```
 
-### Creating a database
+#### Creating a database
 
 If you have a folder containg many cif files for different MOF, you could easily create a database. To create such a database, simply run the following command.
 
@@ -71,7 +71,7 @@ Here the 'ciffolder' is the folder containing the cif files. The ouput will be s
 mofstructure_database ciffolder path_to_result
 ```
 
-## Use as a libray
+### Use as a libray
 
 ```Python
 from  mofstructure import mofdeconstructor
@@ -93,7 +93,7 @@ df = pd.DataFrame(pores, index=[0])
 df.to_csv('pore.csv')
 ```
 
-### sbus and linkers
+#### sbus and linkers
 
 Compute sbus and linkers
 
@@ -110,13 +110,13 @@ metal_sbus, organic_sbus, building_unit_regions = MOF_deconstructor.find_unique_
     )
 ```
 
-### when cheminfo = True
+#### when cheminfo = True
 
 openbabel is called to compute all chemifomatic information,
 which are all stored on the ase_atom.info
 metal_sbus and organic_sbus list that contains all the unique instances of the metal sbus and organic sbus.
 
-### extracting cheminfor
+#### extracting cheminfor
 
 For each instance in a building unit the various chemiformatic informations are as follows.
 
@@ -133,18 +133,18 @@ for i,  sbu in enumerate(metal_sbu):
     sbu.write('metal_sbu_'+str(i)+'.cif')
 ```
 
-# Summary
+## Summary
 
 All of above codes can be run by a single function found mofstructure.buildingunits
 
-## for a single cif file
+### for a single cif file
 
 ```Python
 from  mofstructure import buildingunits
 buildingunits.work_flow(ciffile, result_folder)
 ```
 
-## for multiple cif files
+### for multiple cif files
 
 ```Python
 from  mofstructure import buildingunits
@@ -156,11 +156,9 @@ for cif_files in all_cifs:
 # Note that result_folder can be any path. If the path does not exist, it will create one and populate it with all the data.
 ```
 
-## How-to Tutorial
+## Documentation
 
-<iframe src="source/doc/how-to-doc.html" width="100%" height="600">
-  Click <a href="source/doc/how-to-doc.html">here</a> for a how-to tutorial.
-</iframe>
+You can access the full project documentation on [docs](https://bafgreat.github.io/mofstructure/docs/)
 
 ## Roadmap
 

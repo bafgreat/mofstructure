@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>API Reference &#8212; mofstructure 0.1.7 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=d1102ebc" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=12dfc556" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="_static/style.css?v=22a50566" />
+    <script src="_static/documentation_options.js?v=ca7ad2ea"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="_static/copybutton.js?v=f281be69"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Updates Version 0.1.4" href="updates.html" />
+    <link rel="prev" title="How to Guide" href="examples.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="api-reference">
+<h1>API Reference<a class="headerlink" href="#api-reference" title="Link to this heading">¶</a></h1>
+<section id="module-mofstructure.mofdeconstructor">
+<span id="mof-deconstructions"></span><h2>MOF Deconstructions<a class="headerlink" href="#module-mofstructure.mofdeconstructor" title="Link to this heading">¶</a></h2>
+</section>
+<section id="module-mofstructure.porosity">
+<span id="computing-porosity"></span><h2>Computing Porosity<a class="headerlink" href="#module-mofstructure.porosity" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.porosity.ase_to_zeoobject">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.porosity.</span></span><span class="sig-name descname"><span class="pre">ase_to_zeoobject</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ase_atom</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/porosity.html#ase_to_zeoobject"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.porosity.ase_to_zeoobject" title="Link to this definition">¶</a></dt>
+<dd><p>Converts an ase atom type to a zeo++ Cssr object
+In zeo++ the xyz coordinate system is rotated to a zyx format.</p>
+<dl class="simple">
+<dt><strong>parameter:</strong></dt><dd><p>ase_atom: ase atom object</p>
+</dd>
+<dt><strong>returns:</strong></dt><dd><p>cssr_object: string representing zeo++ cssr object</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.porosity.zeo_calculation">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.porosity.</span></span><span class="sig-name descname"><span class="pre">zeo_calculation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ase_atom</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">probe_radius</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1.86</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">number_of_steps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">high_accuracy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rad_file</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/porosity.html#zeo_calculation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.porosity.zeo_calculation" title="Link to this definition">¶</a></dt>
+<dd><p>Main script to compute geometric structure of porous systems.
+The focus here is on MOF, but the script can run on any porous periodic
+system. The script computes the accesible surface area, accessible volume
+and the pore geometry. There are many more outputs which can be extracted
+from ,vol_str and sa_str. Moreover there are also other computation that can be done.
+Check out the test directory in dependencies/pyzeo/test.
+Else contact <a class="reference external" href="mailto:bafgreat&#37;&#52;&#48;gmail&#46;com">bafgreat<span>&#64;</span>gmail<span>&#46;</span>com</a>. if you need more output and can’t figure it out.</p>
+<dl class="simple">
+<dt><strong>parameter:</strong></dt><dd><p>ase_atom: ase atom object
+probe_radius: The radius of the probe. Here 1.86 is used as default
+number_of_steps: Number of GCMC simulation cycles
+high_accuracy: key to determine where to perform high accuracy computation</p>
+</dd>
+<dt><strong>return:</strong></dt><dd><p><strong>python dictionary containing</strong>
+1) AV_Volume_fraction: Accessible volume void fraction
+2) AV_A^3: Accessible volume in A^2
+3) AV_cm^3/g: Accessible volume in cm^3/g. This values is often infinity because it literatly divides the given value by the avogadro’s number
+4) ASA_A^2: Accessible surface area A^2
+5) ASA_m^2/cm^3: Accessible surface area in m^2/cm^3
+6) Number_of_channels: Number of channels present in the porous system, which correspond to the number of pores within the system
+7) LCD_A: The largest cavity diameter is the largest sphere that can be inserted in a porous system without overlapping with any of the atoms in the system.
+8) lfpd_A:The largest included sphere along free sphere path is largest sphere that can be inserted in the pore
+9)PLD_A:The pore limiting diameter is the largest sphere that can freely diffuse through the porous network without overlapping with any of the atoms in the system</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-mofstructure.cof_stacking">
+<span id="computing-stacking-in-2d-systems-and-inter-layer-height"></span><h2>Computing stacking in 2D systems and inter-layer height<a class="headerlink" href="#module-mofstructure.cof_stacking" title="Link to this heading">¶</a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="mofstructure.cof_stacking.compute_cof_stacking">
+<span class="sig-prename descclassname"><span class="pre">mofstructure.cof_stacking.</span></span><span class="sig-name descname"><span class="pre">compute_cof_stacking</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ase_atom</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mofstructure/cof_stacking.html#compute_cof_stacking"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mofstructure.cof_stacking.compute_cof_stacking" title="Link to this definition">¶</a></dt>
+<dd><p>A a simple function to compute the stacking pattern of COFs or
+layered materials like graphene</p>
+<dl class="simple">
+<dt><strong>parameter:</strong></dt><dd><p>ase_atom : ASE Atoms object</p>
+</dd>
+<dt><strong>returns</strong></dt><dd><p>layers : list of list wherei each list correspond to a layar
+lateral_offsets : list of list where each list contains the lateral offsets between two layers
+interlayer_height : list of list where each list contains the interlayer heights between two layers</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">mofstructure</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Quick Start Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#running-on-the-command-line">Running on the Command Line</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage.html#using-mofstructure-as-a-library">Using <cite>mofstructure</cite> as a Library</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">How to Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html#run-on-the-command-line">Run on the Command Line</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html#processing-multiple-cif-files">Processing Multiple CIF Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html#use-as-a-library">Use as a Library</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#module-mofstructure.mofdeconstructor">MOF Deconstructions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#module-mofstructure.porosity">Computing Porosity</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.porosity.ase_to_zeoobject"><code class="docutils literal notranslate"><span class="pre">ase_to_zeoobject()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.porosity.zeo_calculation"><code class="docutils literal notranslate"><span class="pre">zeo_calculation()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-mofstructure.cof_stacking">Computing stacking in 2D systems and inter-layer height</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#mofstructure.cof_stacking.compute_cof_stacking"><code class="docutils literal notranslate"><span class="pre">compute_cof_stacking()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="updates.html">Updates Version 0.1.4</a></li>
+<li class="toctree-l1"><a class="reference internal" href="updates.html#updates-version-0-1-5">Updates Version 0.1.5</a></li>
+<li class="toctree-l1"><a class="reference internal" href="updates.html#updates-version-0-1-6">Updates Version 0.1.6</a></li>
+<li class="toctree-l1"><a class="reference internal" href="updates.html#updates-version-0-1-7">Updates Version 0.1.7</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="examples.html" title="previous chapter">How to Guide</a></li>
+      <li>Next: <a href="updates.html" title="next chapter">Updates Version 0.1.4</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024, Dinga Wonanke.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.2.6</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
+      
+      |
+      <a href="_sources/api_reference.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
