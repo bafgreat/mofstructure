@@ -20,9 +20,9 @@ release = '0.1.7'
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 html_allow_unicode = True
-html_logo ='./images/logo.png'
+html_logo ='_static/logo.png'
 html_theme_options = {
-    'logo_only': True, 
+    'logo_only': True,
 }
 
 extensions = [
@@ -46,7 +46,6 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = 'alabaster'
-html_static_path = ['_static']
 
 master_doc = 'index'
 

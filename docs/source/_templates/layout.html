@@ -9,11 +9,8 @@
     {{ super() }}
 {% endblock %}
 
-<!-- _templates/layout.html -->
-{% extends "!layout.html" %}
-
 {% block sidebarlogo %}
 <a href="{{ pathto(master_doc) }}" class="logo">
-   <img src="{{ pathto('../images/logo.png', 1) }}" alt="mofstructure logo">
+   <img src="{{ pathto('_static/images/logo.png', 1) }}" alt="mofstructure logo">
 </a>
 {% endblock %}
