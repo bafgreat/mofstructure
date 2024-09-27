@@ -132,3 +132,9 @@ Updates Version 0.1.7
           )
 
       metal_sbus[0].write('test1.xyz')
+
+Updates Version 0.1.8
+======================
+1. The main update here is to enable mofstructure to run on Python versions
+3.9 to 3.13. We have done the neccessary tests but let us know if you have
+any conflicts or bugs and we will fix it. 
