@@ -137,4 +137,14 @@ Updates Version 0.1.8
 ======================
 1. The main update here is to enable mofstructure to run on Python versions
 3.9 to 3.13. We have done the neccessary tests but let us know if you have
-any conflicts or bugs and we will fix it. 
+any conflicts or bugs and we will fix it.
+
+
+Updates Version 0.1.8.1
+======================
+Made rdkit to be an optional dependency so that mofstructure should
+be compatible with Python 3.12, since there are no recent versions
+of rdkit that are compatible with Python 3.12. Hence if you wish to use
+rdkit, you should install it separately.
+
+  .. code-block:: pip install rdkit

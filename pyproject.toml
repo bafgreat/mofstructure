@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "mofstructure"
-version = "0.1.8"  # Commented out since versioning is handled dynamically
+version = "0.1.8.1"  # Commented out since versioning is handled dynamically
 description = "A Python tool to deconstruct MOFs into building units and compute porosity. The code removes guests from MOFs and all porous systems, computes SMILES strings and InChIKeys of all building units."
 keywords = ["guest removal", "InChIKeys", "InChI", "SMILES", "PLD", "LCD", "MOF", "COF", "zeolites", "accessible surface area", "void fraction", "coordination number", "porosity", "zeo++", "SBU", "point of extension"]
 authors = ["Dinga Wonanke <bafgreat@gmail.com>"]
@@ -24,7 +24,7 @@ openbabel-wheel = "3.1.1.16"
 pandas = ">=1.3.5"
 pymatgen = "==2024.2.20"
 pyzeo = ">=0.1.1"
-rdkit = "==2022.9.5"
+rdkit = {version = ">=2022.9.5", optional = true}
 omsdetector_forked = ">=2024.9.27"
 sphinx = "<8.0.2"
 sphinxcontrib-mermaid = "^0.9.2"
@@ -41,6 +41,9 @@ mofstructure_porosity = "mofstructure.collect_porosity:main"
 flake8 = "^7.1.1"
 pytest = "^8.3.2"
 sphinx = "<8.0.2"
+
+[tool.poetry.extras]
+rdkit = ["rdkit"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning"]
