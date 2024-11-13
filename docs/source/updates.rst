@@ -148,3 +148,8 @@ of rdkit that are compatible with Python 3.12. Hence if you wish to use
 rdkit, you should install it separately.
 
   .. code-block:: pip install rdkit
+
+Updates Version 0.1.8.2
+======================
+Fixed the python dependency to be compatible with any Python 3.9 and above. 
+  .. code-block:: pip install rdkit

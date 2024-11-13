@@ -8,18 +8,19 @@ from pymatgen.analysis.graphs import StructureGraph
 from pymatgen.io.ase import AseAtomsAdaptor
 from ase.data import chemical_symbols, covalent_radii, atomic_numbers
 from ase import neighborlist, geometry
-from ase import Atoms
+# from ase import Atoms
 
 try:
     from openbabel import pybel as pb
     from openbabel import openbabel as ob
 except ModuleNotFoundError:
     print('install openbabel if you wish to use compute_openbabel_cheminformatic function')
+    print("pip install openbabel-wheel==3.1.1.16")
 try:
     from rdkit import Chem
     from rdkit.Chem import rdDetermineBonds
 except ModuleNotFoundError:
-    print('install rdkit if you wish to use compute_cheminformatic_from_rdkit function')
+    pass
 
 
 def transition_metals():
@@ -114,11 +115,16 @@ def obmol_2_rdkit(obmol):
         rdmol : rdkit molecule object.
 
     '''
-    obconverted = ob.OBConversion()
-    obconverted.SetOutFormat('sdf')
-    outmdl = obconverted.WriteString(obmol)
-    rdmol = Chem.MolFromMolBlock(outmdl)
-    return rdmol
+    if Chem is None or rdDetermineBonds is None:
+        print('install rdkit if you wish to use compute_cheminformatic_from_rdkit function')
+    else:
+        obconverted = ob.OBConversion()
+        obconverted.SetOutFormat('sdf')
+        outmdl = obconverted.WriteString(obmol)
+        rdmol = Chem.MolFromMolBlock(outmdl)
+        return rdmol
+
+    return None
 
 
 def compute_inchis(obmol):
