@@ -74,21 +74,23 @@ mofstructure_database ciffolder path_to_result
 ### Use as a libray
 
 ```Python
-from  mofstructure import mofdeconstructor
-from  mofstructure import porosity
-from  mofstructure import buildingunits
-from ase.io import read, write
-import pandas as pd
+from  mofstructure import structure
 
-# Read cif file using ase
-ase_atom = read(cif_file)
+"""
+you can parse in a filename or an ase atom
+"""
 
-# check and remove unbound guest molecules
-no_guest_indices = mofdeconstructor.remove_unbound_guest(ase_atom)
-no_guest_atom = ase_atom[no_guest_indices]
+mof_object = structure.MOFstructure(filename=cif_file)
+
+# once and also directly parse an ASE atom object
+# mof_object = structure.MOFstructure(ase_atoms)
+
+# guest free structure
+
+guest_free_ase_atoms = mof_object.remove_guest()
 
 # compute porosit and write output to csv
-pores = porosity.zeo_calculation(ase_ato, probe_radius=1.86, number_of_steps=5000)
+pores = mof_object.get_porosity(probe_radius=1.86, number_of_steps=5000,  rad_file=None,high_accuracy=True)
 df = pd.DataFrame(pores, index=[0])
 df.to_csv('pore.csv')
 ```
@@ -98,16 +100,9 @@ df.to_csv('pore.csv')
 Compute sbus and linkers
 
 ```Python
-connected_components, atoms_indices_at_breaking_point, porpyrin_checker, all_regions = MOF_deconstructor.secondary_building_units(ase_atom)
+metal_sbus, organic_sbus = mof_object.get_sbu(wrap_system=True, cheminfo=True, add_dummy=False)
 
-metal_sbus, organic_sbus, building_unit_regions = MOF_deconstructor.find_unique_building_units(
-    connected_components,
-    atoms_indices_at_breaking_point,
-    ase_atom,
-    porpyrin_checker,
-    all_regions,
-    cheminfo=True
-    )
+organic_ligands = mof_object.get_ligands(wrap_system=True, cheminfo=True, add_dummy=False)
 ```
 
 #### when cheminfo = True
@@ -121,10 +116,10 @@ metal_sbus and organic_sbus list that contains all the unique instances of the m
 For each instance in a building unit the various chemiformatic informations are as follows.
 
 ```Python
-for i,  sbu in enumerate(metal_sbu):
+for i,  sbu in enumerate(metal_sbus):
     smi = sbu.info['smi']
     inchi = sbu.info['inchi']
-    inchikey = sbu.info['inchikey]
+    inchikey = sbu.info['inchikey']
     # for sbus only
     number_of_point_of_extension = sbu.info['point_of_extension']
     #for metal sbus only
@@ -133,11 +128,14 @@ for i,  sbu in enumerate(metal_sbu):
     sbu.write('metal_sbu_'+str(i)+'.cif')
 ```
 
-## Summary
+### open metal site, metal coordination number/environment
 
-All of above codes can be run by a single function found mofstructure.buildingunits
+```python
+oms =  mof_object.get_oms()
+print(oms)
+```
 
-### for a single cif file
+<!-- ### for a single cif file
 
 ```Python
 from  mofstructure import buildingunits
@@ -154,7 +152,7 @@ all_cifs = glob.glob(folder/*cif)
 for cif_files in all_cifs:
     buildingunits.work_flow(cif_files, result_folder)
 # Note that result_folder can be any path. If the path does not exist, it will create one and populate it with all the data.
-```
+``` -->
 
 ## Documentation
 

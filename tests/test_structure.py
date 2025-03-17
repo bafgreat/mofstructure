@@ -18,7 +18,7 @@ def test_structure():
     mof = structure.MOFstructure(ase_atom)
 
 
-    assert len(mof.get_oms()) == 6
+    assert len(mof.get_oms()) == 8
     cluster_ligand = mof.get_ligands()
     assert len(cluster_ligand) == 2
     assert cluster_ligand[1][0].info['inchikey'] == 'DESKXQISJOCIDX-UHFFFAOYSA-N'
