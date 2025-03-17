@@ -22,10 +22,11 @@ def zeo_calculation(ase_atom, probe_radius=1.86, number_of_steps=10000, high_acc
     Else contact bafgreat@gmail.com. if you need more output and can't figure it out.
 
     **parameter:**
-        ase_atom: ase atom object
-        probe_radius: The radius of the probe. Here 1.86 is used as default
-        number_of_steps: Number of GCMC simulation cycles
-        high_accuracy: key to determine where to perform high accuracy computation
+        ase_atom: ASE atoms object representing the porous structure.
+        probe_radius (float): Radius of the probe (default: 1.86).
+        number_of_steps (int): Number of GCMC simulation cycles (default: 10000).
+        high_accuracy (bool): If True, perform high-accuracy computations.
+        rad_file: Optional file containing user defined atom radii. Must have the `.rad` extension
 
     **return:**
         **python dictionary containing**

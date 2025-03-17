@@ -186,6 +186,27 @@ def read_zip(zip_file):
     return content
 
 
+def convert_numpy_types(data):
+    '''
+    A function that jsonifies a dictionary by removing numpy data types.
+
+    **parameter:**
+        data (dict): data to jsonify
+
+    **return:**
+        data (dic): jsonified data
+    '''
+    if isinstance(data, dict):
+        return {key: convert_numpy_types(value) for key, value in data.items()}
+    elif isinstance(data, list):
+        return [convert_numpy_types(element) for element in data]
+    elif isinstance(data, np.integer):
+        return int(data)
+    elif isinstance(data, np.floating):
+        return float(data)
+    else:
+        return data
+
 def load_data(filename):
     '''
     function that recognises file extenion and chooses the correction

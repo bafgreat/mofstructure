@@ -56,7 +56,8 @@ def find_oms(cif_file, base_name, ase_atom, result_folder):
     test_folder = result_folder+'/test'
     a_mof_collection = MofCollection(
         path_list=[cif_file], analysis_folder=test_folder)
-    a_mof_collection.analyse_mofs()
+    print ("This is important")
+    a_mof_collection.analyse_mofs(overwrite=True)
     data = read_write.load_data(
         test_folder+'/oms_results/' + base_name+'/'+base_name+'.json')
 
@@ -92,8 +93,8 @@ def find_oms(cif_file, base_name, ase_atom, result_folder):
     # else:
     #     result['oms'] = []
     #     result['environment'] = {}
-    if os.path.exists(test_folder):
-        shutil.rmtree(test_folder)
+    # if os.path.exists(test_folder):
+    #     shutil.rmtree(test_folder)
     return result
 
 
@@ -129,23 +130,23 @@ def compile_data(cif_files, result_folder, verbose=False):
             pass
 
     for cif_file in cif_files:
-        try:
-            tmp_metal = {}
-            encoder = read_write.AtomsEncoder
-            base_name = cif_file[:cif_file.rindex('.')].split('/')[-1]
-            ase_atom = read(cif_file)
-            ase_atom = remove_guest(ase_atom)
-            if not base_name in seen:
+        # try:
+        tmp_metal = {}
+        # encoder = read_write.AtomsEncoder
+        base_name = cif_file[:cif_file.rindex('.')].split('/')[-1]
+        ase_atom = read(cif_file)
+        ase_atom = remove_guest(ase_atom)
+        if not base_name in seen:
 
-                open_metal_sites = find_oms(cif_file, base_name,  ase_atom, result_folder)
-                metal_info[base_name] = open_metal_sites
-                read_write.append_json(
-                metal_info, result_folder+'/metal_info.json')
-        except Exception:
-            pass
+            open_metal_sites = find_oms(cif_file, base_name,  ase_atom, result_folder)
+            print (open_metal_sites)
+            metal_info[base_name] = open_metal_sites
+            read_write.append_json(metal_info, result_folder+'/metal_info.json')
+        # except Exception:
+        #     pass
 
     data_f = pd.DataFrame.from_dict(metal_info, orient='index')
-    data_f.index.name = 'mof_names'
+    # data_f.index.name = 'mof_names'
     data_f.to_csv(result_folder+'/metal_info.csv')
 
     if verbose:

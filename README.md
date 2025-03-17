@@ -1,6 +1,6 @@
 # mofstructure
 
-![intro](source/images/Rotation.gif)
+![intro](./docs/source/images/Rotation.gif)
 
 This is an elaborate python module that provides simple functions for
 manipulation metal-organic frameworks and other porous systems such as

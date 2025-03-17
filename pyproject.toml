@@ -24,11 +24,12 @@ sphinxcontrib-mermaid = "^0.9.2"
 sphinx-copybutton = "^0.5.2"
 
 [tool.poetry.scripts]
-mofstructure = "mofstructure.buildingunits:main"
-mofstructure_database = "mofstructure.collect_data:main"
-mofstructure_building_units = "mofstructure.collect_building_units:main"
-mofstructure_oms = "mofstructure.collect_oms:main"
-mofstructure_porosity = "mofstructure.collect_porosity:main"
+mofstructure = "mofstructure.scripts.buildingunits:main"
+mofstructure_database = "mofstructure.scripts.collect_data:main"
+mofstructure_building_units = "mofstructure.scripts.collect_building_units:main"
+mofstructure_oms = "mofstructure.scripts.collect_oms:main"
+mofstructure_porosity = "mofstructure.scripts.collect_porosity:main"
+mofstructure_curate = "mofstructure.scripts.curate_structures:main"
 
 [tool.poetry.group.dev.dependencies]
 flake8 = "^7.1.1"
