@@ -89,6 +89,10 @@ def main():
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='print verbose output')
     args = parser.parse_args()
-    cif_files = [os.path.join(args.cif_folder, f) for f in os.listdir(
-        args.cif_folder) if f.endswith('.cif')]
+    if os.path.isdir(args.cif_folder):
+        cif_files = [os.path.join(args.cif_folder, f)
+                 for f in os.listdir(args.cif_folder)
+                 if f.endswith('.cif')]
+    else:
+        cif_files = [args.cif_folder]
     compile_data(cif_files, args.save_dir, args.verbose)

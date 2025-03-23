@@ -8,6 +8,7 @@ from pymatgen.analysis.graphs import StructureGraph
 from pymatgen.io.ase import AseAtomsAdaptor
 from ase.data import chemical_symbols, covalent_radii, atomic_numbers
 from ase import neighborlist, geometry
+from ase.neighborlist import NeighborList
 # from ase import Atoms
 
 try:
@@ -34,6 +35,62 @@ def transition_metals():
 
 
 def inter_atomic_distance_check(ase_atom):
+    """
+    A function that checks whether any pair of atoms (except those with exactly one hydrogen)
+    has a distance below 0.90 Å. Only unique pairs are checked to avoid redundancy.
+
+    **Parameters**
+    ase_atom : ase.Atoms
+        An ASE Atoms object containing atomic positions and chemical symbols.
+
+    **Returns**
+    bool
+        Returns False if any applicable atom pair has a distance below 0.90 Å.
+        Otherwise, returns True.
+    """
+    graph, _ = compute_ase_neighbour(ase_atom)
+    for i, neighbours in graph.items():
+        distances = ase_atom.get_distances(i, neighbours, mic=True)
+        for j, d in zip(neighbours, distances):
+            if i >= j:
+                continue
+
+            i_symbol = ase_atom[i].symbol
+            j_symbol = ase_atom[j].symbol
+
+            if (i_symbol == 'H') ^ (j_symbol == 'H'):
+                continue
+
+            if d < 0.9:
+                return False
+    return True
+
+
+def inter_atomic_distance_check2(ase_atom):
+    '''
+    Checks whether any non-hydrogen atom in the ASE atoms object has a neighbor
+    within 0.90 Å (ignoring self-distances). This is used to detect overly close contacts,
+    while ignoring R–H bonds (i.e., cases where the central atom is hydrogen).
+
+    **parameters:**
+        ase_atom : ASE atoms object
+
+    **returns:**
+        bool: False if any non-hydrogen atom has a neighbor (other than itself) within 0.90 Å; True otherwise.
+    '''
+    distances = ase_atom.get_all_distances(mic=True)
+    symbols = np.array(ase_atom.get_chemical_symbols())
+    print(len(distances))
+
+    non_h_mask = symbols != 'H'
+    off_diag_mask = ~np.eye(len(symbols), dtype=bool)
+    check_mask = non_h_mask[:, None] & off_diag_mask
+
+    if np.any(distances[check_mask] < 0.90):
+        return False
+    return True
+
+def inter_atomic_distance_iterative(ase_atom):
     '''
     A function that checks whether two atoms are within a distance 1.0 Amstrong unless it is an R-H bond
 
@@ -441,7 +498,7 @@ def remove_unbound_guest(ase_atom):
             return sum(fragments, [])
 
 
-def connected_components(graph):
+def connected_components_recursive(graph):
     '''
     Find the connected fragments in a graph. Should work for any graph defined as a dictionary
 
@@ -465,6 +522,75 @@ def connected_components(graph):
                 dfsutil_graph_method(graph, temp, v, visited))
     return list_of_connected_components
 
+
+def dfs_iterative(graph, start, visited):
+    '''
+    Depth-first search (DFS) iterative graph algorithm for traversing graph data structures.
+    It starts at the root node 'start' and explores as far as possible along each branch before backtracking.
+    This function is used as a utility for identifying connected components in the MOF graph.
+
+    **parameters:**
+        graph: a python dictionary where keys represent nodes and values are lists of neighboring nodes.
+        start: a key in the python dictionary (graph), which is used as the starting or root node for the DFS.
+        visited: a dictionary containing nodes that have been visited (True if visited, False otherwise).
+
+    **returns:**
+        A python list containing the nodes in the connected component starting from 'start'.
+    '''
+    component = []
+    stack = [start]
+
+    while stack:
+        node = stack.pop()
+        if not visited[node]:
+            visited[node] = True
+            component.append(node)
+            # Add all unvisited neighbors to the stack.
+            for neighbor in graph.get(node, []):
+                if not visited[neighbor]:
+                    stack.append(neighbor)
+
+    return component
+
+
+def connected_components_iterative(graph):
+    '''
+    Find the connected fragments in a graph. Should work for any graph defined as a dictionary.
+
+    **parameters:**
+        graph: a python dictionary representing the graph where keys are nodes and values are lists of adjacent nodes.
+
+    **returns:**
+        A python list of lists containing the connected components.
+        Each sublist corresponds to an individual connected component (i.e., a set of nodes that are all connected).
+    '''
+    visited = {node: False for node in graph}
+    components = []
+
+    for node in graph:
+        if not visited[node]:
+            comp = dfs_iterative(graph, node, visited)
+            components.append(comp)
+
+    return components
+
+def connected_components(graph):
+    '''
+    Selects the appropriate connected components algorithm based on the size of the system.
+    Generally, the recursive method is faster but may exceed the recursion depth limit when the system is too large,
+    while the iterative approach is slower but prevents the code from crashing in such cases.
+    This function chooses the connected components method based on the size of the graph.
+
+    **parameters:**
+        graph: A dictionary representing a graph, where keys are nodes and values are lists of adjacent nodes.
+
+    **returns:**
+        A list of lists, where each sublist represents a connected component in the graph.
+    '''
+    if len(graph) > 1000:
+        return connected_components_iterative(graph)
+    else:
+        return connected_components_recursive(graph)
 
 def check_planarity(p1, p2, p3, p4):
     '''

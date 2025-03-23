@@ -3,6 +3,8 @@ from __future__ import print_function
 __author__ = "Dr. Dinga Wonanke"
 __status__ = "production"
 import os
+from functools import reduce
+import operator
 import argparse
 import pandas as pd
 import shutil
@@ -168,12 +170,10 @@ class MOFstructure(object):
         overlap = MOF_deconstructor.inter_atomic_distance_check(self.ase_atoms)
         general_info['has_overlapping_atoms'] = not overlap
 
-        if len(self.ase_atoms) > 5000:
-
-            print('System too large and will run out of application memory')
-            return general_info
-            pass
-
+        if len(self.ase_atoms) > 3000:
+            print(f'The system size is very large: {len(self.ase_atoms)} atoms')
+            print('Hence oms computation will take a while ')
+            print('Thanks for your patience!!!')
 
         lattice = self.ase_atoms.get_cell().tolist()
         species = self.ase_atoms.get_chemical_symbols()
