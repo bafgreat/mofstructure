@@ -8,6 +8,8 @@ import pandas as pd
 from mofstructure import structure
 import mofstructure.filetyper as read_write
 
+iupacnames = read_write.load_iupac_names()
+
 def collect_sbus(metal_sbus, organic_sbus, base_name, xyz_path):
     '''
     Function to compile secondary building units and region of MOFs
@@ -105,16 +107,21 @@ def collect_ligand(organic_ligands, base_name, xyz_path):
     if not os.path.exists(path_to_file):
         os.makedirs(path_to_file )
     data_to_json['n_ligands'] = len(organic_ligands)
-    smi, inchikey, inchi = [], [], []
+    smi, inchikey, inchi, iupac = [], [], [], []
     for j, mof_ligand in enumerate(organic_ligands):
         smi.append(mof_ligand.info['smi'])
         inchikey.append(mof_ligand.info['inchikey'])
+        iupac.append(iupacnames.get(mof_ligand.info['inchikey', None]))
         inchi.append(mof_ligand.info['inchi'])
         mof_ligand.write(f'{path_to_file}/{base_name}_organic_ligand_{j+1}.xyz')
     if len(smi) > 0:
         data_to_json['ligand_smile'] = smi
     else:
         data_to_json['ligand_smile'] = []
+    if len(iupac) > 0:
+        data_to_json['ligand_names'] = iupac
+    else:
+        data_to_json['ligand_names'] = []
     if len(inchikey) > 0:
         data_to_json['ligand_inchikey'] = inchikey
     else:

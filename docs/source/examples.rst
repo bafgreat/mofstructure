@@ -1,7 +1,36 @@
 How to Guide
 ============
-
 This section provides step-by-step instructions on how to use `mofstructure` both from the command line and as a Python library. Whether you're new to this module or just need a refresher, this guide will help you get started with ease.
+
+Quick Start Guide
+===================
+
+.. code-block:: python
+   from mofstructure import structure
+   import mofstructure.filetyper as read_write
+
+   # Read a CIF file
+   cif_file = 'path_to_your_cif_file.cif'
+   mofdata = structure.MOFStructure(filename=cif_file)
+   # can also directly parse an ase_atoms object
+   # mofdata = structure.MOFStructure(ase_atoms=ase_atoms)
+
+   # remove unbound guest molecules
+   guest_free_mof = mofdata.remove_guest()
+
+   # get metal and organic SBUs
+   # This will return a list of ase_atoms objects
+   metal_sbus, organic_sbus = mofdata.get_sbu()
+
+   # get organic ligands
+   _, organic_ligands = mofdata.get_ligands()
+
+   # porosity
+   pores = mofdata.get_porosity(probe_radius=1.86, number_of_steps=10000, rad_file=None, high_accuracy=True)
+
+   # get open metal sites
+   open_metal_sites = mofdata.get_oms()
+
 
 Run on the Command Line
 ==========================

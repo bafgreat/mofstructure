@@ -12,6 +12,8 @@ import numpy as np
 from ase import Atoms
 import ase
 import pandas as pd
+import msgpack
+from importlib.resources import files
 
 
 class AtomsEncoder(json.JSONEncoder):
@@ -186,6 +188,18 @@ def read_zip(zip_file):
     return content
 
 
+def save_dict_msgpack(data: dict, filename: str) -> None:
+    """Save a dictionary to a file using MessagePack."""
+    with open(filename, "wb") as f:
+        msgpack.pack(data, f, use_bin_type=True)
+
+
+def load_dict_msgpack(filename: str) -> dict:
+    """Load a dictionary from a MessagePack file."""
+    with open(filename, "rb") as f:
+        return msgpack.unpack(f, raw=False, strict_map_key=False)
+
+
 def convert_numpy_types(data):
     '''
     A function that jsonifies a dictionary by removing numpy data types.
@@ -212,7 +226,10 @@ def load_data(filename):
     function that recognises file extenion and chooses the correction
     function to load the data.
     '''
-    file_ext = filename[filename.rindex('.')+1:]
+    # file_ext = filename[filename.rindex('.')+1:]
+    basename = os.path.basename(filename)
+    file_ext = basename.split('.')[-1]
+
     if file_ext == 'json':
         data = read_json(filename)
     elif file_ext == 'csv':
@@ -221,6 +238,12 @@ def load_data(filename):
         data = pickle_load(filename)
     elif file_ext == 'xlsx':
         data = pd.read_excel(filename)
+    elif file_ext == 'msgpack':
+        data = load_dict_msgpack(filename)
     else:
         data = get_contents(filename)
     return data
+
+def load_iupac_names():
+    msgpack_path = files("mofstructure").joinpath("db/iupacname.msgpack")
+    return load_data(msgpack_path)

@@ -1,6 +1,13 @@
 API Reference
 =============
 
+MOF Structure
+---------------------
+.. automodule:: mofstructure.structure
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 MOF Deconstructions
 ---------------------
 .. automodule:: mofstructure.mofdeconstructor
