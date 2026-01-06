@@ -3,6 +3,7 @@ from __future__ import print_function
 from .load_test import get_test_data
 from mofstructure.porosity import zeo_calculation
 
+
 def test_porosity_data():
     '''
     Test to ensure that zeo++ works efficiently in computing
