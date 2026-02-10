@@ -95,3 +95,34 @@ To identify and extract SBUs and linkers from the MOF:
             )
 
 This code will output the SBUs and linkers along with their cheminformatic information.
+
+
+Example 6: Determining the Topology of a MOF
+-----------------------------------------------------
+To determine the topology of a MOF using Systre:
+.. code-block:: python
+
+   from mofstructure.systre import identify_topology
+
+   # 1) From a CGD file
+   res = identify_topology("net.cgd", input_is_cgd=True)
+   print(res.topology)
+
+   # 2) From a CIF (generate CGD then run systre)
+   res = identify_topology("UiO-66.cif", method="all_node")
+   print(res.topology)
+
+   # 3) From ASE Atoms
+   atoms = read("UiO-66.cif")
+   res = identify_topology(atoms, method="sbus")
+   print(res.topology)
+
+
+
+Example 7: Computing topoology from the command line
+-----------------------------------------------------
+To compute the topology of a MOF from the command line, run:
+.. code-block:: bash
+
+   mofstructure_topology cif_folder
+This command will compute the topology of all CIF files in the specified folder and save the results in a file named `topology_results.csv` in the current directory.

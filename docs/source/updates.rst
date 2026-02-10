@@ -160,3 +160,16 @@ Major update in the code structuring with the inclusion of MOFstructure class
 which makes the entire code more modular and easy to use. In addition,
 the code can now guess the names of common ligands.
 
+Updates Version 0.1.8.6
+======================
+
+Major update in the code structuring with
+ the inclusion of TopologyExtractor class which makes
+ the entire code more modular and easy to use.
+ In addition, the code can now guess the names of common ligands.
+ Moreover, we have added a new command line tool to compute the topology of MOFs using Systre.
+ This tool is called `mofstructure_topology` and can be used as follows:
+.. code-block:: bash
+
+   mofstructure_topology cif_folder
+   

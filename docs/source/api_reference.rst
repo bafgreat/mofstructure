@@ -29,3 +29,17 @@ Computing stacking in 2D systems and inter-layer height
    :members:
    :undoc-members:
    :show-inheritance:
+
+Topological Analysis
+-------------------------
+.. automodule:: mofstructure.topology
+   :members:
+   :undoc-members:
+   :show-inheritance:
+Systre Topology Identification
+-------------------------
+.. automodule:: mofstructure.systre
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   

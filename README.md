@@ -6,15 +6,17 @@ This is an elaborate python module that provides simple functions for
 manipulation metal-organic frameworks and other porous systems such as
 COFs and Zeolites. Some uses of the module involves
 
-1. Computation of geometric properties of MOFs. It calls zeo++ in the background and enables a quick computation of all porosity information such pld, lcd, asa ...
+1. Compute rcsr topological code (**Currently experimenting**)
 
-2. Automated removal of unbound guest molecules
+2. Computation of geometric properties of MOFs. It calls zeo++ in the background and enables a quick computation of all porosity information such pld, lcd, asa ...
 
-3. Deconstruction of metal-organic frameworks into building units. And for each buidling units (organic ligand, metal cluster, organic sbu and metal sbu) computes their cheminformatic identifiers such as SMILES strings, inchi and inchikey. It also identify the type of metal sbu and coordination number of central metal.
+3. Automated removal of unbound guest molecules
 
-4. Wraps systems around unit cell so as to remove effect of pbc. This is often the case, when one tries to visualize the cif files or convert cif files into xyz, the system often appears to be uncoordinated
+4. Deconstruction of metal-organic frameworks into building units. And for each buidling units (organic ligand, metal cluster, organic sbu and metal sbu) computes their cheminformatic identifiers such as SMILES strings, inchi and inchikey. It also identify the type of metal sbu and coordination number of central metal.
 
-5. Seperation of building units into regions. This is essential when on wishes to subsitute a specific ligand or building unit.
+5. Wraps systems around unit cell so as to remove effect of pbc. This is often the case, when one tries to visualize the cif files or convert cif files into xyz, the system often appears to be uncoordinated
+
+6. Seperation of building units into regions. This is essential when on wishes to subsitute a specific ligand or building unit.
 
 ## Installation
 
@@ -70,6 +72,27 @@ Here the 'ciffolder' is the folder containing the cif files. The ouput will be s
 ```bash
 mofstructure_database ciffolder path_to_result
 ```
+
+#### Compute topology
+
+You can easily compute the topology of a MOF from the commandline. The code will work for both files (cifs, cgd or any ASE input) folders containing files.
+**Still testing the robustness of topology**
+
+```bash
+mofstructure_topology net.cgd
+```
+
+```bash
+ mofstructure_topology structure.cif
+ ```
+
+ ```bash
+  mofstructure_systre ./folder
+  ```
+
+  ```bash
+  mofstructure_systre ./folder --no-recursive
+  ```
 
 ### Use as a libray
 
@@ -135,6 +158,33 @@ oms =  mof_object.get_oms()
 print(oms)
 ```
 
+### Topology
+
+```Python
+
+from ase.io import read
+from mofstructure.systre import identify_topology
+
+# 1) From a CGD file
+res = identify_topology("net.cgd", input_is_cgd=True)
+print(res.topology)
+
+# 2) From a CIF (generate CGD then run systre)
+res = identify_topology("UiO-66.cif", method="all_node")
+print(res.topology)
+
+# 3) From ASE Atoms
+atoms = read("UiO-66.cif")
+res = identify_topology(atoms)
+print(res.topology)
+
+# 4) From pymatgen Structure (if pymatgen installed)
+# from pymatgen.core import Structure
+# s = Structure.from_file("UiO-66.cif")
+# res = identify_topology(s)
+# print(res.topology)
+```
+
 <!-- ### for a single cif file
 
 ```Python
@@ -162,10 +212,9 @@ You can access the full project documentation on [docs](https://bafgreat.github.
 
 In the future the code should be able to:
 
-1. Compute rcsr topological code
-2. Subsitutue building units in a MOF to enable framework functionalisation
-3. Automatic curation of cifs
-4. Decontsruction of COFs into their building units
+1. Subsitutue building units in a MOF to enable framework functionalisation
+2. Automatic curation of cifs
+3. Decontsruction of COFs into their building units
    <!-- ![process](source/images/decon.jpeg) -->
 
 <!-- ![proccess]source/(images/guest.png) -->
