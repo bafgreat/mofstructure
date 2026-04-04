@@ -18,6 +18,9 @@ Quick Start Guide
    # remove unbound guest molecules
    guest_free_mof = mofdata.remove_guest()
 
+   # get the topology of the MOF
+   topology = mofdata.get_topology(method="all_node") # method can be "all_node" or "sbus" or "ligand_cluster"
+
    # get metal and organic SBUs
    # This will return a list of ase_atoms objects
    metal_sbus, organic_sbus = mofdata.get_sbu()
@@ -159,7 +162,7 @@ In addition to command-line usage, `mofstructure` can also be used as a Python l
 
    .. code-block:: python
 
-      connected_components, atoms_indices_at_breaking_point, porphyrin_checker, all_regions = mofdeconstructor.secondary_building_units(ase_atom)
+      connected_components, atoms_indices_at_breaking_point, porphyrin_checker, all_regions, breaking_pairs = mofdeconstructor.secondary_building_units(ase_atom)
 
       metal_sbus, organic_sbus, building_unit_regions = mofdeconstructor.find_unique_building_units(
           connected_components,

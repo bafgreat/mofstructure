@@ -83,7 +83,7 @@ To identify and extract SBUs and linkers from the MOF:
 
 .. code-block:: python
 
-   connected_components, atoms_indices_at_breaking_point, porpyrin_checker, all_regions = MOF_deconstructor.secondary_building_units(ase_atom)
+   connected_components, atoms_indices_at_breaking_point, porpyrin_checker, all_regions, breaking_pairs = MOF_deconstructor.secondary_building_units(ase_atom)
 
     metal_sbus, organic_sbus, _ = MOF_deconstructor.find_unique_building_units(
                 connected_components,

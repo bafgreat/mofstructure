@@ -32,7 +32,7 @@ Computing stacking in 2D systems and inter-layer height
 
 Topological Analysis
 -------------------------
-.. automodule:: mofstructure.topology
+.. automodule:: mofstructure.generate_cgd
    :members:
    :undoc-members:
    :show-inheritance:
@@ -42,4 +42,3 @@ Systre Topology Identification
    :members:
    :undoc-members:
    :show-inheritance:
-   

@@ -47,6 +47,6 @@ def test_uio66(uio66):
 
 def test_dut8(dut8):
     topology = sbu_data(dut8)
-    assert topology == 'sql' #pcu
+    assert topology == 'pcu' #pcu
 
 

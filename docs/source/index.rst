@@ -22,19 +22,25 @@ Key Features of `mofstructure`
 
 The `mofstructure` module includes a variety of features that simplify common operations and enhance the workflow for users working with MOFs and similar materials. Some of the key functionalities include:
 
-1. **Computation of Geometric Properties of MOFs:**
+1. **Determine the RCSR Topological Code of a MOF:**
+   - The module can compute the Reticular Chemistry Structure Resource (RCSR) topological code for a given MOF structure. This code is essential for classifying and understanding the connectivity and topology of the framework, which is crucial for predicting its properties and potential applications.
+
+2. **Computation of Geometric Properties of MOFs:**
    - `mofstructure` integrates seamlessly with the `zeo++` software in the background to enable quick and accurate computation of all porosity-related properties. Users can easily obtain essential metrics such as Pore Limiting Diameter (PLD), Largest Cavity Diameter (LCD), Accessible Surface Area (ASA), and other geometric characteristics critical to the analysis of MOFs.
 
-2. **Automated Removal of Unbound Guest Molecules:**
+3. **Automated Removal of Unbound Guest Molecules:**
    - The module offers an automated process for identifying and removing unbound guest molecules from the framework. This feature is particularly useful when preparing structures for simulations or other computational analyses where the presence of unbound molecules could skew results.
 
-3. **Deconstruction of Metal-Organic Frameworks into Building Units:**
+4. **Deconstruction of Metal-Organic Frameworks into Building Units:**
    - `mofstructure` allows users to deconstruct MOFs into their constituent building units, including organic ligands, metal clusters, organic secondary building units (SBUs), and metal SBUs. For each building unit, the module computes important cheminformatic identifiers such as SMILES strings, InChI, and InChIKey. Additionally, it identifies the type of metal SBU and determines the coordination number of the central metal atom, which is crucial for understanding the structural properties of the framework.
 
-4. **Wrapping Systems Around Unit Cells to Remove the Effect of Periodic Boundary Conditions (PBC):**
+5. ** Determination of open metal sites (OMS) in MOFs:**
+   - The module can identify and characterize open metal sites within MOF structures. This is particularly important for applications such as catalysis, where the presence of OMS can significantly influence the material's performance.
+
+6. **Wrapping Systems Around Unit Cells to Remove the Effect of Periodic Boundary Conditions (PBC):**
    - When visualizing CIF files or converting CIF files to XYZ format, systems may appear uncoordinated due to the effects of periodic boundary conditions. `mofstructure` provides a solution by wrapping systems around their unit cells, ensuring a more accurate and visually coherent representation of the structure.
 
-5. **Separation of Building Units into Regions:**
+7. **Separation of Building Units into Regions:**
    - This feature is essential for users who need to substitute specific ligands or building units within a framework. By separating building units into distinct regions, `mofstructure` enables targeted modifications, allowing for precise customization of the framework's properties.
 
 .. .. image:: images/Rotation.gif
@@ -68,10 +74,10 @@ Roadmap
 
 In the future, the code should be able to:
 
-1. Compute RCSR topological code
-2. Substitute building units in a MOF to enable framework functionalization
-3. Automatically curate CIFs
-4. Deconstruct COFs into their building units
+
+1. Substitute building units in a MOF to enable framework functionalization
+2. Automatically curate CIFs
+3. Deconstruct COFs into their building units
 
 * :ref:`genindex`
 * :ref:`modindex`

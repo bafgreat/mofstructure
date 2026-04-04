@@ -2,13 +2,17 @@
 from __future__ import print_function
 __author__ = "Dr. Dinga Wonanke"
 __status__ = "production"
+from itertools import combinations
 import numpy as np
-from pymatgen.analysis.local_env import JmolNN
+import networkx as nx
+from pymatgen.analysis.local_env import JmolNN, VoronoiNN
 from pymatgen.analysis.graphs import StructureGraph
 from pymatgen.io.ase import AseAtomsAdaptor
 from ase.data import chemical_symbols, covalent_radii, atomic_numbers
 from ase import neighborlist, geometry
 from ase.neighborlist import NeighborList
+from collections import defaultdict, Counter
+
 # from ase import Atoms
 
 try:
@@ -16,7 +20,7 @@ try:
     from openbabel import openbabel as ob
 except ModuleNotFoundError:
     print('install openbabel if you wish to use compute_openbabel_cheminformatic function')
-    print("pip install openbabel-wheel==3.1.1.16")
+    print("pip install openbabel-wheel==3.1.1.22")
 try:
     from rdkit import Chem
     from rdkit.Chem import rdDetermineBonds
@@ -32,6 +36,24 @@ def transition_metals():
     metal = [symbol for symbol in chemical_symbols if symbol not in [chemical_symbols[main_index]
                                                                      for main_index in [1, 2, 5, 6, 7, 8, 9, 10, 14, 15, 16, 17, 18, 33, 34, 35, 36, 52, 53, 54, 85, 86]]]
     return metal
+
+
+def is_metal(symbols):
+    """
+    Check wether symbols in a list are metals
+    """
+    symbols = np.array([symbols]).flatten()
+    metals = transition_metals()
+    return np.isin(symbols, metals)
+
+
+def is_alkali(symbols):
+    """
+    Check wether symbols in a list are alkali
+    """
+    symbols = np.array([symbols]).flatten()
+    alkali = ['Li','Na','K','Rb','Cs','Fr','Be','Mg','Ca','Sr','Ba','Ra']
+    return np.isin(symbols, alkali)
 
 
 def inter_atomic_distance_check(ase_atom):
@@ -318,6 +340,147 @@ def compute_cheminformatic_from_rdkit(ase_atom):
     return smi, inChi, inChiKey
 
 
+def get_neighbour_bond_matrix(sbu, skin=0.30, bo_step=0.10, aromatic=True):
+    '''
+    Create a bond-order connectivity graph using covalent radii
+    and ASE NeighborList, with optional aromatic ring correction.
+
+    The algorithm:
+        1) Uses covalent radii + tolerance to determine bonded atoms.
+        2) Uses progressively shorter cutoffs to heuristically assign
+           single, double, and triple bonds.
+        3) Applies MOF-specific rules for metals, alkali metals,
+           and hydrogen atoms.
+        4) Optionally detects planar 5–10 membered rings and
+           assigns aromatic bond order (1.5).
+
+    **parameters:**
+        sbu : ASE atoms object
+        skin : float
+            Additional tolerance added to covalent radii (Å).
+            Important for capturing slightly elongated coordination bonds.
+        bo_step : float
+            Distance reduction step used to define higher bond orders.
+        aromatic : bool
+            If True, perform aromatic ring detection and correction.
+
+    **returns:**
+        1. atom_neighbors:
+            A python dictionary where each atom index is a key and
+            the value is a list of bonded atom indices.
+            e.g.
+            atom_neighbors = {0:[1,2,3], 1:[0,4], ...}
+
+        2. bonds:
+            Bond order matrix (NxN ndarray).
+            Values:
+                0.0  -> no bond
+                1.0  -> single bond
+                2.0  -> double bond (heuristic)
+                3.0  -> triple bond (heuristic)
+                1.5  -> aromatic bond
+                0.5  -> metal–organic coordination-like bond
+                0.25 -> metal–metal weak bond
+    '''
+    bonds = np.zeros((len(sbu), len(sbu)))
+    symbols = np.array(sbu.get_chemical_symbols())
+    numbers = np.array(sbu.get_atomic_numbers())
+    positions = np.array(sbu.get_positions())
+
+    BO1 = np.array([covalent_radii[n] if n > 0 else 0.7 for n in numbers])
+    BO2 = BO1 - 0.15
+    BO3 = BO2 - 0.15
+
+    nl1 = NeighborList(cutoffs=BO1,
+                       bothways=True,
+                       self_interaction=False,
+                       skin=0.1)
+    nl2 = NeighborList(cutoffs=BO2,
+                       bothways=True,
+                       self_interaction=False,
+                       skin=0.1)
+    nl3 = NeighborList(cutoffs=BO3,
+                       bothways=True,
+                       self_interaction=False,
+                       skin=0.1)
+
+    nl1.update(sbu)
+    nl2.update(sbu)
+    nl3.update(sbu)
+
+    for atom in sbu:
+        i1, _ = nl1.get_neighbors(atom.index)
+        i2, _ = nl2.get_neighbors(atom.index)
+        i3, _ = nl3.get_neighbors(atom.index)
+        bonds[atom.index, i1] = 1.0
+        bonds[atom.index, i2] = 2.0
+        bonds[atom.index, i3] = 3.0
+
+    hydrogens = np.where(symbols == "H")[0]
+    metals = np.where(is_metal(symbols))[0]
+    alkali = np.where(is_alkali(symbols))[0]
+    organic = np.ones(bonds.shape[0], dtype=bool)
+    organic[hydrogens] = False
+    organic[metals] = False
+    organic[alkali] = False
+
+    # bonds[hydrogens][:, bonds[hydrogens] > 1.0] = 1.0
+    bonds[hydrogens, :] = np.clip(bonds[hydrogens, :], 0, 1.0)
+    bonds[:, hydrogens] = np.clip(bonds[:, hydrogens], 0, 1.0)
+    bonds[:, hydrogens] = bonds[hydrogens].T
+
+    ix = np.ix_(metals, metals)
+    bonds[ix][bonds[ix] > 0] = 0.25
+    bonds[np.ix_(metals, hydrogens)] = 0.0
+    bonds[np.ix_(hydrogens, metals)] = 0.0
+    bonds[np.ix_(alkali, alkali)] = 0.0
+    bonds[np.ix_(metals, alkali)] = 0.0
+    bonds[np.ix_(alkali, metals)] = 0.0
+
+    ix = np.ix_(metals, np.where(organic)[0])
+    bonds[ix][bonds[ix] > 0] = 0.5
+    bonds[ix[::-1]][bonds[ix[::-1]] > 0] = 0.5
+
+    # -----------------
+    # Ring detection
+    # -----------------
+    # Build graph from strong bonds (single + double)
+    graph = nx.Graph()
+    for i in range(len(sbu)):
+        for j in range(i+1, len(sbu)):
+            if bonds[i, j] >= 1.0 and symbols[i] != "H" and symbols[j] != "H":
+                graph.add_edge(i, j)
+
+    # Find all cycles (rings)
+    aromatic_rings = []
+    for cycle in nx.cycle_basis(graph):
+        if 5 <= len(cycle) <= 10:
+            ring_symbols = symbols[cycle]
+            homocycle = np.all(ring_symbols == "C")
+            heterocycle = np.in1d(ring_symbols, ["C", "S", "N", "O"]).all()
+            if (homocycle and len(cycle) % 2 == 0) or heterocycle:
+                coords = positions[cycle]
+                # Check coplanarity
+                coplanar = True
+                for quad in combinations(coords, 4):
+                    matrix = np.vstack(quad[:3]) - quad[3]
+                    if abs(np.linalg.det(matrix)) >= 0.1:
+                        coplanar = False
+                        break
+                if coplanar:
+                    aromatic_rings.append(cycle)
+
+    # Aromatic bond fixing
+    for ring in aromatic_rings:
+        for i, j in combinations(ring, 2):
+            if bonds[i, j] > 0:
+                bonds[i, j] = 1.5
+                bonds[j, i] = 1.5
+    atom_neighbors = matrix2dict(bonds)
+
+    return atom_neighbors, bonds
+
+
 def compute_ase_neighbour(ase_atom):
     '''
     Create a connectivity graph using ASE neigbour list.
@@ -353,6 +516,43 @@ def compute_ase_neighbour(ase_atom):
         atom_neighbors[atoms.index] = connectivity
 
     return atom_neighbors, matrix
+
+
+def compute_ase_neighbour_with_offsets(ase_atom):
+    """
+    Create a connectivity graph using ASE neigbour list.
+
+    **parameters:**
+        ASE atoms
+
+    **return:**
+        atom_neighbors: dict[int, list[int]]
+        matrix: adjacency matrix
+        bond_offsets: dict[(i, j)] -> list[(sx, sy, sz)]
+    """
+    atom_neighbors = {}
+    cut_off = neighborlist.natural_cutoffs(ase_atom)
+
+    nl = neighborlist.NeighborList(
+        cut_off,
+        self_interaction=False,
+        bothways=True
+    )
+    nl.update(ase_atom)
+    matrix = nl.get_connectivity_matrix(sparse=False)
+
+    bond_offsets = defaultdict(list)
+
+    for atom in ase_atom:
+        neigh_idx, neigh_off = nl.get_neighbors(atom.index)
+        atom_neighbors[atom.index] = list(neigh_idx)
+
+        for j, off in zip(neigh_idx, neigh_off):
+            j = int(j)
+            s = tuple(int(x) for x in np.asarray(off, dtype=int))
+            bond_offsets[(atom.index, j)].append(s)
+
+    return atom_neighbors, matrix, bond_offsets
 
 
 def matrix2dict(bond_matrix):
@@ -573,6 +773,7 @@ def connected_components_iterative(graph):
 
     return components
 
+
 def connected_components(graph):
     '''
     Selects the appropriate connected components algorithm based on the size of the system.
@@ -590,6 +791,7 @@ def connected_components(graph):
         return connected_components_iterative(graph)
     else:
         return connected_components_recursive(graph)
+
 
 def check_planarity(p1, p2, p3, p4):
     '''
@@ -895,6 +1097,11 @@ def find_phosphate(ase_atom, graph):
                     phosphate[index] = oxygen
     return phosphate
 
+def get_bond_shift(i, j, bond_offsets):
+    vals = bond_offsets.get((int(i), int(j)), [])
+    if not vals:
+        return (0, 0, 0)
+    return Counter(vals).most_common(1)[0][0]
 
 def secondary_building_units(ase_atom):
     """
@@ -913,7 +1120,8 @@ def secondary_building_units(ase_atom):
         porphyrin_checker: Boolean showing whether the metal is in the centre of a porpherin
         Regions: Dictionary of regions.
     """
-    graph, bond_matrix = compute_ase_neighbour(ase_atom)
+    # graph, bond_matrix = compute_ase_neighbour(ase_atom)
+    graph, bond_matrix, bond_offsets = compute_ase_neighbour_with_offsets(ase_atom)
     porphyrin_checker = metal_in_porphyrin2(ase_atom, graph)
     breaking_pairs = []
     all_regions = {}
@@ -936,13 +1144,16 @@ def secondary_building_units(ase_atom):
             S_indx = [i for i in connected if ase_atom[i].symbol == 'S']
             if len(all_carbon_indices) == 1:
                 bonds_to_break.append([atoms] + all_carbon_indices)
-                breaking_pairs.append([atoms, all_carbon_indices[0]])
+                sx, sy, sz = get_bond_shift(atoms, all_carbon_indices[0], bond_offsets)
+                breaking_pairs.append([atoms, all_carbon_indices[0], sx, sy, sz])
             if len(all_nitrogens) == 1:
                 bonds_to_break.append([atoms] + all_nitrogens)
-                breaking_pairs.append([atoms, all_nitrogens[0]])
+                sx, sy, sz = get_bond_shift(atoms, all_nitrogens[0], bond_offsets)
+                breaking_pairs.append([atoms, all_nitrogens[0], sx, sy, sz])
             if len(S_indx) == 1:
                 bonds_to_break.append([atoms] + S_indx)
-                breaking_pairs.append([atoms, S_indx[0]])
+                sx, sy, sz = get_bond_shift(atoms, S_indx[0], bond_offsets)
+                breaking_pairs.append([atoms, S_indx[0], sx, sy, sz])
 
         if ase_atom[atoms].symbol == 'C':
             connected = graph[atoms]
@@ -955,12 +1166,16 @@ def secondary_building_units(ase_atom):
                     i for i in oxygens if ase_atom[i].symbol in transition_metals()]
                 oxy_metal = [i for i in oxy_metal if i not in ferocene_metal]
                 if len(oxy_metal) == 1:
-                    breaking_pairs.append([oxygens[0], oxy_metal[0]])
                     bonds_to_break.append([oxygens[0]] + oxy_metal)
+                    sx, sy, sz = get_bond_shift(oxygens[0], oxy_metal[0], bond_offsets)
+                    breaking_pairs.append([oxygens[0], oxy_metal[0], sx, sy, sz])
+
             if len(carbon_metal) > 0:
                 for met in carbon_metal:
-                    breaking_pairs.append([atoms, met])
                     bonds_to_break.append([atoms] + [met])
+                    sx, sy, sz = get_bond_shift(atoms, met, bond_offsets)
+                    breaking_pairs.append([atoms, met, sx, sy, sz])
+
 
         if atoms in list(all_sulphates.keys()):
             connected = graph[atoms]
@@ -968,8 +1183,12 @@ def secondary_building_units(ase_atom):
                 i for i in connected if ase_atom[i].symbol == 'C']
             oxygen = all_sulphates[atoms]
             if len(all_carbon_indices) == 1:
-                breaking_pairs.append([atoms, all_carbon_indices[0]])
                 bonds_to_break.append([atoms] + all_carbon_indices)
+                sx, sy, sz = get_bond_shift(atoms, all_carbon_indices[0], bond_offsets)
+
+                breaking_pairs.append([atoms, all_carbon_indices[0], sx, sy, sz])
+
+
             if len(all_carbon_indices) > 1:
                 for oxy in oxygen:
                     metal = [i for i in graph[oxy]
@@ -977,22 +1196,25 @@ def secondary_building_units(ase_atom):
                     metal = [i for i in metal if i not in ferocene_metal]
                     if len(metal) > 0:
                         for met in metal:
-                            breaking_pairs.append([oxy, met])
                             bonds_to_break.append([oxy] + [met])
+                            sx, sy, sz = get_bond_shift(oxy, met, bond_offsets)
+                            breaking_pairs.append([oxy, met, sx, sy, sz])
 
         if atoms in list(all_phosphites.keys()):
             all__n_indices = all_phosphites[atoms]
             connected = [i for i in graph[atoms] if i not in all__n_indices]
             for neigbour in connected:
-                breaking_pairs.append([atoms, neigbour])
                 bonds_to_break.append([atoms] + [neigbour])
+                sx, sy, sz = get_bond_shift(atoms, neigbour, bond_offsets)
+                breaking_pairs.append([atoms, neigbour, sx, sy, sz])
 
         if atoms in list(all_sulphites.keys()):
             all__n_indices = all_sulphites[atoms]
             connected = [i for i in graph[atoms] if i not in all__n_indices]
             for neigbour in connected:
-                breaking_pairs.append([atoms, neigbour])
                 bonds_to_break.append([atoms] + [neigbour])
+                sx, sy, sz = get_bond_shift(atoms, neigbour, bond_offsets)
+                breaking_pairs.append([atoms, neigbour, sx, sy, sz])
 
         # if atoms in list(all_sulphites.keys()):
         #     all__n_indices = all_sulphites[atoms]
@@ -1011,8 +1233,9 @@ def secondary_building_units(ase_atom):
                 i for i in connected if ase_atom[i].symbol == 'C']
             non_metals = cos_group[atoms]
             if len(all_carbon_indices) == 1:
-                breaking_pairs.append([atoms, all_carbon_indices[0]])
                 bonds_to_break.append([atoms] + all_carbon_indices)
+                sx, sy, sz = get_bond_shift(atoms, all_carbon_indices[0], bond_offsets)
+                breaking_pairs.append([atoms, all_carbon_indices[0], sx, sy, sz])
             if len(all_carbon_indices) > 1:
                 for atom_idx in non_metals:
                     metal = [i for i in graph[atom_idx]
@@ -1020,8 +1243,9 @@ def secondary_building_units(ase_atom):
                     metal = [i for i in metal if i not in ferocene_metal]
                     if len(metal) > 0:
                         for met in metal:
-                            breaking_pairs.append([atom_idx, met])
                             bonds_to_break.append([atom_idx] + [met])
+                            sx, sy, sz = get_bond_shift(atom_idx, met, bond_offsets)
+                            breaking_pairs.append([atom_idx, met, sx, sy, sz])
 
         if ase_atom[atoms].symbol == 'O':
             seen = sum(list(carboxylates.values())
@@ -1036,12 +1260,13 @@ def secondary_building_units(ase_atom):
                 carbon = [i for i in connected if ase_atom[i].symbol
                           == 'C' and i not in list(carboxylates.keys())]
                 if len(metal) >= 1 and len(carbon) == 1:
-
-                    breaking_pairs.append([atoms, carbon[0]])
                     bonds_to_break.append([atoms] + carbon)
+                    sx, sy, sz = get_bond_shift(atoms, carbon[0], bond_offsets)
+                    breaking_pairs.append([atoms, carbon[0], sx, sy, sz])
                 if len(metal) == 1 and len(carbon) == 2:
-                    breaking_pairs.append([atoms, metal[0]])
                     bonds_to_break.append([atoms] + metal)
+                    sx, sy, sz = get_bond_shift(atoms, metal[0], bond_offsets)
+                    breaking_pairs.append([atoms, metal[0], sx, sy, sz])
                 if len(metal) == 1 and len(Nitrogen) == 1:
                     n_carbon = [i for i in graph[Nitrogen[0]]
                                 if ase_atom[i].symbol == 'C' and i not in list(carboxylates.keys())]
@@ -1050,15 +1275,18 @@ def secondary_building_units(ase_atom):
                     n_sulphur = [i for i in graph[Nitrogen[0]]
                                  if ase_atom[i].symbol == 'S' and i not in list(all_sulphates.keys())]
                     if len(n_carbon) > 1:
-                        breaking_pairs.append([atoms, Nitrogen[0]])
                         bonds_to_break.append([atoms] + Nitrogen)
+                        sx, sy, sz = get_bond_shift(atoms, Nitrogen[0], bond_offsets)
+                        breaking_pairs.append([atoms, Nitrogen[0], sx, sy, sz])
 
                     elif len(n_nitrogen) > 1:
-                        breaking_pairs.append([atoms, Nitrogen[0]])
                         bonds_to_break.append([atoms] + Nitrogen)
+                        sx, sy, sz = get_bond_shift(atoms, Nitrogen[0], bond_offsets)
+                        breaking_pairs.append([atoms, Nitrogen[0], sx, sy, sz])
                     elif len(n_sulphur) > 1:
-                        breaking_pairs.append([atoms, Nitrogen[0]])
                         bonds_to_break.append([atoms] + Nitrogen)
+                        sx, sy, sz = get_bond_shift(atoms, Nitrogen[0], bond_offsets)
+                        breaking_pairs.append([atoms, Nitrogen[0], sx, sy, sz])
 
         if ase_atom[atoms].symbol == 'N':
             connected = graph[atoms]
@@ -1067,8 +1295,9 @@ def secondary_building_units(ase_atom):
             metal = [i for i in metal if i not in ferocene_metal]
             if atoms not in porphyrin_checker:
                 if len(metal) == 1:
-                    breaking_pairs.append([atoms, metal[0]])
                     bonds_to_break.append([atoms] + metal)
+                    sx, sy, sz = get_bond_shift(atoms, metal[0], bond_offsets)
+                    breaking_pairs.append([atoms, metal[0], sx, sy, sz])
 
         if ase_atom[atoms].symbol == 'S':
             seen = sum(list(carboxylates.values())
@@ -1083,8 +1312,9 @@ def secondary_building_units(ase_atom):
                 metal = [i for i in metal if i not in ferocene_metal]
                 if len(metal) > 0:
                     for met in metal:
-                        breaking_pairs.append([atoms, met])
                         bonds_to_break.append([atoms, met])
+                        sx, sy, sz = get_bond_shift(atoms, met, bond_offsets)
+                        breaking_pairs.append([atoms, met, sx, sy, sz])
 
         if ase_atom[atoms].symbol == 'P':
             # Find the carbon closest to P, which is not bonded to a metal and cut
@@ -1108,11 +1338,13 @@ def secondary_building_units(ase_atom):
                     all_carbon_indices = sum([[i for i in graph[j] if i in connected]
                                               for j in closest_atoms], [])
                     for frag in all_carbon_indices:
-                        breaking_pairs.append([atoms, frag])
                         bonds_to_break.append([atoms, frag])
+                        sx, sy, sz = get_bond_shift(atoms, frag, bond_offsets)
+                        breaking_pairs.append([atoms, frag, sx, sy, sz])
 
                     bonds_to_break.append([atoms, frag])
-                    breaking_pairs.append([atoms, frag])
+                    sx, sy, sz = get_bond_shift(atoms, frag, bond_offsets)
+                    breaking_pairs.append([atoms, frag, sx, sy, sz])
 
         if ase_atom[atoms].symbol == 'B':
             # Find the carbon closest to P, which is  bonded to a metal and cut
@@ -1125,8 +1357,9 @@ def secondary_building_units(ase_atom):
             metal = [i for i in metal if i not in ferocene_metal]
             if len(metal_connect) > 0:
                 for frag in metal_connect:
-                    breaking_pairs.append(frag)
                     bonds_to_break.append(frag)
+                    sx, sy, sz = get_bond_shift(frag[0], frag[1], bond_offsets)
+                    breaking_pairs.append([frag[0], frag[1], sx, sy, sz])
     # In special cases some carbon and hydrogen get very closed to metals
     # So in such case it is important to clear this
     for metal in all_metals:
@@ -1135,7 +1368,8 @@ def secondary_building_units(ase_atom):
         if len(c_H) > 0:
             for c_h in c_H:
                 bonds_to_break.append([c_h, metal])
-                breaking_pairs.append([c_h, metal])
+                sx, sy, sz = get_bond_shift(c_h, metal, bond_offsets)
+                breaking_pairs.append([c_h, metal, sx, sy, sz])
 
 
     for bonds in bonds_to_break:
@@ -1164,8 +1398,54 @@ def secondary_building_units(ase_atom):
     return [
         list_of_connected_components,
         bonds_to_break,
-        porphyrin_checker, all_regions
+        porphyrin_checker,
+        all_regions,
+        breaking_pairs
     ]
+
+def rings_and_atom_ring_lookup(graph, use_mcb=True):
+    """
+    Build rings and fast per-atom ring membership lookup.
+
+    Parameters
+    ----------
+    graph : dict[int, list[int]]
+        Undirected adjacency list (atom -> neighbors).
+    use_mcb : bool
+        If True: use nx.minimum_cycle_basis (SSSR-like).
+        If False: use nx.cycle_basis (fundamental cycles; faster, less "SSSR").
+
+    Returns
+    -------
+    rings : list[list[int]]
+        List of cycles (each cycle is a list of atom indices).
+    atom_in_ring : dict[int, bool]
+        Quick membership: atom_in_ring[i] == True if i is in any ring.
+    atom_to_rings : dict[int, list[int]]
+        atom_to_rings[i] gives list of ring indices that contain atom i.
+    """
+    G = nx.Graph()
+    for u, neighs in graph.items():
+        for v in neighs:
+            if u != v:
+                G.add_edge(u, v)
+
+    rings = nx.minimum_cycle_basis(G) if use_mcb else nx.cycle_basis(G)
+
+    atom_in_ring = {n: False for n in G.nodes()}
+    atom_to_rings = {n: [] for n in G.nodes()}
+
+    for ridx, ring in enumerate(rings):
+        for n in ring:
+            atom_in_ring[n] = True
+            atom_to_rings[n].append(ridx)
+
+    return rings, atom_in_ring, atom_to_rings
+
+
+def is_atom_in_ring(atom_index, atom_in_ring_lookup):
+    """O(1) check."""
+    return atom_in_ring_lookup.get(atom_index, False)
 
 
 def ligands_and_metal_clusters(ase_atom):
@@ -1183,7 +1463,9 @@ def ligands_and_metal_clusters(ase_atom):
         Porpyrin_checker: Boolean showing whether the metal is in the centre of a porpherin
         Regions: Dictionary of regions.
     '''
-    graph, bond_matrix = compute_ase_neighbour(ase_atom)
+    # graph, bond_matrix = compute_ase_neighbour(ase_atom)
+    graph, bond_matrix, bond_offsets = compute_ase_neighbour_with_offsets(ase_atom)
+
 
     porphyrin_checker = metal_in_porphyrin2(ase_atom, graph)
 
@@ -1210,7 +1492,8 @@ def ligands_and_metal_clusters(ase_atom):
                     seen_oxygen.append(oxy)
                     for met in metal:
                         bonds_to_break.append([atoms] + [met])
-                        breaking_pairs.append([atoms, met])
+                        sx, sy, sz = get_bond_shift(atoms, met, bond_offsets)
+                        breaking_pairs.append([atoms, met, sx, sy, sz])
 
         if atoms in list(all_sulphates.keys()):
             oxygen = all_sulphates[atoms]
@@ -1223,7 +1506,8 @@ def ligands_and_metal_clusters(ase_atom):
                 if len(metal) > 0:
                     for met in metal:
                         bonds_to_break.append([oxy] + [met])
-                        breaking_pairs.append((oxy, met))
+                        sx, sy, sz = get_bond_shift(oxy, met, bond_offsets)
+                        breaking_pairs.append([oxy, met, sx, sy, sz])
 
         if atoms in list(all_phosphites.keys()):
             all__n_indices = all_phosphites[atoms]
@@ -1231,8 +1515,9 @@ def ligands_and_metal_clusters(ase_atom):
                 metals = [i for i in graph[phos]
                           if ase_atom[i].symbol in transition_metals()]
                 for met in metals:
-                    breaking_pairs.append([phos, met])
                     bonds_to_break.append([phos] + [met])
+                    sx, sy, sz = get_bond_shift(phos, met, bond_offsets)
+                    breaking_pairs.append([phos, met, sx, sy, sz])
 
         if atoms in list(all_sulphites.keys()):
             all__n_indices = all_sulphites[atoms]
@@ -1240,8 +1525,9 @@ def ligands_and_metal_clusters(ase_atom):
                 metals = [i for i in graph[sulphur]
                           if ase_atom[i].symbol in transition_metals()]
                 for met in metals:
-                    breaking_pairs.append([sulphur, met])
                     bonds_to_break.append([sulphur, met])
+                    sx, sy, sz = get_bond_shift(sulphur, met, bond_offsets)
+                    breaking_pairs.append([sulphur, met, sx, sy, sz])
 
         if ase_atom[atoms].symbol == 'C':
             connected = graph[atoms]
@@ -1250,8 +1536,9 @@ def ligands_and_metal_clusters(ase_atom):
             carbon_metal = [i for i in carbon_metal if i not in ferocene_metal]
             if len(carbon_metal) > 0:
                 for met in carbon_metal:
-                    breaking_pairs.append((atoms, met))
                     bonds_to_break.append([atoms] + [met])
+                    sx, sy, sz = get_bond_shift(atoms, met, bond_offsets)
+                    breaking_pairs.append([atoms, met, sx, sy, sz])
 
         if ase_atom[atoms].symbol == 'N':
             connected = graph[atoms]
@@ -1261,7 +1548,8 @@ def ligands_and_metal_clusters(ase_atom):
             if len(metal) > 0 and atoms not in porphyrin_checker:
                 for met in metal:
                     bonds_to_break.append([atoms, met])
-                    breaking_pairs.append([atoms, met])
+                    sx, sy, sz = get_bond_shift(atoms, met, bond_offsets)
+                    breaking_pairs.append([atoms, met, sx, sy, sz])
 
         if ase_atom[atoms].symbol == 'S':
             seen = sum(list(all_sulphites.values()), [])
@@ -1274,7 +1562,8 @@ def ligands_and_metal_clusters(ase_atom):
                     if len(metal) > 0:
                         for met in metal:
                             bonds_to_break.append([atoms] + [met])
-                            breaking_pairs.append([atoms, met])
+                            sx, sy, sz = get_bond_shift(atoms, met, bond_offsets)
+                            breaking_pairs.append([atoms, met, sx, sy, sz])
 
         if ase_atom[atoms].symbol == 'O':
             # if not atoms in Seen_oxygen:
@@ -1286,19 +1575,22 @@ def ligands_and_metal_clusters(ase_atom):
             carbon = [i for i in connected if ase_atom[i].symbol == 'C']
             if len(metal) > 0 and len(carbon) == 1:
                 for met in metal:
-                    breaking_pairs.append([atoms, met])
                     bonds_to_break.append([atoms, met])
+                    sx, sy, sz = get_bond_shift(atoms, met, bond_offsets)
+                    breaking_pairs.append([atoms, met, sx, sy, sz])
             if len(metal) > 0 and len(Nitrogen) == 1:
                 n_carbon = [i for i in graph[Nitrogen[0]]
                             if ase_atom[i].symbol in ['C', 'S', 'N']]
                 if len(n_carbon) > 1:
                     for met in metal:
-                        breaking_pairs.append([atoms, met])
                         bonds_to_break.append([atoms, met])
+                        sx, sy, sz = get_bond_shift(atoms, met, bond_offsets)
+                        breaking_pairs.append([atoms, met, sx, sy, sz])
             if len(carbon) > 1 and len(metal) > 0:
                 for met in metal:
                     bonds_to_break.append([atoms] + [met])
-                    breaking_pairs.append([atoms, met])
+                    sx, sy, sz = get_bond_shift(atoms, met, bond_offsets)
+                    breaking_pairs.append([atoms, met, sx, sy, sz])
 
         if ase_atom[atoms].symbol == 'P':
             # Find the carbon closest to P, which is not bonded to a metal and cut
@@ -1314,7 +1606,8 @@ def ligands_and_metal_clusters(ase_atom):
                                     transition_metals()]for j in connected], [])
                 for frag in closest_atoms:
                     bonds_to_break.append(frag)
-                    breaking_pairs.append([frag[0], frag[1]])
+                    sx, sy, sz = get_bond_shift(frag[0], frag[1], bond_offsets)
+                    breaking_pairs.append([frag[0], frag[1], sx, sy, sz])
     # In special cases some carbon and hydrogen get very closed to metals
     # So in such case it is important to clear this
     for metal in all_metals:
@@ -1323,7 +1616,8 @@ def ligands_and_metal_clusters(ase_atom):
         if len(c_H) > 0:
             for c_h in c_H:
                 bonds_to_break.append([c_h, metal])
-                breaking_pairs.append([c_h, metal])
+                sx, sy, sz = get_bond_shift(c_h, metal, bond_offsets)
+                breaking_pairs.append([c_h, metal, sx, sy, sz])
 
     for bonds in bonds_to_break:
         bond_matrix[bonds[0], bonds[1]] = 0
@@ -1345,10 +1639,10 @@ def ligands_and_metal_clusters(ase_atom):
         for j in range(len(all_pm_structures)):
             if all_pm_structures[i] == all_pm_structures[j]:
                 temp.append(j)
-        if temp not in all_regions .values():
+        if temp not in all_regions.values():
             all_regions[i] = temp
 
-    return list_of_connected_components, bonds_to_break, porphyrin_checker, all_regions
+    return list_of_connected_components, bonds_to_break, porphyrin_checker, all_regions, breaking_pairs
 
 
 def is_rodlike(metal_sbu):

@@ -12,6 +12,26 @@ Folder output:
       --csv results.csv
       --json results.json
     where the key is the file basename (stem) and the value is topology.
+
+Notes (updated for new topology module)
+---------------------------------------
+The new topology module keeps the same method names but changes their behavior:
+
+  - method="sbus":
+        SBUs deconstruction + **metal-region nodes** contraction
+        (regions containing transition metals not in _porphyrin become node-regions).
+
+  - method="ligand_cluster":
+        Ligand-cluster deconstruction + **metal-region nodes** contraction
+        (same metal region selection).
+
+  - method="all_node":
+        SBUs deconstruction + **top-k most connected regions** contraction
+        (your previous "all_node" idea).
+
+Therefore:
+- Dedup options are no longer used by CGD generation here (contraction always dedups for Systre).
+- We keep CLI arguments for backwards compatibility, but they are ignored with a warning.
 """
 
 from __future__ import annotations
@@ -49,15 +69,28 @@ def build_parser() -> argparse.ArgumentParser:
         help="CGD method for structure inputs (default: all_node).",
     )
     p.add_argument("--name", default="net", help="CGD graph ID name (default: net).")
+
+    # all_node-specific
     p.add_argument("--top-k-regions", type=int, default=1, help="For all_node: pick top K regions (default: 1).")
-    p.add_argument("--connect-mode", choices=["clique", "chain"], default="clique", help="For all_node contraction.")
+    p.add_argument(
+        "--connect-mode",
+        choices=["clique", "chain"],
+        default="clique",
+        help="For contraction methods: how to connect nodes touched by a contracted component.",
+    )
+
+    # Legacy options (kept for compatibility; ignored in new topology module)
     p.add_argument(
         "--dedup-mode",
         choices=["none", "shift", "topological"],
         default="shift",
-        help="Dedup mode for CGD generation (default: shift).",
+        help="(legacy; ignored) Dedup mode for CGD generation.",
     )
-    p.add_argument("--no-dedup", action="store_true", help="Disable edge dedup during CGD generation.")
+    p.add_argument(
+        "--no-dedup",
+        action="store_true",
+        help="(legacy; ignored) Disable edge dedup during CGD generation.",
+    )
 
     # batch filtering
     p.add_argument(
@@ -69,11 +102,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     # outputs (folder mode; also allowed in single-file mode)
-    p.add_argument("--csv", dest="csv_out", default='Topology.csv', help="Write results to CSV file (basename, topology).")
-    p.add_argument("--json", dest="json_out", default='Topology.json', help="Write results to JSON file ({basename: topology}).")
+    p.add_argument("--csv", dest="csv_out", default="Topology.csv",
+                   help="Write results to CSV file (basename, topology).")
+    p.add_argument("--json", dest="json_out", default="Topology.json",
+                   help="Write results to JSON file ({basename: topology}).")
 
     # output verbosity
     p.add_argument("--verbose", action="store_true", help="Print Systre stdout/stderr.")
+
     return p
 
 
@@ -88,14 +124,28 @@ def _write_csv(path: Path, mapping: Dict[str, str]) -> None:
 
 def _write_json(path: Path, mapping: Dict[str, str]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    # stable ordering for nicer diffs
     ordered = {k: mapping[k] for k in sorted(mapping.keys())}
     path.write_text(json.dumps(ordered, indent=4, sort_keys=True), encoding="utf-8")
+
+
+def _warn_legacy_dedup(args) -> None:
+    # New topology module does contraction + systre-safe dedup internally.
+    # Keep CLI flags but warn if user tries to use them.
+    if args.no_dedup or (args.dedup_mode and args.dedup_mode != "shift"):
+        print(
+            "Warning: --no-dedup and --dedup-mode are legacy flags and are ignored in the new topology module.\n"
+            "         Contraction methods always generate Systre-compatible edges internally."
+        )
 
 
 def main(argv=None) -> int:
     args = build_parser().parse_args(argv)
     inp = Path(args.input)
+
+    if not inp.exists():
+        raise SystemExit(f"Input not found: {inp}")
+
+    _warn_legacy_dedup(args)
 
     common = dict(
         java=args.java,
@@ -104,21 +154,17 @@ def main(argv=None) -> int:
         keep_tmp=args.keep_tmp,
     )
 
+    # Only pass parameters that the NEW TopologyExtractor.build_cgd accepts
     gen = dict(
         method=args.method,
         name=args.name,
-        top_k_regions=args.top_k_regions,
-        connect_mode=args.connect_mode,
-        dedup_parallel_edges=(not args.no_dedup),
-        dedup_mode=args.dedup_mode,
+        # top_k_regions=args.top_k_regions,
+        # connect_mode=args.connect_mode,
     )
 
     patterns: Tuple[str, ...] = tuple(args.patterns) if args.patterns else (
         ".cgd", ".cif", ".vasp", ".poscar", ".xyz", ".pdb", ".mol", ".sdf"
     )
-
-    if not inp.exists():
-        raise SystemExit(f"Input not found: {inp}")
 
     # Folder batch mode
     if inp.is_dir():
@@ -129,11 +175,8 @@ def main(argv=None) -> int:
             **gen,
             **common,
         )
-      
-        topo_map: Dict[str, str] = {}
 
-        # handle possible basename collisions (same stem in different subfolders)
-        # We keep "stem" as key, but if collision happens, we suffix with __2, __3...
+        topo_map: Dict[str, str] = {}
         counts: Dict[str, int] = {}
 
         for fp in sorted(resmap.keys()):
@@ -156,7 +199,6 @@ def main(argv=None) -> int:
                 print(res.stderr)
                 print("----------------")
 
-        # write outputs if requested
         if args.csv_out:
             _write_csv(Path(args.csv_out), topo_map)
         if args.json_out:
@@ -172,7 +214,6 @@ def main(argv=None) -> int:
 
     print(res.topology)
 
-    # if user requested csv/json for a single file, write a single-entry mapping
     if args.csv_out or args.json_out:
         topo_map = {inp.stem: res.topology}
         if args.csv_out:
@@ -185,6 +226,7 @@ def main(argv=None) -> int:
         print(res.stdout)
         print("---- STDERR ----")
         print(res.stderr)
+
     return 0
 
 

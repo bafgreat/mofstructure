@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "mofstructure"
-version = "0.1.8.5"
+version = "0.1.8.6"
 description = "A Python tool to deconstruct MOFs into building units and compute porosity. The code removes guests from MOFs and all porous systems, computes SMILES strings and InChIKeys of all building units."
 keywords = ["guest removal", "InChIKeys", "InChI", "SMILES", "PLD", "LCD", "MOF", "COF", "zeolites", "accessible surface area", "void fraction", "coordination number", "porosity", "zeo++", "SBU", "point of extension", "topology", "cgd", "periodic graph", "systre", "topological analysis"]
 authors = ["Dinga Wonanke <dak52@uclive.ac.nz>"]
@@ -38,7 +38,9 @@ mofstructure_oms = "mofstructure.scripts.collect_oms:main"
 mofstructure_porosity = "mofstructure.scripts.collect_porosity:main"
 mofstructure_curate = "mofstructure.scripts.curate_structures:main"
 mofstructure_generate_cgd="mofstructure.topology:main"
+mofstructure_systre_cgd="mofstructure.scripts.systre_cgd:main"
 mofstructure_topology = "mofstructure.scripts.systre_cli:main"
+cof_stacking = "mofstructure.cof_stacking:Main"
 
 [tool.poetry.group.dev.dependencies]
 flake8 = "^7.1.1"

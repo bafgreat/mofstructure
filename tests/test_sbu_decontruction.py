@@ -33,7 +33,7 @@ def sbu_data(ase_atom):
     ----------
     ase_atom : ASE atoms object
     '''
-    connected_components, atoms_indices_at_breaking_point, porphyrin_checker, all_regions = MOF_deconstructor.secondary_building_units(ase_atom)
+    connected_components, atoms_indices_at_breaking_point, porphyrin_checker, all_regions, breaking_pairs = MOF_deconstructor.secondary_building_units(ase_atom)
     metal_sbus, organic_sbus, building_unit_regions = MOF_deconstructor.find_unique_building_units(
             connected_components,
             atoms_indices_at_breaking_point,

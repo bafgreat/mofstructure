@@ -1,20 +1,5 @@
 #!/usr/bin/env python3
 """
-systre.py
-=========
-
-Run Systre (Gavrog) on CGD (PERIODIC_GRAPH) files to identify RCSR topology.
-
-Supports:
-- CGD file path
-- CGD text (string containing "PERIODIC_GRAPH")
-- Structure file path (CIF, etc.) -> generate CGD first via TopologyExtractor
-- Folder input (batch)
-- ASE Atoms object
-- pymatgen Structure object (optional dependency)
-
-Also checks for Java and provides OS-specific install guidance.
-
 Author: Dr. Dinga Wonanke
 Status: production
 """
@@ -28,31 +13,53 @@ import tempfile
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
-# importlib.resources for packaged jar/arc access
 try:
     from importlib.resources import files as ir_files  # py>=3.9
 except Exception:  # pragma: no cover
     ir_files = None  # type: ignore
 
 from ase.atoms import Atoms
-from ase.io import read as ase_read
 
-from mofstructure.topology import TopologyExtractor
-
+from mofstructure.generate_cgd import TopologyExtractor
 
 CGDLike = Union[str, Path]
 InputLike = Union[str, Path, Atoms, "PymatgenStructure"]  # pymatgen is optional
 
 
 def _is_cgd_text(s: str) -> bool:
+    '''
+    Check whether a string appears to contain CGD text.
+
+    The test is intentionally simple and only checks whether the string
+    contains the standard PERIODIC_GRAPH and EDGES blocks expected in
+    a Systre-readable CGD file.
+
+    **parameters:**
+        s: str
+            Input string to test.
+
+    **returns:**
+        bool
+            True if the string appears to be CGD text, otherwise False.
+    '''
     return ("PERIODIC_GRAPH" in s) and ("EDGES" in s)
 
 
 def _java_install_hints() -> str:
+    '''
+    Return platform-specific installation hints when Java is not found.
+
+    Systre requires a working Java executable. This helper generates a
+    user-friendly installation message depending on the current operating
+    system.
+
+    **returns:**
+        str
+            A formatted help message describing how to install Java.
+    '''
     plat = sys.platform.lower()
-    # Keep this simple + robust (no web calls); Adoptium is the safest general recommendation.
     if plat.startswith("linux"):
         return (
             "Java not found.\n\n"
@@ -86,9 +93,26 @@ def _java_install_hints() -> str:
 
 
 def find_java(java: str = "java") -> str:
-    """
-    Return a usable java executable path/name. Raises RuntimeError if not found.
-    """
+    '''
+    Find a usable Java executable.
+
+    The function first checks whether the supplied executable name or path
+    exists and is accessible. If Java is not found, a RuntimeError is raised
+    with platform-specific installation guidance.
+
+    **parameters:**
+        java: str
+            Name of the Java executable or an explicit path to it.
+            Default is "java".
+
+    **returns:**
+        str
+            Path or executable name of a working Java command.
+
+    **raises:**
+        RuntimeError:
+            If no Java executable can be found.
+    '''
     exe = shutil.which(java) if os.path.sep not in java else (java if os.path.exists(java) else None)
     if not exe:
         raise RuntimeError(_java_install_hints())
@@ -96,12 +120,27 @@ def find_java(java: str = "java") -> str:
 
 
 def _resource_path(rel: str) -> str:
-    """
-    Return absolute filesystem path to a packaged resource (jar/arc).
-    Works for normal installs and editable installs. For zipped installs,
-    importlib.resources gives a virtual path; we materialize to a temp file if needed.
-    """
-    # Common case: source tree / editable install -> direct file path exists
+    '''
+    Return the absolute filesystem path of a packaged resource.
+
+    This helper is used to locate packaged resources such as the Systre JAR
+    file or the RCSR archive. It works for standard installs, editable installs,
+    and environments where importlib.resources returns a virtual path. In the
+    latter case, the resource is materialized into a temporary file.
+
+    **parameters:**
+        rel: str
+            Relative path to the resource inside the package.
+
+    **returns:**
+        str
+            Absolute filesystem path to the resource.
+
+    **raises:**
+        RuntimeError:
+            If the resource cannot be located and importlib.resources is not
+            available.
+    '''
     direct = Path(__file__).resolve().parent / rel
     if direct.exists():
         return str(direct)
@@ -112,7 +151,6 @@ def _resource_path(rel: str) -> str:
     pkg_root = ir_files("mofstructure")
     candidate = pkg_root.joinpath(rel)
 
-    # If candidate is a real file on disk, return it
     try:
         cand_path = Path(str(candidate))
         if cand_path.exists():
@@ -120,7 +158,6 @@ def _resource_path(rel: str) -> str:
     except Exception:
         pass
 
-    # Otherwise, materialize to temp (rare, but safe)
     data = candidate.read_bytes()
     suffix = Path(rel).suffix
     fd, tmp = tempfile.mkstemp(prefix="mofstructure_resource_", suffix=suffix)
@@ -137,9 +174,32 @@ def systre_command(
     jar_relpath: str = "bin/Systre-19.6.0.jar",
     rcsr_relpath: str = "db/RCSRnets-2019-06-01.arc",
 ) -> List[str]:
-    """
-    Build the base Systre command list.
-    """
+    '''
+    Build the command-line call required to run Systre.
+
+    This function resolves the Java executable, locates the packaged Systre
+    JAR file and the RCSR archive, and returns the base command list that can
+    be passed to `subprocess.run`.
+
+    **parameters:**
+        java: str
+            Java executable name or explicit path.
+            Default is "java".
+
+        xmx: str
+            Maximum Java heap size.
+            Example: "1024m".
+
+        jar_relpath: str
+            Relative path to the packaged Systre JAR file.
+
+        rcsr_relpath: str
+            Relative path to the packaged RCSR archive file.
+
+    **returns:**
+        list
+            Command list suitable for subprocess execution.
+    '''
     java_exe = find_java(java)
     jar = _resource_path(jar_relpath)
     rcsr = _resource_path(rcsr_relpath)
@@ -160,9 +220,27 @@ def run_systre_on_cgd_path(
     timeout_s: int = 30,
     xmx: str = "1024m",
 ) -> subprocess.CompletedProcess:
-    """
-    Run Systre on a CGD file path; returns CompletedProcess.
-    """
+    '''
+    Run Systre on a CGD file located on disk.
+
+    **parameters:**
+        cgd_path: str or Path
+            Path to a CGD file.
+
+        java: str
+            Java executable name or explicit path.
+
+        timeout_s: int
+            Timeout in seconds for the Systre run.
+
+        xmx: str
+            Maximum Java heap size.
+
+    **returns:**
+        subprocess.CompletedProcess
+            The completed subprocess result containing stdout, stderr,
+            and the process return code.
+    '''
     cmd = systre_command(java=java, xmx=xmx) + [str(cgd_path)]
     return subprocess.run(
         cmd,
@@ -174,12 +252,27 @@ def run_systre_on_cgd_path(
 
 
 def parse_systre_topology(stdout: str) -> str:
-    """
-    Parse Systre stdout and return:
-      - RCSR net name (e.g. "pcu", "dia", ...)
-      - or one of: "UNKNOWN", "ERROR", "TIMEOUT", "MISMATCH"
-    This follows the logic you showed from mofid but keeps it self-contained.
-    """
+    '''
+    Parse the standard output of Systre and extract the identified topology.
+
+    The function looks for net names reported by Systre and returns a single
+    consensus topology if all processed components match. If multiple components
+    produce different topologies, the function returns "MISMATCH". Other sentinel
+    values such as "UNKNOWN" or "ERROR" are also returned where appropriate.
+
+    **parameters:**
+        stdout: str
+            Standard output produced by a Systre run.
+
+    **returns:**
+        str
+            One of the following:
+                - an RCSR topology name, e.g. "pcu", "dia"
+                - "UNKNOWN"
+                - "ERROR"
+                - "TIMEOUT"
+                - "MISMATCH"
+    '''
     topologies: List[str] = []
     current_component = 0
     topology_line = False
@@ -191,7 +284,6 @@ def parse_systre_topology(stdout: str) -> str:
         if topology_line:
             topology_line = False
             parts = line.split()
-            # Expected: "Name: pcu"
             if len(parts) >= 2 and parts[0] == "Name:":
                 topologies.append(parts[1])
             else:
@@ -203,11 +295,10 @@ def parse_systre_topology(stdout: str) -> str:
             parts = line.split()
             if not parts or parts[0] != "Name:":
                 return "ERROR"
-            # Expected: "Name: refcode_clean_component_2"
             comps = line.split("_")
             if len(comps) >= 2 and comps[-2] == "component":
                 try:
-                    idx = int(comps[-1]) - 1  # Systre is 1-indexed
+                    idx = int(comps[-1]) - 1
                     topologies.append(topologies[idx])
                 except Exception:
                     return "ERROR"
@@ -228,10 +319,6 @@ def parse_systre_topology(stdout: str) -> str:
             continue
         if "Processing component " in line:
             current_component += 1
-            # Basic sanity: should extract one topology per component
-            if len(topologies) != (current_component - 1):
-                # Don't hard-fail; some Systre versions differ slightly
-                pass
             continue
 
     if not topologies:
@@ -245,6 +332,22 @@ def parse_systre_topology(stdout: str) -> str:
 
 @dataclass
 class SystreResult:
+    '''
+    Container class for the result of a Systre topology identification.
+
+    **attributes:**
+        topology: str
+            Identified topology name or sentinel value such as "ERROR" or "UNKNOWN".
+
+        stdout: str
+            Standard output from the Systre process.
+
+        stderr: str
+            Standard error from the Systre process.
+
+        cgd_path: str or None
+            Path to the CGD file used for the Systre run, if available.
+    '''
     topology: str
     stdout: str
     stderr: str
@@ -252,9 +355,20 @@ class SystreResult:
 
 
 def _atoms_from_pymatgen(obj) -> Atoms:
-    """
-    Convert pymatgen Structure to ASE Atoms.
-    """
+    '''
+    Convert a pymatgen Structure object to an ASE Atoms object.
+
+    **parameters:**
+        obj:
+            A pymatgen Structure object.
+
+    **returns:**
+        ASE atoms object
+
+    **raises:**
+        ImportError:
+            If pymatgen is not installed but a pymatgen Structure was provided.
+    '''
     try:
         from pymatgen.io.ase import AseAtomsAdaptor  # type: ignore
     except Exception as exc:  # pragma: no cover
@@ -268,28 +382,41 @@ def _atoms_from_pymatgen(obj) -> Atoms:
 def _make_cgd_from_input(
     x: InputLike,
     *,
-    method: str = "sbus",
+    method: str = "all_node",
     name: str = "net",
-    top_k_regions: int = 1,
-    connect_mode: str = "clique",
-    dedup_parallel_edges: bool = True,
-    dedup_mode: str = "shift",
 ) -> str:
-    """
-    Accept Atoms, pymatgen Structure, or a structure file path; produce CGD text.
-    """
+    '''
+    Generate CGD text from a supported structure-like input.
+
+    This helper accepts:
+        - ASE Atoms objects
+        - pymatgen Structure objects
+        - structure file paths readable by ASE
+
+    It then calls the new topology module to generate a CGD representation.
+
+    **parameters:**
+        x:
+            Structure-like input. This can be an ASE atoms object, a pymatgen
+            Structure object, or a structure file path.
+
+        method: str
+            Topology extraction mode passed to TopologyExtractor.build_cgd().
+
+        name: str
+            CGD graph ID.
+
+    **returns:**
+        str
+            CGD text.
+    '''
     if isinstance(x, Atoms):
         topo = TopologyExtractor(ase_atoms=x)
         return topo.build_cgd(
             method=method,
             name=name,
-            top_k_regions=top_k_regions,
-            connect_mode=connect_mode,
-            dedup_parallel_edges=dedup_parallel_edges,
-            dedup_mode=dedup_mode,
         )
 
-    # If it's a path-like
     if isinstance(x, (str, Path)):
         p = Path(x)
         if p.exists() and p.is_file():
@@ -297,22 +424,13 @@ def _make_cgd_from_input(
             return topo.build_cgd(
                 method=method,
                 name=name,
-                top_k_regions=top_k_regions,
-                connect_mode=connect_mode,
-                dedup_parallel_edges=dedup_parallel_edges,
-                dedup_mode=dedup_mode,
             )
         raise FileNotFoundError(f"Input path not found: {p}")
 
-    # Assume pymatgen Structure-like
     return _make_cgd_from_input(
         _atoms_from_pymatgen(x),
         method=method,
         name=name,
-        top_k_regions=top_k_regions,
-        connect_mode=connect_mode,
-        dedup_parallel_edges=dedup_parallel_edges,
-        dedup_mode=dedup_mode,
     )
 
 
@@ -322,37 +440,78 @@ def identify_topology(
     input_is_cgd: Optional[bool] = None,
     method: str = "all_node",
     name: str = "net",
-    top_k_regions: int = 1,
-    connect_mode: str = "clique",
-    dedup_parallel_edges: bool = True,
-    dedup_mode: str = "shift",
-    # systre options
+    dedup_parallel_edges: bool = True,  # ignored
+    dedup_mode: str = "shift",          # ignored
     java: str = "java",
     timeout_s: int = 30,
     xmx: str = "1024m",
     keep_tmp: bool = False,
 ) -> SystreResult:
-    """
-    High-level API:
-      - If x is a CGD file path -> run directly
-      - If x is CGD text -> write temp CGD and run
-      - If x is Atoms / pymatgen Structure / structure file -> generate CGD first then run
+    '''
+    Identify the topology of a structure or CGD input using Systre.
 
-    Returns SystreResult with parsed topology plus stdout/stderr.
-    """
+    This is the main high-level API of the module. It accepts:
+        1) a CGD file path,
+        2) CGD text,
+        3) an ASE Atoms object,
+        4) a pymatgen Structure object,
+        5) a structure file path such as CIF.
+
+    If the input is not already a CGD file or CGD text, a CGD representation
+    is generated first using `TopologyExtractor`.
+
+    **parameters:**
+        x:
+            Input object. This can be a CGD path, CGD text, ASE atoms object,
+            pymatgen Structure object, or a structure file path.
+
+        input_is_cgd: bool or None
+            If True, force the input to be treated as CGD.
+            If False or None, the input is auto-detected.
+
+        method: str
+            Topology extraction mode used when a CGD must first be generated.
+
+        name: str
+            CGD graph ID used when generating a CGD representation.
+
+        dedup_parallel_edges: bool
+            Deprecated and ignored. Retained only for API compatibility.
+
+        dedup_mode: str
+            Deprecated and ignored. Retained only for API compatibility.
+
+        java: str
+            Java executable name or explicit path.
+
+        timeout_s: int
+            Timeout in seconds for the Systre run.
+
+        xmx: str
+            Maximum Java heap size.
+
+        keep_tmp: bool
+            If True, temporary CGD files are kept on disk.
+
+    **returns:**
+        SystreResult
+            Object containing the identified topology, stdout, stderr,
+            and optionally the CGD file path.
+    '''
+    _ = (dedup_parallel_edges, dedup_mode)
     tmp_path: Optional[str] = None
 
     try:
-        # Decide how to interpret x
         if isinstance(x, (str, Path)):
             s = str(x)
             p = Path(s)
+
             if input_is_cgd is True:
-                # treat as cgd path or cgd text
                 if p.exists() and p.is_file():
                     proc = run_systre_on_cgd_path(p, java=java, timeout_s=timeout_s, xmx=xmx)
                     topo = parse_systre_topology(proc.stdout)
                     return SystreResult(topo, proc.stdout, proc.stderr, cgd_path=str(p))
+
                 if _is_cgd_text(s):
                     fd, tmp_path = tempfile.mkstemp(prefix="mofstructure_", suffix=".cgd")
                     os.close(fd)
@@ -360,9 +519,9 @@ def identify_topology(
                     proc = run_systre_on_cgd_path(tmp_path, java=java, timeout_s=timeout_s, xmx=xmx)
                     topo = parse_systre_topology(proc.stdout)
                     return SystreResult(topo, proc.stdout, proc.stderr, cgd_path=tmp_path)
+
                 raise ValueError("input_is_cgd=True but input is neither a CGD file nor CGD text.")
 
-            # auto-detect:
             if p.exists() and p.is_file() and p.suffix.lower() == ".cgd":
                 proc = run_systre_on_cgd_path(p, java=java, timeout_s=timeout_s, xmx=xmx)
                 topo = parse_systre_topology(proc.stdout)
@@ -376,16 +535,11 @@ def identify_topology(
                 topo = parse_systre_topology(proc.stdout)
                 return SystreResult(topo, proc.stdout, proc.stderr, cgd_path=tmp_path)
 
-            # otherwise treat as structure file
             if p.exists() and p.is_file():
                 cgd_text = _make_cgd_from_input(
                     p,
                     method=method,
                     name=name,
-                    top_k_regions=top_k_regions,
-                    connect_mode=connect_mode,
-                    dedup_parallel_edges=dedup_parallel_edges,
-                    dedup_mode=dedup_mode,
                 )
                 fd, tmp_path = tempfile.mkstemp(prefix="mofstructure_", suffix=".cgd")
                 os.close(fd)
@@ -396,15 +550,10 @@ def identify_topology(
 
             raise FileNotFoundError(f"Path not found: {p}")
 
-        # ASE Atoms / pymatgen Structure
         cgd_text = _make_cgd_from_input(
             x,
             method=method,
             name=name,
-            top_k_regions=top_k_regions,
-            connect_mode=connect_mode,
-            dedup_parallel_edges=dedup_parallel_edges,
-            dedup_mode=dedup_mode,
         )
         fd, tmp_path = tempfile.mkstemp(prefix="mofstructure_", suffix=".cgd")
         os.close(fd)
@@ -414,7 +563,12 @@ def identify_topology(
         return SystreResult(topo, proc.stdout, proc.stderr, cgd_path=tmp_path)
 
     except subprocess.TimeoutExpired as exc:
-        return SystreResult("TIMEOUT", stdout=getattr(exc, "stdout", "") or "", stderr=getattr(exc, "stderr", "") or "", cgd_path=tmp_path)
+        return SystreResult(
+            "TIMEOUT",
+            stdout=getattr(exc, "stdout", "") or "",
+            stderr=getattr(exc, "stderr", "") or "",
+            cgd_path=tmp_path,
+        )
 
     finally:
         if tmp_path and (not keep_tmp):
@@ -431,25 +585,58 @@ def identify_topology_batch(
     recursive: bool = True,
     **kwargs,
 ) -> Dict[str, SystreResult]:
-    """
-    Batch topology identification for a folder of CGD or structure files.
-    Returns mapping: filepath -> SystreResult.
-    """
+    '''
+    Identify topologies for all supported files in a folder.
+
+    The function scans a directory for CGD files or structure files, runs
+    `identify_topology()` on each of them, and returns a dictionary mapping
+    file paths to `SystreResult` objects.
+
+    **parameters:**
+        folder: str or Path
+            Path to the folder containing input files.
+
+        patterns: tuple
+            Allowed filename suffixes to process.
+
+        recursive: bool
+            If True, recurse into subfolders.
+
+        **kwargs:
+            Additional keyword arguments passed directly to `identify_topology()`.
+
+    **returns:**
+        python dictionary
+            Mapping:
+                filepath -> SystreResult
+
+    **raises:**
+        NotADirectoryError:
+            If the provided folder path is not a valid directory.
+    '''
     folder = Path(folder)
     if not folder.exists() or not folder.is_dir():
         raise NotADirectoryError(f"Not a folder: {folder}")
 
     results: Dict[str, SystreResult] = {}
+    allowed = {x.lower() for x in patterns}
     it = folder.rglob("*") if recursive else folder.glob("*")
+
     for p in it:
         if not p.is_file():
             continue
-        if p.suffix.lower() not in {x.lower() for x in patterns}:
+        if p.suffix.lower() not in allowed:
             continue
         try:
             res = identify_topology(p, **kwargs)
         except Exception as exc:
-            results[str(p)] = SystreResult("ERROR", stdout="", stderr=str(exc), cgd_path=str(p) if p.suffix.lower() == ".cgd" else None)
+            results[str(p)] = SystreResult(
+                "ERROR",
+                stdout="",
+                stderr=str(exc),
+                cgd_path=str(p) if p.suffix.lower() == ".cgd" else None,
+            )
         else:
             results[str(p)] = res
+
     return results

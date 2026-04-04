@@ -26,5 +26,7 @@ def test_structure():
     assert metal_sbu.info['sbu_type'] == 'paddlewheel'
     assert metal_sbu.info['inchikey'] == 'ZCOYFNAPKIGPTI-UHFFFAOYSA-N'
     assert linker.info['inchikey'] == 'IMNIMPAHZVJRPE-UHFFFAOYSA-N'
+    topology = mof.get_topology(method="all_node")
+    assert topology == 'pcu'
 
 

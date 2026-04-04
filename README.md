@@ -6,7 +6,7 @@ This is an elaborate python module that provides simple functions for
 manipulation metal-organic frameworks and other porous systems such as
 COFs and Zeolites. Some uses of the module involves
 
-1. Compute rcsr topological code (**Currently experimenting**)
+1. Compute RCSR topology of MOFs.
 
 2. Computation of geometric properties of MOFs. It calls zeo++ in the background and enables a quick computation of all porosity information such pld, lcd, asa ...
 

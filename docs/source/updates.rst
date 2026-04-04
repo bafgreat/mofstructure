@@ -172,4 +172,43 @@ Major update in the code structuring with
 .. code-block:: bash
 
    mofstructure_topology cif_folder
-   
+
+   mofstructure_topology cif_folder --method all_node
+   mofstructure_topology cif_folder --method sbus
+   mofstructure_topology cif_folder --method ligand_cluster
+
+   # Can be directly used on a single CIF file as well
+   mofstructure_topology cif_file.cif
+
+
+The topology can also be computing as a library as follows:
+.. code-block:: python
+
+   from mofstructure.systre import identify_topology
+   from ase.io import read
+
+   # 1) From a CGD file
+   res = identify_topology("net.cgd", input_is_cgd=True)
+   print(res.topology)
+
+   # 2) From a CIF (generate CGD then run systre)
+   res = identify_topology("UiO-66.cif", method="all_node")
+   print(res.topology)
+
+   # 3) From ASE Atoms
+   atoms = read("UiO-66.cif")
+   res = identify_topology(atoms, method="sbus")
+   print(res.topology)
+
+
+It can also be called from structure as follows:
+.. code-block:: python
+   from mofstructure import structure
+   from ase.io import read
+
+   atoms = read("UiO-66.cif")
+   mofdata = structure.MOFStructure(ase_atoms=atoms)
+   topology = mofdata.get_topology(method="sbus")
+   print(topology)
+
+

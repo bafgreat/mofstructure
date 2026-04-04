@@ -17,6 +17,7 @@ from omsdetector_forked import MofCollection, mof
 import mofstructure.mofdeconstructor as MOF_deconstructor
 from mofstructure.porosity import zeo_calculation
 import mofstructure.filetyper as read_write
+from mofstructure.systre import identify_topology
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
@@ -60,7 +61,7 @@ class MOFstructure(object):
             linker_sbu (list): A list of unique organic secondary building units
         """
         guest_free_atoms = self.remove_guest()
-        connected_components, atoms_indices_at_breaking_point, porpyrin_checker, all_regions = MOF_deconstructor.secondary_building_units(guest_free_atoms)
+        connected_components, atoms_indices_at_breaking_point, porpyrin_checker, all_regions, _ = MOF_deconstructor.secondary_building_units(guest_free_atoms)
         if len(connected_components) > 0:
             metal_sbus, organic_sbus, _ = MOF_deconstructor.\
                 find_unique_building_units(connected_components,
@@ -95,7 +96,7 @@ class MOFstructure(object):
             organic_ligands (list): A list of unique organic ligands.
         """
         guest_free_atoms = self.remove_guest()
-        connected_components, atoms_indices_at_breaking_point, porpyrin_checker, all_regions = MOF_deconstructor.ligands_and_metal_clusters(guest_free_atoms)
+        connected_components, atoms_indices_at_breaking_point, porpyrin_checker, all_regions, _ = MOF_deconstructor.ligands_and_metal_clusters(guest_free_atoms)
         if len(connected_components) > 0:
             metal_clusters, organic_ligands, _ = MOF_deconstructor.\
                 find_unique_building_units(connected_components,
@@ -161,6 +162,17 @@ class MOFstructure(object):
                                     high_accuracy=high_accuracy,
                                     rad_file=rad_file)
         return read_write.convert_numpy_types(pores)
+
+    def get_topology(self, method="all_node"):
+        """
+        A function to compute the topology of a system using the RCSR code.
+
+        **return:**
+            topology (str): The RCSR code representing the topology of the system.
+        """
+        guest_free_atoms = self.remove_guest()
+        topology = identify_topology(guest_free_atoms, method=method)
+        return topology
 
     def get_oms(self):
         """
