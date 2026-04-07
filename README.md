@@ -9,11 +9,14 @@
   loop
   playsinline
   width="600"
-   height="400"
+  height="400"
   preload="metadata"
   poster="https://raw.githubusercontent.com/bafgreat/mofstructure/main/docs/source/images/DUT-8.png"
 >
-  <source src="https://raw.githubusercontent.com/bafgreat/mofstructure/main/docs/docs/source/images/DUT-8.mp4" type="video/mp4">
+  <source
+    src="https://raw.githubusercontent.com/bafgreat/mofstructure/main/docs/source/images/DUT-8.mp4"
+    type="video/mp4"
+  >
 </video>
 
 **A Python toolkit for topology, porosity, and building-unit analysis of MOFs**
