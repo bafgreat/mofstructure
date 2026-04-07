@@ -34,7 +34,7 @@ if not logger.handlers:
     )
 
 
-InputLike = Union[str, Path, Atoms, "PymatgenStructure"]
+InputLike = Union[str, Path, Atoms]
 Coord3D = Tuple[float, float, float]
 Cell6 = Tuple[float, float, float, float, float, float]
 Edge3D = Tuple[Coord3D, Coord3D]
