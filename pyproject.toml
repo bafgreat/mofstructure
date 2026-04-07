@@ -6,7 +6,6 @@ keywords = ["guest removal", "InChIKeys", "InChI", "SMILES", "PLD", "LCD", "MOF"
 authors = ["Dinga Wonanke <dak52@uclive.ac.nz>"]
 license = "MIT"
 readme = "README.md"
-Citation = "https://doi.org/10.21203/rs.3.rs-8375247/v1"
 
 include = [
   { path = "mofstructure/bin/Systre-19.6.0.jar", format = ["sdist", "wheel"] },
