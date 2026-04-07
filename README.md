@@ -1,10 +1,16 @@
-![mofstructure logo](https://raw.githubusercontent.com/bafgreat/mofstructure/main/docs/source/images/logo.png)
+<!-- markdownlint-disable MD033 -->
+<div align="center">
+
+<img src="https://raw.githubusercontent.com/bafgreat/mofstructure/main/docs/source/images/logo.png" width="50">
 
 # mofstructure
 
-A Python toolkit for topology, porosity,open-metal sites and building-unit analysis of MOFs.
+**A Python toolkit for topology, porosity, and building-unit analysis of MOFs**
 
-![intro](https://raw.githubusercontent.com/bafgreat/mofstructure/main/docs/source/images/Rotation.gif)
+<img src="https://raw.githubusercontent.com/bafgreat/mofstructure/main/docs/source/images/Rotation.gif" width="400">
+
+</div>
+<!-- markdownlint-enable MD033 -->
 
 This is an elaborate python module that provides simple functions for
 manipulation metal-organic frameworks and other porous systems such as
