@@ -1,0 +1,34 @@
+cff-version: 1.2.0
+
+title: "mofstructure"
+message: "If you use this software, please cite both the software and the associated publication below."
+
+type: software
+
+authors:
+  - family-names: Wonanke
+    given-names: AD Dinga
+  - family-names: Heine
+    given-names: Thomas
+  - family-names: Longa
+    given-names: Antonio
+
+version: "0.1.8.6"
+date-released: 2026-02-02
+
+repository-code: "https://github.com/bafgreat/mofstructure"
+url: "https://github.com/bafgreat/mofstructure"
+
+preferred-citation:
+  type: article
+  title: "FAIR-MOFs: Structure-centred synthesis inference from three-dimensional structures of metal-organic frameworks"
+  authors:
+    - family-names: Heine
+      given-names: Thomas
+    - family-names: Wonanke
+      given-names: Dinga
+    - family-names: Longa
+      given-names: Antonio
+  year: 2026
+  doi: "10.21203/rs.3.rs-8375247/v1"
+  journal: "Research Square"

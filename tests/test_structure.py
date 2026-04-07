@@ -27,6 +27,9 @@ def test_structure():
     assert metal_sbu.info['inchikey'] == 'ZCOYFNAPKIGPTI-UHFFFAOYSA-N'
     assert linker.info['inchikey'] == 'IMNIMPAHZVJRPE-UHFFFAOYSA-N'
     topology = mof.get_topology(method="all_node")
-    assert topology == 'pcu'
+    assert topology.get('topology') == 'pcu'
+    assert topology.get('dimension') == 3
+    assert topology.get('td10') == 1561
+    assert topology.get('topology_hash') == '4b5eb714e48dcff8cb1c03182dcc3a09e8fe132b7d9f922f26ceec6e80505f3e'
 
 

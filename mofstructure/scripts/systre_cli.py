@@ -1,37 +1,27 @@
 #!/usr/bin/env python3
 """
-mofstructure_systre CLI
+mofstructure_topology CLI
 
-Works out of the box for:
-  - .cgd files (run Systre directly)
-  - structure files readable by ASE (e.g., .cif) -> generate CGD then run Systre
-  - folders containing mix of files (runs per file)
+This CLI uses `MOFstructure.get_topology()` from `mofstructure.structure`.
 
-Folder output:
-  - Optionally write CSV and/or JSON:
-      --csv results.csv
-      --json results.json
-    where the key is the file basename (stem) and the value is topology.
+Supported input:
+  - one file
+  - multiple files
+  - one or more folders
 
-Notes (updated for new topology module)
----------------------------------------
-The new topology module keeps the same method names but changes their behavior:
+Behavior:
+  - if an input is a file, it is processed directly
+  - if an input is a folder, all ASE-readable files inside it are found and processed
+  - results can be written to CSV and/or JSON
 
-  - method="sbus":
-        SBUs deconstruction + **metal-region nodes** contraction
-        (regions containing transition metals not in _porphyrin become node-regions).
+Notes
+-----
+This script delegates topology detection to:
 
-  - method="ligand_cluster":
-        Ligand-cluster deconstruction + **metal-region nodes** contraction
-        (same metal region selection).
+    MOFstructure(filename=...).get_topology(...)
 
-  - method="all_node":
-        SBUs deconstruction + **top-k most connected regions** contraction
-        (your previous "all_node" idea).
-
-Therefore:
-- Dedup options are no longer used by CGD generation here (contraction always dedups for Systre).
-- We keep CLI arguments for backwards compatibility, but they are ignored with a warning.
+Therefore, it automatically uses the topology workflow already implemented
+in `mofstructure.structure` and `mofstructure.systre`.
 """
 
 from __future__ import annotations
@@ -40,192 +30,311 @@ import argparse
 import csv
 import json
 from pathlib import Path
-from typing import Dict, Tuple
+from typing import Dict, List, Optional, Sequence
 
-from mofstructure.systre import identify_topology, identify_topology_batch
+from ase.io import read
+from mofstructure.structure import MOFstructure
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(
-        description="Run Systre (Gavrog) on CGD files or structures (auto-generate CGD when needed)."
+    """
+    Build the command-line parser.
+
+    **returns:**
+        argparse.ArgumentParser
+    """
+    parser = argparse.ArgumentParser(
+        description="Compute topology using MOFstructure.get_topology() for files or folders."
     )
-    p.add_argument("input", help="Path to a .cgd file, a structure file (e.g. .cif), or a folder.")
-
-    # systre/java
-    p.add_argument("--java", default="java", help="Java executable (default: java).")
-    p.add_argument("--timeout", type=int, default=30, help="Systre timeout in seconds (default: 30).")
-    p.add_argument("--xmx", default="1024m", help="Java max heap, e.g. 1024m (default: 1024m).")
-    p.add_argument("--keep-tmp", action="store_true", help="Keep temporary CGD files (debug).")
-
-    # folder options
-    p.add_argument("--recursive", action="store_true", default=True, help="Recurse into folders (default: True).")
-    p.add_argument("--no-recursive", action="store_false", dest="recursive", help="Do not recurse into folders.")
-
-    # CGD generation options (used when input is NOT .cgd)
-    p.add_argument(
+    parser.add_argument(
+        "inputs",
+        nargs="+",
+        help="One or more files and/or folders.",
+    )
+    parser.add_argument(
         "--method",
         choices=["sbus", "all_node", "ligand_cluster"],
         default="all_node",
-        help="CGD method for structure inputs (default: all_node).",
+        help="Topology method passed to MOFstructure.get_topology().",
     )
-    p.add_argument("--name", default="net", help="CGD graph ID name (default: net).")
-
-    # all_node-specific
-    p.add_argument("--top-k-regions", type=int, default=1, help="For all_node: pick top K regions (default: 1).")
-    p.add_argument(
-        "--connect-mode",
-        choices=["clique", "chain"],
-        default="clique",
-        help="For contraction methods: how to connect nodes touched by a contracted component.",
+    parser.add_argument(
+        "--decimals",
+        type=int,
+        default=8,
+        help="Number of decimal places used in topology hashing.",
     )
-
-    # Legacy options (kept for compatibility; ignored in new topology module)
-    p.add_argument(
-        "--dedup-mode",
-        choices=["none", "shift", "topological"],
-        default="shift",
-        help="(legacy; ignored) Dedup mode for CGD generation.",
-    )
-    p.add_argument(
-        "--no-dedup",
+    parser.add_argument(
+        "--include-edge-centers",
         action="store_true",
-        help="(legacy; ignored) Disable edge dedup during CGD generation.",
+        help="Include edge-center comments in the CRYSTAL2 text.",
     )
-
-    # batch filtering
-    p.add_argument(
-        "--patterns",
-        nargs="*",
-        default=None,
-        help="Optional list of file extensions to consider in folders (e.g. .cgd .cif .vasp). "
-             "Default: auto (common structure formats + .cgd).",
+    parser.add_argument(
+        "--fallback-to-input-cgd",
+        action="store_true",
+        help="Fallback to input CGD text if no relaxed component is parsed.",
     )
+    parser.add_argument(
+        "--recursive",
+        action="store_true",
+        default=True,
+        help="Recurse into folders (default: True).",
+    )
+    parser.add_argument(
+        "--no-recursive",
+        action="store_false",
+        dest="recursive",
+        help="Do not recurse into folders.",
+    )
+    parser.add_argument(
+        "--csv",
+        dest="csv_out",
+        default="Topology.csv",
+        help="Write results to CSV file.",
+    )
+    parser.add_argument(
+        "--json",
+        dest="json_out",
+        default="Topology.json",
+        help="Write results to JSON file.",
+    )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Print full topology dictionaries.",
+    )
+    return parser
 
-    # outputs (folder mode; also allowed in single-file mode)
-    p.add_argument("--csv", dest="csv_out", default="Topology.csv",
-                   help="Write results to CSV file (basename, topology).")
-    p.add_argument("--json", dest="json_out", default="Topology.json",
-                   help="Write results to JSON file ({basename: topology}).")
 
-    # output verbosity
-    p.add_argument("--verbose", action="store_true", help="Print Systre stdout/stderr.")
+def _is_ase_readable(path: Path) -> bool:
+    """
+    Check whether ASE can read a file.
 
-    return p
+    **parameters:**
+        path: pathlib.Path
+            Input file path.
+
+    **returns:**
+        bool
+    """
+    try:
+        read(path)
+        return True
+    except Exception:
+        return False
 
 
-def _write_csv(path: Path, mapping: Dict[str, str]) -> None:
+def _collect_input_files(inputs: Sequence[str], recursive: bool = True) -> List[Path]:
+    """
+    Collect all readable files from input paths.
+
+    Rules:
+      - files are added directly
+      - directories are searched for ASE-readable files
+
+    **parameters:**
+        inputs: sequence
+            Input file and/or folder paths.
+
+        recursive: bool
+            If True, recurse into folders.
+
+    **returns:**
+        list
+            List of unique readable file paths.
+    """
+    collected: List[Path] = []
+    seen = set()
+
+    for item in inputs:
+        path = Path(item)
+
+        if not path.exists():
+            print(f"Warning: input not found: {path}")
+            continue
+
+        if path.is_file():
+            if _is_ase_readable(path):
+                resolved = str(path.resolve())
+                if resolved not in seen:
+                    collected.append(path)
+                    seen.add(resolved)
+            else:
+                print(f"Warning: ASE could not read file: {path}")
+            continue
+
+        if path.is_dir():
+            iterator = path.rglob("*") if recursive else path.glob("*")
+            for subpath in iterator:
+                if not subpath.is_file():
+                    continue
+                if not _is_ase_readable(subpath):
+                    continue
+                resolved = str(subpath.resolve())
+                if resolved not in seen:
+                    collected.append(subpath)
+                    seen.add(resolved)
+
+    return collected
+
+
+def _compute_topology(
+    path: Path,
+    *,
+    method: str,
+    decimals: int,
+    include_edge_centers: bool,
+    fallback_to_input_cgd: bool,
+) -> Dict[str, object]:
+    """
+    Compute topology data for one structure file.
+
+    **parameters:**
+        path: pathlib.Path
+            Input structure path.
+
+        method: str
+            Topology method.
+
+        decimals: int
+            Number of decimal places used in topology hashing.
+
+        include_edge_centers: bool
+            If True, include edge-center comments in the CRYSTAL2 text.
+
+        fallback_to_input_cgd: bool
+            If True, fallback to input CGD text when needed.
+
+    **returns:**
+        python dictionary
+            Topology data returned by `MOFstructure.get_topology()`.
+    """
+    structure = MOFstructure(filename=str(path))
+    data = structure.get_topology(
+        method=method,
+        decimals=decimals,
+        include_edge_centers=include_edge_centers,
+        fallback_to_input_cgd=fallback_to_input_cgd,
+    )
+    return data
+
+
+def _write_csv(path: Path, mapping: Dict[str, Dict[str, object]]) -> None:
+    """
+    Write topology results to CSV.
+
+    **parameters:**
+        path: pathlib.Path
+            Output CSV path.
+
+        mapping: python dictionary
+            Mapping:
+                basename -> topology data dictionary
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", newline="", encoding="utf-8") as f:
-        w = csv.writer(f)
-        w.writerow(["MOF name", "topology"])
-        for k in sorted(mapping.keys()):
-            w.writerow([k, mapping[k]])
+
+    fieldnames = [
+        "MOF name",
+        "topology",
+        "dimension",
+        "td10",
+        "topology_hash",
+        "cgd_crystal2text",
+    ]
+
+    with path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+
+        for key in sorted(mapping):
+            row = mapping[key]
+            writer.writerow(
+                {
+                    "MOF name": key,
+                    "topology": row.get("topology"),
+                    "dimension": row.get("dimension"),
+                    "td10": row.get("td10"),
+                    "topology_hash": row.get("topology_hash"),
+                    "cgd_crystal2text": row.get("cgd_crystal2text"),
+                }
+            )
 
 
-def _write_json(path: Path, mapping: Dict[str, str]) -> None:
+def _write_json(path: Path, mapping: Dict[str, Dict[str, object]]) -> None:
+    """
+    Write topology results to JSON.
+
+    **parameters:**
+        path: pathlib.Path
+            Output JSON path.
+
+        mapping: python dictionary
+            Mapping:
+                basename -> topology data dictionary
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
-    ordered = {k: mapping[k] for k in sorted(mapping.keys())}
+    ordered = {key: mapping[key] for key in sorted(mapping)}
     path.write_text(json.dumps(ordered, indent=4, sort_keys=True), encoding="utf-8")
 
 
-def _warn_legacy_dedup(args) -> None:
-    # New topology module does contraction + systre-safe dedup internally.
-    # Keep CLI flags but warn if user tries to use them.
-    if args.no_dedup or (args.dedup_mode and args.dedup_mode != "shift"):
-        print(
-            "Warning: --no-dedup and --dedup-mode are legacy flags and are ignored in the new topology module.\n"
-            "         Contraction methods always generate Systre-compatible edges internally."
-        )
+def main(argv: Optional[Sequence[str]] = None) -> int:
+    """
+    Command-line entry point.
 
+    **parameters:**
+        argv: list, optional
+            Command-line arguments.
 
-def main(argv=None) -> int:
+    **returns:**
+        int
+            Exit status code.
+    """
     args = build_parser().parse_args(argv)
-    inp = Path(args.input)
 
-    if not inp.exists():
-        raise SystemExit(f"Input not found: {inp}")
+    files = _collect_input_files(args.inputs, recursive=args.recursive)
+    if not files:
+        raise SystemExit("No ASE-readable files were found.")
 
-    _warn_legacy_dedup(args)
+    results: Dict[str, Dict[str, object]] = {}
+    counts: Dict[str, int] = {}
 
-    common = dict(
-        java=args.java,
-        timeout_s=args.timeout,
-        xmx=args.xmx,
-        keep_tmp=args.keep_tmp,
-    )
+    for filepath in files:
+        try:
+            topo_data = _compute_topology(
+                filepath,
+                method=args.method,
+                decimals=args.decimals,
+                include_edge_centers=args.include_edge_centers,
+                fallback_to_input_cgd=args.fallback_to_input_cgd,
+            )
+        except Exception as exc:
+            topo_data = {
+                "topology": "ERROR",
+                "dimension": None,
+                "td10": None,
+                "topology_hash": None,
+                "cgd_crystal2text": None,
+                "error": str(exc),
+            }
 
-    # Only pass parameters that the NEW TopologyExtractor.build_cgd accepts
-    gen = dict(
-        method=args.method,
-        name=args.name,
-        # top_k_regions=args.top_k_regions,
-        # connect_mode=args.connect_mode,
-    )
+        stem = filepath.stem
+        if stem in results:
+            counts[stem] = counts.get(stem, 1) + 1
+            key = f"{stem}__{counts[stem]}"
+        else:
+            counts[stem] = 1
+            key = stem
 
-    patterns: Tuple[str, ...] = tuple(args.patterns) if args.patterns else (
-        ".cgd", ".cif", ".vasp", ".poscar", ".xyz", ".pdb", ".mol", ".sdf"
-    )
+        results[key] = topo_data
 
-    # Folder batch mode
-    if inp.is_dir():
-        resmap = identify_topology_batch(
-            inp,
-            patterns=patterns,
-            recursive=args.recursive,
-            **gen,
-            **common,
-        )
+        print(f"{filepath}\t{topo_data.get('topology')}")
+        if args.verbose:
+            print(json.dumps(topo_data, indent=2, sort_keys=True))
 
-        topo_map: Dict[str, str] = {}
-        counts: Dict[str, int] = {}
+    if args.csv_out:
+        _write_csv(Path(args.csv_out), results)
 
-        for fp in sorted(resmap.keys()):
-            res = resmap[fp]
-            stem = Path(fp).stem
-            if stem in topo_map:
-                counts[stem] = counts.get(stem, 1) + 1
-                stem_key = f"{stem}__{counts[stem]}"
-            else:
-                stem_key = stem
-                counts[stem] = 1
-
-            topo_map[stem_key] = res.topology
-
-            print(f"{fp}\t{res.topology}")
-            if args.verbose and (res.stdout or res.stderr):
-                print("---- STDOUT ----")
-                print(res.stdout)
-                print("---- STDERR ----")
-                print(res.stderr)
-                print("----------------")
-
-        if args.csv_out:
-            _write_csv(Path(args.csv_out), topo_map)
-        if args.json_out:
-            _write_json(Path(args.json_out), topo_map)
-
-        return 0
-
-    # Single file mode
-    if inp.suffix.lower() == ".cgd":
-        res = identify_topology(inp, input_is_cgd=True, **common)
-    else:
-        res = identify_topology(inp, **gen, **common)
-
-    print(res.topology)
-
-    if args.csv_out or args.json_out:
-        topo_map = {inp.stem: res.topology}
-        if args.csv_out:
-            _write_csv(Path(args.csv_out), topo_map)
-        if args.json_out:
-            _write_json(Path(args.json_out), topo_map)
-
-    if args.verbose and (res.stdout or res.stderr):
-        print("---- STDOUT ----")
-        print(res.stdout)
-        print("---- STDERR ----")
-        print(res.stderr)
+    if args.json_out:
+        _write_json(Path(args.json_out), results)
 
     return 0
 

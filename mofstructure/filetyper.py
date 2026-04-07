@@ -245,5 +245,5 @@ def load_data(filename):
     return data
 
 def load_iupac_names():
-    msgpack_path = files("mofstructure").joinpath("db/iupacname.msgpack")
+    msgpack_path = files("mofstructure").joinpath("db/iupacname_smiles.msgpack")
     return load_data(msgpack_path)

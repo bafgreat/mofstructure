@@ -1,22 +1,55 @@
+![mofstructure logo](https://raw.githubusercontent.com/bafgreat/mofstructure/main/docs/source/images/logo.png)
+
 # mofstructure
 
-![intro](./docs/source/images/Rotation.gif)
+A Python toolkit for topology, porosity,open-metal sites and building-unit analysis of MOFs.
+
+![intro](https://raw.githubusercontent.com/bafgreat/mofstructure/main/docs/source/images/Rotation.gif)
 
 This is an elaborate python module that provides simple functions for
 manipulation metal-organic frameworks and other porous systems such as
 COFs and Zeolites. Some uses of the module involves
 
-1. Compute RCSR topology of MOFs.
+## Features
 
-2. Computation of geometric properties of MOFs. It calls zeo++ in the background and enables a quick computation of all porosity information such pld, lcd, asa ...
+`mofstructure` provides tools for:
 
-3. Automated removal of unbound guest molecules
+1. **Topology identification**
+   - Compute framework topology using Systre and RCSR-style net naming when available.
 
-4. Deconstruction of metal-organic frameworks into building units. And for each buidling units (organic ligand, metal cluster, organic sbu and metal sbu) computes their cheminformatic identifiers such as SMILES strings, inchi and inchikey. It also identify the type of metal sbu and coordination number of central metal.
+2. **Porosity analysis**
+   - Compute geometric properties such as PLD, LCD, ASA, accessible volume, and channel information.
+   - Uses Zeo++/pyzeo-style workflows in the background.
 
-5. Wraps systems around unit cell so as to remove effect of pbc. This is often the case, when one tries to visualize the cif files or convert cif files into xyz, the system often appears to be uncoordinated
+3. **Guest removal**
+   - Automatically remove unbound guest molecules from porous frameworks.
 
-6. Seperation of building units into regions. This is essential when on wishes to subsitute a specific ligand or building unit.
+4. **Framework deconstruction**
+   - Deconstruct MOFs into chemically meaningful building units, including:
+     - metal clusters
+     - organic ligands
+     - metal SBUs
+     - organic SBUs
+
+5. **Cheminformatics for building units**
+   - Compute identifiers such as:
+     - SMILES
+     - InChI
+     - InChIKey
+
+6. **SBU characterization**
+   - Identify SBU type and the coordination number of the central metal.
+
+7. **Periodic wrapping / reconstruction**
+   - Rebuild or wrap structures across periodic boundaries to remove visualization artefacts caused by PBC fragmentation.
+
+8. **Region-based framework partitioning**
+   - Separate frameworks into regions to support targeted substitution or building-unit manipulation.
+
+9. **Open metal site analysis**
+   - Detect open metal sites and characterize the local metal environment.
+
+---
 
 ## Installation
 
@@ -108,9 +141,10 @@ mof_object = structure.MOFstructure(filename=cif_file)
 # once and also directly parse an ASE atom object
 # mof_object = structure.MOFstructure(ase_atoms)
 
-# guest free structure
 
 guest_free_ase_atoms = mof_object.remove_guest()
+
+
 
 # compute porosit and write output to csv
 pores = mof_object.get_porosity(probe_radius=1.86, number_of_steps=5000,  rad_file=None,high_accuracy=True)
@@ -162,6 +196,16 @@ print(oms)
 
 ```Python
 
+topology = mof_object.get_topology()
+print (topology )
+
+```
+
+You can also compute topology directly from systre module
+incase you wish to have more autonomy
+
+```Python
+
 from ase.io import read
 from mofstructure.systre import identify_topology
 
@@ -177,32 +221,7 @@ print(res.topology)
 atoms = read("UiO-66.cif")
 res = identify_topology(atoms)
 print(res.topology)
-
-# 4) From pymatgen Structure (if pymatgen installed)
-# from pymatgen.core import Structure
-# s = Structure.from_file("UiO-66.cif")
-# res = identify_topology(s)
-# print(res.topology)
 ```
-
-<!-- ### for a single cif file
-
-```Python
-from  mofstructure import buildingunits
-buildingunits.work_flow(ciffile, result_folder)
-```
-
-### for multiple cif files
-
-```Python
-from  mofstructure import buildingunits
-import glob
-all_cifs = glob.glob(folder/*cif)
-# folder corresponds to the folder containing all the cif files
-for cif_files in all_cifs:
-    buildingunits.work_flow(cif_files, result_folder)
-# Note that result_folder can be any path. If the path does not exist, it will create one and populate it with all the data.
-``` -->
 
 ## Documentation
 
@@ -212,120 +231,111 @@ You can access the full project documentation on [docs](https://bafgreat.github.
 
 In the future the code should be able to:
 
-1. Subsitutue building units in a MOF to enable framework functionalisation
-2. Automatic curation of cifs
-3. Decontsruction of COFs into their building units
-   <!-- ![process](source/images/decon.jpeg) -->
+1. We are currently working on SBU deconstruction and topological analysis of COFs.
 
-<!-- ![proccess]source/(images/guest.png) -->
+## Updates version 0.1.8.6
 
-<!-- # Updates version 0.1.4
+This release introduces a major upgrade to the topology analysis workflow in `mofstructure`, providing a more robust, reproducible, and information-rich framework for topological characterization.
 
-The new update enables the computation of open metal sites in cifs
-To use this functionality run the following on the command line
+### Key improvements
 
-```
-mofstructure_database ciffolder --oms
-```
+#### 1. Enhanced topology extraction
 
-Here ciffolder corresponse to the directory/folder containing the cif files.
+Topology determination is now handled through a high-level interface built on top of Systre, enabling:
 
-After the computation the metal information will be found in a json file called `metal_info.json`. This file is found in the output folder that defaults to `MOFDb` incase none is provided.
+- Direct support for:
+  - `.cgd` files
+  - CIF and all ASE-readable structure formats
+  - Batch processing of folders
+- Automatic generation of CGD representations when needed
+- Improved robustness for complex and multi-component frameworks
 
-# NB
+---
 
-Note that computing open metal sites is computationally expensive, especially if you intend to
-run it on a folder with many cif files. There I recommend that if you are not interested in computing the open metal sites simply run command without the --oms option.
+#### 2. Rich topology output
 
-```
-mofstructure_database ciffolder
-```
+The `get_topology()` method now returns a structured dictionary containing:
 
-This command will generate a MOFDb folder without the `metal_info.json` file. But the code will run very fast.
+- `topology` → Identified RCSR net (or `UNKNOWN`)
+- `dimension` → Periodicity of the net (0D, 1D, 2D, 3D)
+- `td10` → Topological density descriptor from Systre
+- `topology_hash` → Stable hash of the relaxed topology
+- `cgd_crystal2text` → CRYSTAL2 representation of the relaxed net
 
-Also note that the `--oms` option is provided on for the `mofstructure_database` command. This is not available for `mofstructure` command which targets a single cif file. If you have a single cif file wish to compute open metal sites, simply put the cif file in a folder and rin `mofstructure_database` command on the folder (`mofstructure_database ciffolder --oms`).
+This enables reproducible identification and easy downstream storage/indexing.
 
-# Updates version 0.1.5
+---
 
-The new update enables users to include a Rad file when computing porosity using pyzeo. This allows users to specify the type of radii to use. If omitted, the default pyzeo radii will be used, which are covalent radii obtained from the CSD.
+#### 3. Relaxed-topology hashing
 
-Currently, this functionality can only be used when using mofstructure as a library. This can be done as follows:
+A deterministic topology hash is now available:
 
-```
-from mofstructure.porosity import zeo_calculation
-from ase.io import read
+- Based on normalized relaxed coordinates
+- Independent of atom ordering and numerical noise
+- Suitable for:
+  - database indexing
+  - duplicate detection
+  - large-scale screening workflows
 
-ase_atom = read(filename)
+---
 
-pore_data = zeo_calculation(ase_atom, rad_file='rad_file_name.rad')
-```
+#### 4. CRYSTAL2 export from relaxed topology
 
-# NB
+The topology pipeline now supports:
 
-Note that filename is any ASE-readable crystal structure file, ideally a CIF file. Moreover, rad_file_name.rad is a file containing the radii of each element present in the structure file. This should be formatted as follows:
+- Direct generation of CRYSTAL2-style CGD text from relaxed Systre output
+- Optional inclusion of edge-center metadata
+- Fallback conversion from original CGD when relaxed output is unavailable
 
-```
-element radii
-```
+---
 
-For example, for an MgO system, your Rad file should look like this:
+#### 5. Memory-efficient workflow
 
-```
-Mg 0.66
-O 1.84
-```
+The topology computation has been redesigned to be lightweight:
 
-Also note that of the radii file does not have the .rad extension like `rad_file_name.rad` the default radii will be used.
+- Uses a single Systre call per structure
+- Avoids redundant parsing and data duplication
+- Only extracts the most informative component by default
 
-# Updates version 0.1.6
+This makes it suitable for large MOF datasets and high-throughput workflows.
 
-Added new command line tools to expedite calculations especially when working on a quite large database.
+---
 
-## compute only deconstruction
+#### 6. Improved CLI support
 
-If you wish to only compute the deconstruction of MOFs without having to compute
-their porosity and open metal sites. Then simply run the following command
+Topology tools now:
 
-```
-mofstructure_building_units  cif_folder
-```
+- Work seamlessly on files and folders
+- Support CSV/JSON export of results
+- Provide optional verbose output for debugging
+- Maintain backward compatibility with legacy flags
 
-## compute only porosity
+---
 
-If you wish to only compute the porosity using default values. i.e
-probe radius = 1.86, number of gcmc cycles = 10000 and default csd atomic radii, then run the following command:
+### Example
 
-```
-mofstructure_porosity cif_folder
-```
+```python
+from mofstructure import structure
 
-However, if you wish to use another probe radius of maybe 1.5 and gcmc cycles of 20000 alongside custom atomic radii in a file called rad.rad, run the following command:
+mof = structure.MOFstructure(filename="UiO-66.cif")
+topo = mof.get_topology()
 
-```
-mofstructure_porosity cif_folder -pr 1.5 -ns 20000 -rf rad.rad
-```
-
-## compute only open metal sites
-
-If you are only interested in computing the open metal sites, then running the following command
-
-```
-mofstructure_oms cif_folder
+print(topo)
 ```
 
-# Updates version 0.1.7
+## Updates version 0.1.7
 
 1. Implemented a robust CI/CD using git actions
 2. Included add_dummy key to add dummy atoms to point of extension. This is important to effectively control the breaking point. This dummy atoms can then
    be replaced with hydrogen to fully neutralize the system.
 
-## N.B.
+### N.B
 
 Be please don't use add dummy when deconstructing to ligands and clusters. The add dummy argument should be used only for sbus.
 e.g
 
-```
-connected_components, atoms_indices_at_breaking_point, porpyrin_checker, all_regions = MOF_deconstructor.secondary_building_units(ase_atom)
+```Python
+connected_components, atoms_indices_at_breaking_point, porpyrin_checker, all_regions, breaking_pairs = MOF_deconstructor.secondary_building_units(ase_atom)
 metal_sbus, organic_sbus, building_unit_regions = MOF_deconstructor.find_unique_building_units(
     connected_components,
     atoms_indices_at_breaking_point,
@@ -337,4 +347,98 @@ metal_sbus, organic_sbus, building_unit_regions = MOF_deconstructor.find_unique_
     )
 
 metal_sbus[0].write('test1.xyz)
-``` -->
+```
+
+## Updates version 0.1.6
+
+Added new command line tools to expedite calculations especially when working on a quite large database.
+
+### compute only deconstruction
+
+If you wish to only compute the deconstruction of MOFs without having to compute
+their porosity and open metal sites. Then simply run the following command
+
+```Bash
+mofstructure_building_units  cif_folder
+```
+
+### compute only porosity
+
+If you wish to only compute the porosity using default values. i.e
+probe radius = 1.86, number of gcmc cycles = 10000 and default csd atomic radii, then run the following command:
+
+```Bash
+mofstructure_porosity cif_folder
+```
+
+However, if you wish to use another probe radius of maybe 1.5 and gcmc cycles of 20000 alongside custom atomic radii in a file called rad.rad, run the following command:
+
+```Bash
+mofstructure_porosity cif_folder -pr 1.5 -ns 20000 -rf rad.rad
+```
+
+### compute only open metal sites
+
+If you are only interested in computing the open metal sites, then running the following command
+
+```Bash
+mofstructure_oms cif_folder
+```
+
+## Updates version 0.1.5
+
+The new update enables users to include a Rad file when computing porosity using pyzeo. This allows users to specify the type of radii to use. If omitted, the default pyzeo radii will be used, which are covalent radii obtained from the CSD.
+
+Currently, this functionality can only be used when using mofstructure as a library. This can be done as follows:
+
+```Python
+from mofstructure.porosity import zeo_calculation
+from ase.io import read
+
+ase_atom = read(filename)
+
+pore_data = zeo_calculation(ase_atom, rad_file='rad_file_name.rad')
+```
+
+### NB
+
+Note that filename is any ASE-readable crystal structure file, ideally a CIF file. Moreover, rad_file_name.rad is a file containing the radii of each element present in the structure file. This should be formatted as follows:
+
+```bash
+element radii
+```
+
+For example, for an MgO system, your Rad file should look like this:
+
+```bash
+Mg 0.66
+O 1.84
+```
+
+Also note that of the radii file does not have the .rad extension like `rad_file_name.rad` the default radii will be used.
+
+## Updates version 0.1.4
+
+The new update enables the computation of open metal sites in cifs
+To use this functionality run the following on the command line
+
+```bash
+mofstructure_database ciffolder --oms
+```
+
+Here ciffolder corresponse to the directory/folder containing the cif files.
+
+After the computation the metal information will be found in a json file called `metal_info.json`. This file is found in the output folder that defaults to `MOFDb` incase none is provided.
+
+NB
+
+Note that computing open metal sites is computationally expensive, especially if you intend to
+run it on a folder with many cif files. There I recommend that if you are not interested in computing the open metal sites simply run command without the --oms option.
+
+```Bash
+mofstructure_database ciffolder
+```
+
+This command will generate a MOFDb folder without the `metal_info.json` file. But the code will run very fast.
+
+Also note that the `--oms` option is provided on for the `mofstructure_database` command. This is not available for `mofstructure` command which targets a single cif file. If you have a single cif file wish to compute open metal sites, simply put the cif file in a folder and rin `mofstructure_database` command on the folder (`mofstructure_database ciffolder --oms`).

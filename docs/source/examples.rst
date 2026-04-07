@@ -21,6 +21,9 @@ Quick Start Guide
    # get the topology of the MOF
    topology = mofdata.get_topology(method="all_node") # method can be "all_node" or "sbus" or "ligand_cluster"
 
+   print(topology['topology']) # prints the topology name, e.g. pcu, dia, etc.
+   print(topology['dimension']) # prints the dimension of the topology, e.g. 3 for 3D, 2 for 2D, etc.
+   print(topology['td10']) # prints the td10 value of the topology, which is a measure of the
    # get metal and organic SBUs
    # This will return a list of ase_atoms objects
    metal_sbus, organic_sbus = mofdata.get_sbu()

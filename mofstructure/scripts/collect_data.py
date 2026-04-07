@@ -111,7 +111,7 @@ def collect_ligand(organic_ligands, base_name, xyz_path):
     for j, mof_ligand in enumerate(organic_ligands):
         smi.append(mof_ligand.info['smi'])
         inchikey.append(mof_ligand.info['inchikey'])
-        iupac.append(iupacnames.get(mof_ligand.info['inchikey', None]))
+        iupac.append(iupacnames.get(mof_ligand.info['smi'], None))
         inchi.append(mof_ligand.info['inchi'])
         mof_ligand.write(f'{path_to_file}/{base_name}_organic_ligand_{j+1}.xyz')
     if len(smi) > 0:

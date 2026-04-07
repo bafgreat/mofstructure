@@ -17,7 +17,7 @@ from omsdetector_forked import MofCollection, mof
 import mofstructure.mofdeconstructor as MOF_deconstructor
 from mofstructure.porosity import zeo_calculation
 import mofstructure.filetyper as read_write
-from mofstructure.systre import identify_topology
+from mofstructure.systre import SystreTopology
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
@@ -163,16 +163,74 @@ class MOFstructure(object):
                                     rad_file=rad_file)
         return read_write.convert_numpy_types(pores)
 
-    def get_topology(self, method="all_node"):
+    def get_topology(
+        self,
+        method="all_node",
+        *,
+        decimals=8,
+        include_edge_centers=True,
+        fallback_to_input_cgd=False,
+    ):
         """
-        A function to compute the topology of a system using the RCSR code.
+        Compute topology information for the guest-free system.
+
+        **parameters:**
+            method: str
+                Topology extraction method passed to SystreTopology.
+
+            decimals: int
+                Number of decimal places used when hashing the relaxed topology payload.
+
+            include_edge_centers: bool
+                If True, include edge-center comments in the CRYSTAL2 text.
+
+            fallback_to_input_cgd: bool
+                If True, return a CRYSTAL2 wrapper from the input CGD when no
+                relaxed component can be parsed from Systre output.
 
         **return:**
-            topology (str): The RCSR code representing the topology of the system.
+            python dictionary
+                Mapping containing:
+                    - topology
+                    - dimension
+                    - td10
+                    - topology_hash
+                    - cgd_crystal2text
         """
         guest_free_atoms = self.remove_guest()
-        topology = identify_topology(guest_free_atoms, method=method)
-        return topology
+
+        runner = SystreTopology(
+            guest_free_atoms,
+            method=method,
+            name="net",
+            keep_tmp=False,
+        )
+
+        result = runner.identify()
+        comp = runner.best_component()
+
+        if comp is None:
+            return {
+                "topology": result.topology,
+                "dimension": None,
+                "td10": None,
+                "topology_hash": None,
+                "cgd": runner.crystal2_text(
+                    include_edge_centers=include_edge_centers,
+                    fallback_to_input_cgd=fallback_to_input_cgd,
+                ),
+            }
+
+        return {
+            "topology": result.topology,
+            "dimension": comp.dimension,
+            "td10": comp.td10,
+            "topology_hash": comp.topology_hash(decimals=decimals),
+            "cgd": comp.crystal2_text(
+                name=comp.rcsr_name or "net",
+                include_edge_centers=include_edge_centers,
+            ),
+        }
 
     def get_oms(self):
         """
