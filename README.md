@@ -1,25 +1,12 @@
 <!-- markdownlint-disable MD033 -->
 <div align="center">
 
+
 # mofstructure
 
-<video
-  autoplay
-  muted
-  loop
-  playsinline
-  width="600"
-  height="400"
-  preload="metadata"
-  poster="https://raw.githubusercontent.com/bafgreat/mofstructure/main/docs/source/images/DUT-8.png"
->
-  <source
-    src="https://raw.githubusercontent.com/bafgreat/mofstructure/main/docs/source/images/DUT-8.mp4"
-    type="video/mp4"
-  >
-</video>
-
 **A Python toolkit for topology, porosity, and building-unit analysis of MOFs**
+
+<img src="https://raw.githubusercontent.com/bafgreat/mofstructure/main/docs/source/images/DUT-8.gif" width="600">
 
 </div>
 <!-- markdownlint-enable MD033 -->
