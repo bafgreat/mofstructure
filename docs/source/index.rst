@@ -12,9 +12,22 @@ Introduction
 
 .. raw:: html
 
-   <video width="600" height="400" autoplay loop muted>
-      <source src="_static/movie3.mp4" type="video/mp4">
-      Your browser does not support the video tag.
+   .. <video width="600" height="400" autoplay loop muted>
+   ..    <source src="_static/movie3.mp4" type="video/mp4">
+   ..    Your browser does not support the video tag.
+   .. </video>
+
+   <video
+   autoplay
+   muted
+   loop
+   playsinline
+   width="600"
+      height="400"
+   preload="metadata"
+   poster="https://raw.githubusercontent.com/bafgreat/mofstructure/main/docs/source/images/DUT-8.png"
+   >
+   <source src="https://raw.githubusercontent.com/bafgreat/mofstructure/main/docs/docs/source/images/DUT-8.mp4" type="video/mp4">
    </video>
 
 Key Features of `mofstructure`
