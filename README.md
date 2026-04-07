@@ -4,9 +4,9 @@
 
 # mofstructure
 
-**A Python toolkit for topology, porosity, and building-unit analysis of MOFs**
+A Python toolkit for topology, porosity, and building-unit analysis of MOFs
 
-<img src="https://raw.githubusercontent.com/bafgreat/mofstructure/main/docs/source/images/DUT-8.gif" width="600">
+<img src="https://raw.githubusercontent.com/bafgreat/mofstructure/main/docs/source/images/DUT-8.gif" width="800" height="1200">
 
 </div>
 <!-- markdownlint-enable MD033 -->
@@ -231,6 +231,20 @@ print(res.topology)
 ## Documentation
 
 You can access the full project documentation on [docs](https://bafgreat.github.io/mofstructure/)
+
+## Citation
+
+If you find mofstructure helpful please kindly cite the following manusrcipts
+
+```bibtex
+@article{wonanke2026fairmofs,
+  title={FAIR-MOFs: Structure-centred synthesis inference from three-dimensional structures of metal-organic frameworks},
+  author={Wonanke, Dinga and Heine, Thomas and Longa, Antonio and others},
+  year={2026},
+  doi={10.21203/rs.3.rs-8375247/v1}
+}
+
+```
 
 ## Roadmap
 
