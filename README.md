@@ -125,11 +125,30 @@ mofstructure_topology net.cgd
  ```
 
  ```bash
-  mofstructure_systre ./folder
+  mofstructure_topology ./folder
   ```
 
-  ```bash
-  mofstructure_systre ./folder --no-recursive
+
+You can also decided how the topology should be computed by
+defining which deconstruction you want. At the moment we have
+three major methods [`all_nodes`, `sbus` and `ligand_cluster`].
+Note that the topology from each could be thesame or different since
+these methods determines how the topological graph is constructed.
+
+```bash
+ mofstructure_topology structure.cif --method all_nodels
+ ```
+
+ ```bash
+  mofstructure_topology ./folder ligand_cluster
+  ```
+
+For a very large dataset you can choose to write files to
+disk in small batches. for that you can use the `--flush-every` keyword
+as follows.
+
+ ```bash
+  mofstructure_topology ./folder ligand_cluster --flush-every 100
   ```
 
 ### Use as a libray

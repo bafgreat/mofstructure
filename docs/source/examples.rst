@@ -1,9 +1,17 @@
 How to Guide
 ============
-This section provides step-by-step instructions on how to use `mofstructure` both from the command line and as a Python library. Whether you're new to this module or just need a refresher, this guide will help you get started with ease.
+This section provides detailed
+step-by-step examples demonstrating how to use `mofstructure`
+both as a Python library and from the command line.
+The aim is to guide users from a raw crystal structure
+(e.g. CIF file) to meaningful structural, topological and chemical insights.
+
 
 Quick Start Guide
 ===================
+
+The `MOFstructure` class provides a simple
+and unified interface to most functionalities
 
 .. code-block:: python
    from mofstructure import structure
@@ -37,14 +45,138 @@ Quick Start Guide
    # get open metal sites
    open_metal_sites = mofdata.get_oms()
 
+Reading Structures
+====================
+`mofstructure` supports all formats readable by ASE (e.g. CIF, POSCAR, XYZ).
+
+.. code-block:: python
+
+   from mofstructure import structure
+
+   mof = structure.MOFstructure(filename="structure.cif")
+
+Alternatively an ASE Atoms object can be passed directly:
+
+.. code-block:: python
+
+   from mofstructure import structure
+   mof = structure.MOFstructure(ase_atoms=ase_atoms)
+
+
+Removing Guest Molecules
+========================
+Many experimentally resolved MOFs contain solvent
+or guest molecules that are not part of the framework.
+ These must be removed before analysis.
+
+.. code-block:: python
+
+   clean_structure = mof.remove_guest()
+
+This codes identifies disconnected components in the periodic graph and removes unbound fragments.
+
+Deconstruction: Building Units
+===============================
+A central feature of mofstructure is the decomposition of a framework into:
+- Metal secondary building units (SBUs)
+- Organic SBUs (linkers)
+- Organic ligands
+- metal clusters
+
+.. code-block:: python
+
+   metal_sbus, organic_sbus = mof.get_sbu()
+   metal_clusters, organic_ligands = mof.get_ligands()
+
+Each building unit is returned as an ASE Atoms object with additional metadata stored in .info.
+
+.. code-block:: python
+
+   for sbu in metal_sbus:
+      print(sbu.info["sbu_type"])
+      print(sbu.info["inchikey"])
+
+Available information includes:
+- SMILES
+- InChI / InChIKey
+- SBU type (e.g. paddlewheel, rod-like)
+- Points of extension
+
+Saving building units:
+-----------------------
+.. code-block:: python
+
+   for i, sbu in enumerate(metal_sbus):
+      sbu.write(f"metal_sbu_{i}.cif")
+
+Topology Analysis
+=================
+
+Topology is determined using a graph representation of the framework and analysed using Systre.
+This is possible becuase of the deconstruction into building units, which allows for different levels of abstraction.
+
+.. code-block:: python
+
+   topology = mof.get_topology(method="all_node")
+   print(topology["topology"]) # e.g. pcu, dia
+   print(topology["dimension"]) # 2 or 3
+   print(topology["td10"])
+
+Available methods:
+
+- all_node: full atomic network
+- sbus: SBU-based coarse graining
+- ligand_cluster: ligand-based abstraction
+
+The output includes:
+- RCSR topology name
+- Dimensionality
+- Topological descriptors
+- TD10 value
+- Topology hash for uniqueness
+- systre optimised cgd string representation
+
+Porosity Analysis
+=================
+Porosity properties are computed using our python wrapper around Zeo++ called pyzeo.
+
+.. code-block:: python
+   pores = mof.get_porosity(
+   probe_radius=1.86,
+   number_of_steps=10000,
+   high_accuracy=True
+   )
+   print(pores["AV_Volume_fraction"])
+   print(pores["ASA_m2_cm3"])
+
+Typical outputs include:
+- Accessible volume fraction
+- Accessible surface area
+- Pore limiting diameter (PLD)
+- Largest cavity diameter (LCD)
+
+For high-quality results, `high_accuracy=True` is recommended.
+
+
+Open Metal Sites (OMS)
+=======================
+Open metal sites are important for adsorption and catalysis.
+
+   .. code-block:: python
+   oms = mof.get_oms()
+
+The returned data typically includes:
+- Metal identity
+- Coordination environment
+- Atomic indices
 
 Run on the Command Line
 ==========================
 
 One of the most powerful features of `mofstructure` is its ability to perform complex operations directly from the command line. Below, we walk you through how to deconstruct metal-organic frameworks (MOFs) into their building units and how to create a database of MOFs from multiple files.
 
-Building Units
-----------------
+Deconstruct a structure:
+------------------------
 
 If you have a CIF file (or any file format that ASE can read, such as POSCAR, XYZ, etc.) containing a MOF, you can deconstruct it into its constituent building units using a simple command. This command processes the MOF structure and saves the results in an organized folder structure.
 

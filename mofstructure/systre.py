@@ -803,6 +803,7 @@ def _resolve_jdk4py_java() -> Optional[str]:
 
     return None
 
+_CACHED_JAVA: Optional[str] = None
 
 def find_java(java: Optional[str] = None) -> str:
     '''
@@ -1150,25 +1151,54 @@ def _parse_rcsr_name(block: str) -> Optional[str]:
     return match.group(1) if match else None
 
 
+def _default_cell_from_dimension(dimension: int) -> Cell6:
+    '''
+    Return a fallback cell when Systre does not print relaxed cell parameters.
+
+    This is mainly needed for UNKNOWN / new 1D and 0D components, where
+    Systre may print relaxed positions and edges but omit a full cell block.
+
+    **parameters:**
+        dimension: int
+            Component periodic dimension.
+
+    **returns:**
+        tuple
+            (a, b, c, alpha, beta, gamma)
+    '''
+    if dimension == 2:
+        return (1.0, 1.0, 1.0, 90.0, 90.0, 90.0)
+    if dimension == 1:
+        return (1.0, 1.0, 1.0, 90.0, 90.0, 90.0)
+    if dimension == 0:
+        return (1.0, 1.0, 1.0, 90.0, 90.0, 90.0)
+    return (1.0, 1.0, 1.0, 90.0, 90.0, 90.0)
+
 def _parse_dimension(block: str) -> Optional[int]:
     '''
     Parse the periodic dimension from a Systre block.
 
-    **parameters:**
-        block: str
-            One Systre component block.
-
-    **returns:**
-        int or None
+    For disconnected systems, the block may still contain the global
+    "Input structure described as 3-periodic" line before the component
+    section. We therefore prefer:
+        1) explicit "dimension = N"
+        2) the last "described as N-periodic" match
     '''
-    for pattern in (
-        r"described\s+as\s+(\d+)\s*-\s*periodic",
-        r"described\s+as\s+(\d+)\s+periodic",
-        r"dimension\s*=\s*(\d+)",
-    ):
-        match = re.search(pattern, block, flags=re.IGNORECASE)
-        if match:
-            return int(match.group(1))
+    match = re.search(r"dimension\s*=\s*(\d+)", block, flags=re.IGNORECASE)
+    if match:
+        return int(match.group(1))
+
+    matches = re.findall(
+        r"described\s+as\s+(\d+)\s*-\s*periodic|described\s+as\s+(\d+)\s+periodic",
+        block,
+        flags=re.IGNORECASE,
+    )
+    if matches:
+        last = matches[-1]
+        for val in reversed(last):
+            if val:
+                return int(val)
+
     return None
 
 
@@ -1429,16 +1459,21 @@ def parse_relaxed_component(block: str, component_index: int) -> Optional[Relaxe
     **returns:**
         RelaxedComponent or None
     '''
+    dimension = _parse_dimension(block) or 0
     cell = _parse_relaxed_cell(block)
     nodes = _parse_relaxed_positions(block)
     edges = _parse_edges(block)
-    if not cell or not nodes or edges is None:
+
+    if not nodes or edges is None:
         return None
+
+    if cell is None:
+        cell = _default_cell_from_dimension(dimension)
 
     given_sg, ideal_sg = _parse_space_groups(block)
     return RelaxedComponent(
         component_index=component_index,
-        dimension=_parse_dimension(block) or 0,
+        dimension=dimension,
         cell=cell,
         nodes=nodes,
         edges=edges,
@@ -1831,9 +1866,10 @@ def crystal2_text_from_component(
     a, b, c, alpha, beta, gamma = comp.cell
 
     lines = [
-        "# Generated from Systre stdout (relaxed) -> CRYSTAL2",
-        f"# Component: {comp.component_index}",
-        f"# Systre-dimension: {comp.dimension}",
+        "# CRYSTAL2 CGD generated from mofstructure's Systre output",
+        f'# mofstructure:https://github.com/bafgreat/mofstructure.git',
+        f"# Author: Dinga Wonanke <dak52@uclive.ac.uk>",
+        f"# Dimension: {comp.dimension}",
         f"# TD10: {comp.td10 if comp.td10 is not None else 'N/A'}",
     ]
     if comp.rcsr_name:

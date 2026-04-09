@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
+__author__ = "Dr. Dinga Wonanke"
+__status__ = "production"
 
 import argparse
 from pathlib import Path

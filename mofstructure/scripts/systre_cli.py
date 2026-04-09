@@ -1,48 +1,22 @@
 #!/usr/bin/env python3
-"""
-mofstructure_topology CLI
-
-This CLI uses `MOFstructure.get_topology()` from `mofstructure.structure`.
-
-Supported input:
-  - one file
-  - multiple files
-  - one or more folders
-
-Behavior:
-  - if an input is a file, it is processed directly
-  - if an input is a folder, all ASE-readable files inside it are found and processed
-  - results can be written to CSV and/or JSON
-
-Notes
------
-This script delegates topology detection to:
-
-    MOFstructure(filename=...).get_topology(...)
-
-Therefore, it automatically uses the topology workflow already implemented
-in `mofstructure.structure` and `mofstructure.systre`.
-"""
-
 from __future__ import annotations
+__author__ = "Dr. Dinga Wonanke"
+__status__ = "production"
 
 import argparse
 import csv
+import gc
+import hashlib
 import json
+import re
 from pathlib import Path
-from typing import Dict, List, Optional, Sequence
+from typing import Dict, List, Optional, Sequence, Set, Tuple
 
-from ase.io import read
 from mofstructure.structure import MOFstructure
+from mofstructure.filetyper import convert_numpy_types, load_dict_msgpack, save_dict_msgpack
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """
-    Build the command-line parser.
-
-    **returns:**
-        argparse.ArgumentParser
-    """
     parser = argparse.ArgumentParser(
         description="Compute topology using MOFstructure.get_topology() for files or folders."
     )
@@ -54,7 +28,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--method",
         choices=["sbus", "all_node", "ligand_cluster"],
-        default="all_node",
+        default="ligand_cluster",
         help="Topology method passed to MOFstructure.get_topology().",
     )
     parser.add_argument(
@@ -71,7 +45,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--fallback-to-input-cgd",
         action="store_true",
-        help="Fallback to input CGD text if no relaxed component is parsed.",
+        help="Fallback to input CGD text when needed.",
     )
     parser.add_argument(
         "--recursive",
@@ -86,64 +60,65 @@ def build_parser() -> argparse.ArgumentParser:
         help="Do not recurse into folders.",
     )
     parser.add_argument(
-        "--csv",
-        dest="csv_out",
-        default="Topology.csv",
-        help="Write results to CSV file.",
+        "--flush-every",
+        type=int,
+        default=1000,
+        help="Flush one MessagePack batch every N processed files (default: 100).",
+    )
+    parser.add_argument(
+        "--batch-dir",
+        default="Topology_msgpack_batches",
+        help="Directory for intermediate MessagePack batch files.",
+    )
+    parser.add_argument(
+        "--msgpack",
+        dest="msgpack_out",
+        default="Topology.msgpack",
+        help="Final merged MessagePack file.",
     )
     parser.add_argument(
         "--json",
         dest="json_out",
         default="Topology.json",
-        help="Write results to JSON file.",
+        help="Final merged JSON file.",
+    )
+    parser.add_argument(
+        "--csv",
+        dest="csv_out",
+        default="Topology.csv",
+        help="Final merged CSV summary file.",
+    )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        default=True,
+        help="Resume from existing batch files (default: True).",
+    )
+    parser.add_argument(
+        "--no-resume",
+        action="store_false",
+        dest="resume",
+        help="Ignore existing batch files and recompute everything.",
+    )
+    parser.add_argument(
+        "--finalise-only",
+        action="store_true",
+        help="Do not compute new files; only merge existing batch files into final outputs.",
     )
     parser.add_argument(
         "--verbose",
         action="store_true",
-        help="Print full topology dictionaries.",
+        help="Print full topology dictionaries during processing.",
     )
     return parser
 
 
-def _is_ase_readable(path: Path) -> bool:
-    """
-    Check whether ASE can read a file.
-
-    **parameters:**
-        path: pathlib.Path
-            Input file path.
-
-    **returns:**
-        bool
-    """
-    try:
-        read(path)
-        return True
-    except Exception:
-        return False
-
-
 def _collect_input_files(inputs: Sequence[str], recursive: bool = True) -> List[Path]:
     """
-    Collect all readable files from input paths.
-
-    Rules:
-      - files are added directly
-      - directories are searched for ASE-readable files
-
-    **parameters:**
-        inputs: sequence
-            Input file and/or folder paths.
-
-        recursive: bool
-            If True, recurse into folders.
-
-    **returns:**
-        list
-            List of unique readable file paths.
+    Fast collection: do not pre-read with ASE. Just gather files and let compute fail naturally.
     """
     collected: List[Path] = []
-    seen = set()
+    seen: Set[str] = set()
 
     for item in inputs:
         path = Path(item)
@@ -153,13 +128,10 @@ def _collect_input_files(inputs: Sequence[str], recursive: bool = True) -> List[
             continue
 
         if path.is_file():
-            if _is_ase_readable(path):
-                resolved = str(path.resolve())
-                if resolved not in seen:
-                    collected.append(path)
-                    seen.add(resolved)
-            else:
-                print(f"Warning: ASE could not read file: {path}")
+            resolved = str(path.resolve())
+            if resolved not in seen:
+                collected.append(path)
+                seen.add(resolved)
             continue
 
         if path.is_dir():
@@ -167,14 +139,32 @@ def _collect_input_files(inputs: Sequence[str], recursive: bool = True) -> List[
             for subpath in iterator:
                 if not subpath.is_file():
                     continue
-                if not _is_ase_readable(subpath):
-                    continue
                 resolved = str(subpath.resolve())
                 if resolved not in seen:
                     collected.append(subpath)
                     seen.add(resolved)
 
     return collected
+
+
+def _safe_stem(path: Path) -> str:
+    """
+    Create a filesystem- and JSON-friendly name stem.
+    """
+    stem = path.stem.strip()
+    stem = re.sub(r"\s+", "_", stem)
+    stem = re.sub(r"[^A-Za-z0-9_.-]", "_", stem)
+    return stem or "structure"
+
+
+def _make_record_key(path: Path) -> str:
+    """
+    Deterministic unique key based on resolved path.
+    This avoids collisions and makes resume safe.
+    """
+    resolved = str(path.resolve())
+    digest = hashlib.sha1(resolved.encode("utf-8")).hexdigest()[:12]
+    return f"{_safe_stem(path)}__{digest}"
 
 
 def _compute_topology(
@@ -185,29 +175,6 @@ def _compute_topology(
     include_edge_centers: bool,
     fallback_to_input_cgd: bool,
 ) -> Dict[str, object]:
-    """
-    Compute topology data for one structure file.
-
-    **parameters:**
-        path: pathlib.Path
-            Input structure path.
-
-        method: str
-            Topology method.
-
-        decimals: int
-            Number of decimal places used in topology hashing.
-
-        include_edge_centers: bool
-            If True, include edge-center comments in the CRYSTAL2 text.
-
-        fallback_to_input_cgd: bool
-            If True, fallback to input CGD text when needed.
-
-    **returns:**
-        python dictionary
-            Topology data returned by `MOFstructure.get_topology()`.
-    """
     structure = MOFstructure(filename=str(path))
     data = structure.get_topology(
         method=method,
@@ -215,89 +182,191 @@ def _compute_topology(
         include_edge_centers=include_edge_centers,
         fallback_to_input_cgd=fallback_to_input_cgd,
     )
-    return data
+    return convert_numpy_types(data)
 
 
-def _write_csv(path: Path, mapping: Dict[str, Dict[str, object]]) -> None:
+def _write_batch(
+    batch_dir: Path,
+    batch_index: int,
+    batch_data: Dict[str, Dict[str, object]],
+    batch_sources: List[str],
+) -> Tuple[Path, Path]:
     """
-    Write topology results to CSV.
+    Write one MessagePack batch plus a tiny .sources checkpoint file.
+    """
+    batch_dir.mkdir(parents=True, exist_ok=True)
 
-    **parameters:**
-        path: pathlib.Path
-            Output CSV path.
+    msgpack_path = batch_dir / f"batch_{batch_index:06d}.msgpack"
+    sources_path = batch_dir / f"batch_{batch_index:06d}.sources"
 
-        mapping: python dictionary
-            Mapping:
-                basename -> topology data dictionary
+    save_dict_msgpack(batch_data, str(msgpack_path))
+
+    with sources_path.open("w", encoding="utf-8") as handle:
+        for source in batch_sources:
+            handle.write(source + "\n")
+
+    return msgpack_path, sources_path
+
+
+def _discover_completed_sources(batch_dir: Path) -> Set[str]:
+    """
+    Resume quickly by reading only the small .sources files, not the full msgpack data.
+    """
+    completed: Set[str] = set()
+    if not batch_dir.exists():
+        return completed
+
+    for source_file in sorted(batch_dir.glob("batch_*.sources")):
+        with source_file.open("r", encoding="utf-8") as handle:
+            for line in handle:
+                source = line.strip()
+                if source:
+                    completed.add(source)
+
+    return completed
+
+
+def _next_batch_index(batch_dir: Path) -> int:
+    """
+    Continue numbering batch files correctly on resume.
+    """
+    if not batch_dir.exists():
+        return 1
+
+    max_index = 0
+    for path in batch_dir.glob("batch_*.msgpack"):
+        match = re.match(r"batch_(\d+)\.msgpack$", path.name)
+        if match:
+            max_index = max(max_index, int(match.group(1)))
+    return max_index + 1
+
+
+def _merge_batches(batch_dir: Path) -> Dict[str, Dict[str, object]]:
+    """
+    Merge all batch MessagePack files into one in-memory dictionary.
+
+    This is the most memory-intensive step, but it happens only once at the end.
+    """
+    merged: Dict[str, Dict[str, object]] = {}
+
+    batch_files = sorted(batch_dir.glob("batch_*.msgpack"))
+    if not batch_files:
+        return merged
+
+    for batch_file in batch_files:
+        batch_data = load_dict_msgpack(str(batch_file))
+        merged.update(batch_data)
+        del batch_data
+
+    gc.collect()
+    return merged
+
+
+def _write_final_msgpack(path: Path, data: Dict[str, Dict[str, object]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    save_dict_msgpack(data, str(path))
+
+
+def _write_final_json(path: Path, data: Dict[str, Dict[str, object]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    ordered = {key: data[key] for key in sorted(data)}
+    with path.open("w", encoding="utf-8") as handle:
+        json.dump(ordered, handle, indent=4, sort_keys=True)
+
+
+def _write_final_csv(path: Path, data: Dict[str, Dict[str, object]]) -> None:
+    """
+    Summary CSV only. Heavy CGD text fields are intentionally not written here.
     """
     path.parent.mkdir(parents=True, exist_ok=True)
 
     fieldnames = [
+        "record_id",
         "MOF name",
         "topology",
         "dimension",
         "td10",
         "topology_hash",
-        "cgd_crystal2text",
     ]
 
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
 
-        for key in sorted(mapping):
-            row = mapping[key]
+        for key in sorted(data):
+            row = data[key]
             writer.writerow(
                 {
-                    "MOF name": key,
+                    "record_id": key,
+                    "MOF name": row.get("mof_name"),
                     "topology": row.get("topology"),
                     "dimension": row.get("dimension"),
                     "td10": row.get("td10"),
                     "topology_hash": row.get("topology_hash"),
-                    "cgd_crystal2text": row.get("cgd_crystal2text"),
                 }
             )
 
 
-def _write_json(path: Path, mapping: Dict[str, Dict[str, object]]) -> None:
-    """
-    Write topology results to JSON.
-
-    **parameters:**
-        path: pathlib.Path
-            Output JSON path.
-
-        mapping: python dictionary
-            Mapping:
-                basename -> topology data dictionary
-    """
-    path.parent.mkdir(parents=True, exist_ok=True)
-    ordered = {key: mapping[key] for key in sorted(mapping)}
-    path.write_text(json.dumps(ordered, indent=4, sort_keys=True), encoding="utf-8")
-
-
 def main(argv: Optional[Sequence[str]] = None) -> int:
-    """
-    Command-line entry point.
-
-    **parameters:**
-        argv: list, optional
-            Command-line arguments.
-
-    **returns:**
-        int
-            Exit status code.
-    """
     args = build_parser().parse_args(argv)
+
+    batch_dir = Path(args.batch_dir)
+    msgpack_path = Path(args.msgpack_out) if args.msgpack_out else None
+    json_path = Path(args.json_out) if args.json_out else None
+    csv_path = Path(args.csv_out) if args.csv_out else None
+
+    if args.finalise_only:
+        merged = _merge_batches(batch_dir)
+        if not merged:
+            raise SystemExit(f"No batch MessagePack files found in: {batch_dir}")
+
+        if msgpack_path:
+            _write_final_msgpack(msgpack_path, merged)
+            print(f"Wrote MessagePack: {msgpack_path}")
+
+        if json_path:
+            _write_final_json(json_path, merged)
+            print(f"Wrote JSON: {json_path}")
+
+        if csv_path:
+            _write_final_csv(csv_path, merged)
+            print(f"Wrote CSV: {csv_path}")
+
+        del merged
+        gc.collect()
+        return 0
 
     files = _collect_input_files(args.inputs, recursive=args.recursive)
     if not files:
-        raise SystemExit("No ASE-readable files were found.")
+        raise SystemExit("No input files were found.")
 
-    results: Dict[str, Dict[str, object]] = {}
-    counts: Dict[str, int] = {}
+    completed_sources: Set[str] = set()
+    if args.resume:
+        completed_sources = _discover_completed_sources(batch_dir)
+
+    next_batch_index = _next_batch_index(batch_dir) if args.resume else 1
+
+    total_inputs = len(files)
+    skipped = 0
+    processed_new = 0
+
+    batch_results: Dict[str, Dict[str, object]] = {}
+    batch_sources: List[str] = []
+
+    print(f"Found {total_inputs} candidate files.")
+    if args.resume:
+        print(f"Resume mode: {len(completed_sources)} previously flushed files will be skipped.")
+    print(f"Starting batch index: {next_batch_index}")
 
     for filepath in files:
+        resolved = str(filepath.resolve())
+
+        if args.resume and resolved in completed_sources:
+            skipped += 1
+            continue
+
+        key = _make_record_key(filepath)
+
         try:
             topo_data = _compute_topology(
                 filepath,
@@ -312,30 +381,82 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 "dimension": None,
                 "td10": None,
                 "topology_hash": None,
-                "cgd_crystal2text": None,
-                "error": str(exc),
+                "cgd": None
             }
 
-        stem = filepath.stem
-        if stem in results:
-            counts[stem] = counts.get(stem, 1) + 1
-            key = f"{stem}__{counts[stem]}"
-        else:
-            counts[stem] = 1
-            key = stem
+        record = {
+            "mof_name": filepath.stem,
+            "source": resolved,
+            **topo_data,
+        }
 
-        results[key] = topo_data
+        batch_results[key] = record
+        batch_sources.append(resolved)
+        processed_new += 1
 
-        print(f"{filepath}\t{topo_data.get('topology')}")
+        print(f"{filepath}\t{record.get('topology')}")
         if args.verbose:
-            print(json.dumps(topo_data, indent=2, sort_keys=True))
+            print(json.dumps(record, indent=2, sort_keys=True))
 
-    if args.csv_out:
-        _write_csv(Path(args.csv_out), results)
+        if len(batch_results) >= args.flush_every:
+            msgpack_batch, sources_batch = _write_batch(
+                batch_dir=batch_dir,
+                batch_index=next_batch_index,
+                batch_data=batch_results,
+                batch_sources=batch_sources,
+            )
+            print(f"Flushed batch {next_batch_index}: {msgpack_batch}")
+            print(f"Checkpoint file: {sources_batch}")
 
-    if args.json_out:
-        _write_json(Path(args.json_out), results)
+            completed_sources.update(batch_sources)
+            batch_results.clear()
+            batch_sources.clear()
+            next_batch_index += 1
+            gc.collect()
 
+        del topo_data
+        del record
+
+    if batch_results:
+        msgpack_batch, sources_batch = _write_batch(
+            batch_dir=batch_dir,
+            batch_index=next_batch_index,
+            batch_data=batch_results,
+            batch_sources=batch_sources,
+        )
+        print(f"Flushed final batch {next_batch_index}: {msgpack_batch}")
+        print(f"Checkpoint file: {sources_batch}")
+
+        completed_sources.update(batch_sources)
+        batch_results.clear()
+        batch_sources.clear()
+        gc.collect()
+
+    print(f"Processing complete.")
+    print(f"Newly processed this run: {processed_new}")
+    print(f"Skipped from checkpoint: {skipped}")
+
+    merged = _merge_batches(batch_dir)
+    if not merged:
+        raise SystemExit(f"No batch MessagePack files found in: {batch_dir}")
+
+    if msgpack_path:
+        _write_final_msgpack(msgpack_path, merged)
+        print(f"Wrote MessagePack: {msgpack_path}")
+
+    if json_path:
+        _write_final_json(json_path, merged)
+        print(f"Wrote JSON: {json_path}")
+
+    if csv_path:
+        _write_final_csv(csv_path, merged)
+        print(f"Wrote CSV: {csv_path}")
+
+    print(f"Done. Total merged records: {len(merged)}")
+    print(f"Intermediate batches remain in: {batch_dir}")
+
+    del merged
+    gc.collect()
     return 0
 
 
