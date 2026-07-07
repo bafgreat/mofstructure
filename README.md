@@ -1,12 +1,10 @@
 <!-- markdownlint-disable MD033 -->
 <div align="center">
 
-
 # mofstructure
-
 A Python toolkit for topology, porosity, and building-unit analysis of MOFs
 
-<img src="https://raw.githubusercontent.com/bafgreat/mofstructure/main/docs/source/images/DUT-8.gif" width="800" height="1200">
+<img src="https://raw.githubusercontent.com/bafgreat/mofstructure/main/docs/source/images/DUT-8.gif" width="50%">
 
 </div>
 <!-- markdownlint-enable MD033 -->
