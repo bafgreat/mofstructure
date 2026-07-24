@@ -70,9 +70,14 @@ html_show_sourcelink = True
 html_show_copyright = True
 html_show_powered_by = False
 
-# Palette: #000000 #14213d #fca311 #e5e5e5 #ffffff
-# The colours alabaster itself renders are set here; everything alabaster does
-# not expose as an option is handled in _static/style.css.
+# Palette: #000000 #14213d #fb8500 (navigation) #fca311 #e5e5e5 #ffffff
+# The colours alabaster renders itself are set here; anything it does not
+# expose as an option is handled in _static/style.css.
+#
+# sidebar_width is load bearing: alabaster gives div.bodywrapper a left margin
+# of exactly this value, so the stylesheet keeps the sidebar's padding inside
+# it with box-sizing: border-box. Widening the padding without that makes the
+# sidebar overlap the body text.
 html_theme_options = {
     'description': 'Topology, porosity and building-unit analysis of MOFs',
     'github_user': 'bafgreat',
@@ -80,24 +85,28 @@ html_theme_options = {
     'github_button': True,
     'github_type': 'star',
     'fixed_sidebar': True,
-    'page_width': '1180px',
-    'sidebar_width': '260px',
+    'page_width': '1200px',
+    'sidebar_width': '270px',
 
-    'body_text': '#14213d',
+    'body_text': '#1f2a44',
     'link': '#14213d',
-    'link_hover': '#fca311',
-    'sidebar_header': '#fca311',
-    'sidebar_text': '#e5e5e5',
-    'sidebar_link': '#ffffff',
-    'sidebar_hr': '#fca311',
+    'link_hover': '#fb8500',
+    'sidebar_header': '#fb8500',
+    'sidebar_text': '#c8cedb',
+    'sidebar_link': '#eaeef5',
+    'sidebar_link_underscore': '#fb8500',
+    'sidebar_hr': 'rgba(251, 133, 0, 0.3)',
+    'sidebar_search_button': '#fb8500',
+    'anchor': '#fb8500',
+    'anchor_hover_fg': '#fb8500',
     'gray_1': '#14213d',
-    'gray_2': '#e5e5e5',
-    'gray_3': '#000000',
-    'pre_bg': '#e5e5e5',
-    'note_bg': '#e5e5e5',
+    'gray_2': '#f4f5f7',
+    'gray_3': '#5a6478',
+    'pre_bg': '#f4f5f7',
+    'note_bg': '#f7f8fa',
     'note_border': '#14213d',
-    'warn_bg': '#fdf0d5',
-    'warn_border': '#fca311',
+    'warn_bg': '#fff8f0',
+    'warn_border': '#fb8500',
 }
 
 todo_include_todos = True

@@ -2,53 +2,75 @@
  * mofstructure documentation theme
  *
  * Palette
- *   #000000  black      code, strong text
- *   #14213d  oxford blue  headings, sidebar, links
- *   #fca311  amber      accents, hover, active state
- *   #e5e5e5  platinum   rules, code background, table banding
- *   #ffffff  white      page background
+ *   #000000  black       code text
+ *   #14213d  oxford blue headings, sidebar, body text
+ *   #fb8500  orange      navigation
+ *   #fca311  amber       accents and rules
+ *   #e5e5e5  platinum    code background, borders, banding
+ *   #ffffff  white       page background
  *
- * These rules layer on top of alabaster, so the selectors below are the ones
- * alabaster actually emits (div.body, div.sphinxsidebar, div.related and so
- * on). Anything set through html_theme_options in conf.py is not repeated here.
+ * These rules layer on top of alabaster, so the selectors are the ones
+ * alabaster actually emits. Two of its layout decisions have to be respected:
+ * div.bodywrapper reserves exactly the sidebar width as a left margin, so the
+ * sidebar must never render wider than that; and below 1180px alabaster
+ * restyles the sidebar itself, which is overridden at the end of this file.
  */
 
 :root {
   --ms-black: #000000;
   --ms-blue: #14213d;
+  --ms-orange: #fb8500;
   --ms-amber: #fca311;
   --ms-platinum: #e5e5e5;
   --ms-white: #ffffff;
 
   --ms-page-bg: var(--ms-white);
-  --ms-text: var(--ms-blue);
+  --ms-text: #1f2a44;
   --ms-heading: var(--ms-blue);
+  --ms-muted: #5a6478;
   --ms-rule: var(--ms-platinum);
-  --ms-code-bg: var(--ms-platinum);
+  --ms-code-bg: #f4f5f7;
   --ms-code-text: var(--ms-black);
   --ms-sidebar-bg: var(--ms-blue);
-  --ms-sidebar-text: var(--ms-platinum);
+  --ms-sidebar-text: #c8cedb;
+
+  --ms-serif: 'Iowan Old Style', 'Palatino Linotype', Palatino,
+    'Book Antiqua', Georgia, 'Times New Roman', serif;
+  --ms-sans: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  --ms-mono: 'SF Mono', 'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo,
+    Consolas, 'Liberation Mono', monospace;
 }
 
 /* ---------- page ---------- */
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Open Sans',
-    Helvetica, Arial, sans-serif;
-  font-size: 16px;
-  line-height: 1.7;
+  font-family: var(--ms-sans);
+  font-size: 16.5px;
+  line-height: 1.72;
   color: var(--ms-text);
   background-color: var(--ms-page-bg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 div.body {
   color: var(--ms-text);
   background-color: var(--ms-page-bg);
+  font-size: 1rem;
   max-width: 100%;
+  padding: 0 0 0 2.2rem;
+  -webkit-hyphens: none;
+  hyphens: none;
 }
 
 div.bodywrapper {
   background-color: var(--ms-page-bg);
+}
+
+div.body > .section,
+div.body > section {
+  max-width: 46rem;
 }
 
 /* ---------- headings ---------- */
@@ -59,35 +81,39 @@ div.body h3,
 div.body h4,
 div.body h5,
 div.body h6 {
-  font-family: inherit;
+  font-family: var(--ms-serif);
   font-weight: 600;
+  letter-spacing: -0.01em;
   color: var(--ms-heading);
-  line-height: 1.3;
-  margin: 1.6em 0 0.6em;
+  line-height: 1.25;
+  margin: 2.2rem 0 0.75rem;
 }
 
 div.body h1 {
-  font-size: 2.1rem;
-  border-bottom: 3px solid var(--ms-amber);
-  padding-bottom: 0.3em;
+  font-size: 2.35rem;
   margin-top: 0;
+  padding-bottom: 0.35rem;
+  border-bottom: 2px solid var(--ms-amber);
 }
 
 div.body h2 {
-  font-size: 1.6rem;
+  font-size: 1.65rem;
+  padding-bottom: 0.25rem;
   border-bottom: 1px solid var(--ms-rule);
-  padding-bottom: 0.25em;
 }
 
 div.body h3 { font-size: 1.3rem; }
-div.body h4 { font-size: 1.1rem; }
+div.body h4 { font-size: 1.12rem; font-family: var(--ms-sans); font-weight: 650; }
+div.body h5,
+div.body h6 { font-size: 1rem; font-family: var(--ms-sans); font-weight: 650; }
 
-/* the paragraph anchor alabaster adds on hover */
 a.headerlink {
-  color: var(--ms-amber);
+  color: var(--ms-orange);
   text-decoration: none;
-  padding-left: 0.3em;
-  visibility: hidden;
+  padding-left: 0.35rem;
+  font-weight: 400;
+  opacity: 0;
+  transition: opacity 0.15s ease;
 }
 
 h1:hover > a.headerlink,
@@ -95,20 +121,23 @@ h2:hover > a.headerlink,
 h3:hover > a.headerlink,
 h4:hover > a.headerlink,
 dt:hover > a.headerlink {
-  visibility: visible;
+  opacity: 1;
 }
+
+p { margin: 0 0 1.05rem; }
 
 /* ---------- links ---------- */
 
-a {
+div.body a {
   color: var(--ms-blue);
   text-decoration: none;
-  border-bottom: 1px solid var(--ms-platinum);
+  border-bottom: 1px solid rgba(251, 133, 0, 0.45);
+  transition: color 0.15s ease, border-color 0.15s ease;
 }
 
-a:hover {
-  color: var(--ms-amber);
-  border-bottom-color: var(--ms-amber);
+div.body a:hover {
+  color: var(--ms-orange);
+  border-bottom-color: var(--ms-orange);
 }
 
 /* ---------- code ---------- */
@@ -116,164 +145,224 @@ a:hover {
 code,
 tt,
 code.literal,
-span.pre {
-  font-family: 'SF Mono', 'Source Code Pro', Menlo, Consolas, monospace;
-  font-size: 0.88em;
+div.body code.docutils {
+  font-family: var(--ms-mono);
+  font-size: 0.86em;
   background-color: var(--ms-code-bg);
   color: var(--ms-code-text);
-  padding: 0.15em 0.4em;
+  padding: 0.12em 0.38em;
+  border: 1px solid var(--ms-rule);
   border-radius: 3px;
-  border: none;
+}
+
+div.body a code {
+  color: var(--ms-blue);
 }
 
 pre {
-  font-family: 'SF Mono', 'Source Code Pro', Menlo, Consolas, monospace;
-  font-size: 0.86em;
-  line-height: 1.55;
+  font-family: var(--ms-mono);
+  font-size: 0.855em;
+  line-height: 1.6;
   background-color: var(--ms-code-bg);
   color: var(--ms-code-text);
-  border: none;
-  border-left: 4px solid var(--ms-amber);
-  border-radius: 0 4px 4px 0;
-  padding: 1em 1.2em;
+  border: 1px solid var(--ms-rule);
+  border-left: 3px solid var(--ms-orange);
+  border-radius: 0 5px 5px 0;
+  padding: 1rem 1.15rem;
   overflow-x: auto;
+  margin: 1.3rem 0;
 }
 
 pre code,
 div.highlight pre {
   background: none;
-  padding: 0;
   border: none;
+  padding: 0;
+  font-size: 1em;
 }
 
-div.highlight {
-  background: none;
-}
+div.highlight { background: none; }
 
-/* the copy button from sphinx_copybutton */
-button.copybtn {
-  opacity: 0.4;
-}
-
-button.copybtn:hover {
-  opacity: 1;
-}
+button.copybtn { opacity: 0.35; }
+button.copybtn:hover { opacity: 1; }
 
 /* ---------- sidebar ---------- */
 
+/*
+ * box-sizing is the important one. alabaster gives div.bodywrapper a left
+ * margin equal to the configured sidebar width, so padding added here has to
+ * stay inside that width or the sidebar sits on top of the body text.
+ */
 div.sphinxsidebar {
+  box-sizing: border-box;
   background-color: var(--ms-sidebar-bg);
   color: var(--ms-sidebar-text);
-  font-size: 0.92em;
-  padding: 1.5em 1.2em;
+  font-family: var(--ms-sans);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  padding: 1.5rem 1.25rem;
   border-radius: 6px;
+  overflow-y: auto;
+}
+
+div.sphinxsidebarwrapper {
+  padding: 0;
 }
 
 div.sphinxsidebar h3,
 div.sphinxsidebar h4 {
-  color: var(--ms-amber);
-  font-weight: 600;
-  border-bottom: 1px solid rgba(252, 163, 17, 0.35);
-  padding-bottom: 0.4em;
+  font-family: var(--ms-sans);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ms-orange);
+  margin: 1.5rem 0 0.6rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid rgba(251, 133, 0, 0.3);
 }
 
-div.sphinxsidebar h3 a {
-  color: var(--ms-amber);
-}
+div.sphinxsidebar h3:first-of-type { margin-top: 0.5rem; }
+
+div.sphinxsidebar h3 a { color: var(--ms-orange); }
 
 div.sphinxsidebar p,
 div.sphinxsidebar ul {
   color: var(--ms-sidebar-text);
 }
 
+div.sphinxsidebar p.logo { margin-bottom: 1rem; }
+
+div.sphinxsidebar ul {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+div.sphinxsidebar ul ul {
+  padding-left: 0.85rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  margin-left: 0.2rem;
+}
+
+div.sphinxsidebar li { margin: 0.1rem 0; }
+
 div.sphinxsidebar a {
-  color: var(--ms-white);
+  color: #eaeef5;
   border-bottom: none;
+  display: inline-block;
+  padding: 0.15rem 0;
+  transition: color 0.15s ease;
 }
 
-div.sphinxsidebar a:hover {
-  color: var(--ms-amber);
+div.sphinxsidebar a:hover,
+div.sphinxsidebar a.current {
+  color: var(--ms-orange);
 }
 
-div.sphinxsidebar ul li.toctree-l1 > a {
-  font-weight: 600;
-}
+div.sphinxsidebar ul li.toctree-l1 > a { font-weight: 600; }
+div.sphinxsidebar ul li.toctree-l2 > a { font-weight: 400; font-size: 0.95em; }
 
 div.sphinxsidebar input[type='text'] {
-  border: 1px solid var(--ms-platinum);
-  border-radius: 3px;
-  padding: 0.4em;
+  box-sizing: border-box;
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--ms-white);
+  border-radius: 4px;
+  padding: 0.45rem 0.6rem;
+  font-family: var(--ms-sans);
+}
+
+div.sphinxsidebar input[type='text']::placeholder { color: #9aa4b8; }
+
+div.sphinxsidebar input[type='text']:focus {
+  outline: none;
+  border-color: var(--ms-orange);
 }
 
 div.sphinxsidebar input[type='submit'] {
-  background-color: var(--ms-amber);
-  color: var(--ms-blue);
+  background-color: var(--ms-orange);
+  color: var(--ms-white);
   border: none;
-  border-radius: 3px;
-  padding: 0.4em 0.8em;
+  border-radius: 4px;
+  padding: 0.45rem 0.85rem;
+  margin-top: 0.4rem;
+  font-family: var(--ms-sans);
   font-weight: 600;
   cursor: pointer;
 }
 
-/* ---------- breadcrumb bar and footer ---------- */
+div.sphinxsidebar input[type='submit']:hover { background-color: #e07800; }
+
+/* ---------- breadcrumbs and footer ---------- */
 
 div.related {
   background-color: var(--ms-blue);
-  color: var(--ms-platinum);
-  border-radius: 4px;
-  padding: 0.5em 1em;
+  color: var(--ms-sidebar-text);
+  font-size: 0.88rem;
+  border-radius: 5px;
+  padding: 0.55rem 1rem;
+  margin-bottom: 1rem;
 }
 
 div.related a {
   color: var(--ms-white);
   border-bottom: none;
+  font-weight: 500;
 }
 
-div.related a:hover {
-  color: var(--ms-amber);
-}
+div.related a:hover { color: var(--ms-orange); }
 
 div.footer {
-  color: var(--ms-blue);
+  color: var(--ms-muted);
   border-top: 1px solid var(--ms-rule);
-  padding-top: 1em;
-  margin-top: 2.5em;
-  font-size: 0.85em;
+  padding-top: 1.1rem;
+  margin-top: 3rem;
+  font-size: 0.85rem;
 }
+
+div.footer a {
+  color: var(--ms-muted);
+  border-bottom: 1px solid var(--ms-rule);
+}
+
+div.footer a:hover { color: var(--ms-orange); }
 
 /* ---------- tables ---------- */
 
 table.docutils {
-  border: none;
+  border: 1px solid var(--ms-rule);
   border-collapse: collapse;
-  width: 100%;
-  margin: 1.5em 0;
+  border-radius: 5px;
+  font-size: 0.94rem;
+  margin: 1.5rem 0;
 }
 
 table.docutils th {
   background-color: var(--ms-blue);
   color: var(--ms-white);
+  font-family: var(--ms-sans);
   font-weight: 600;
   text-align: left;
-  padding: 0.7em 0.9em;
+  padding: 0.65rem 0.9rem;
   border: none;
 }
 
 table.docutils td {
-  padding: 0.7em 0.9em;
+  padding: 0.65rem 0.9rem;
   border: none;
-  border-bottom: 1px solid var(--ms-rule);
+  border-top: 1px solid var(--ms-rule);
+  vertical-align: top;
 }
 
-table.docutils tbody tr:nth-child(even) {
-  background-color: rgba(229, 229, 229, 0.4);
-}
+table.docutils tbody tr:nth-child(even) { background-color: #fafbfc; }
 
-/* wide tables scroll instead of pushing the page sideways */
-div.table-wrapper,
+/* wide tables scroll rather than pushing the page sideways */
 div.body table.docutils {
   display: block;
   overflow-x: auto;
+  max-width: 100%;
 }
 
 /* ---------- admonitions ---------- */
@@ -282,55 +371,74 @@ div.admonition,
 div.note,
 div.warning,
 div.danger,
-div.tip {
-  border: none;
-  border-left: 4px solid var(--ms-blue);
-  border-radius: 0 4px 4px 0;
-  background-color: var(--ms-platinum);
-  padding: 0.9em 1.2em;
-  margin: 1.5em 0;
+div.tip,
+div.important {
+  font-size: 0.96rem;
+  border: 1px solid var(--ms-rule);
+  border-left: 3px solid var(--ms-blue);
+  border-radius: 0 5px 5px 0;
+  background-color: #f7f8fa;
+  padding: 0.85rem 1.15rem;
+  margin: 1.5rem 0;
 }
 
 div.admonition p.admonition-title,
 div.note p.admonition-title,
-div.warning p.admonition-title {
-  font-weight: 600;
+div.warning p.admonition-title,
+div.tip p.admonition-title {
+  font-family: var(--ms-sans);
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--ms-blue);
-  margin-bottom: 0.4em;
+  margin-bottom: 0.35rem;
 }
 
 div.warning,
 div.danger {
-  border-left-color: var(--ms-amber);
+  border-left-color: var(--ms-orange);
+  background-color: #fff8f0;
 }
 
 div.warning p.admonition-title,
-div.danger p.admonition-title {
-  color: #8a5200;
-}
+div.danger p.admonition-title { color: #a35400; }
 
-/* ---------- api entries from autodoc ---------- */
+div.admonition p:last-child { margin-bottom: 0; }
+
+/* ---------- autodoc api entries ---------- */
 
 dl.py > dt,
 dl.class > dt,
 dl.function > dt,
-dl.method > dt {
-  background-color: var(--ms-platinum);
+dl.method > dt,
+dl.attribute > dt {
+  font-family: var(--ms-mono);
+  font-size: 0.88rem;
+  background-color: var(--ms-code-bg);
+  border: 1px solid var(--ms-rule);
   border-left: 3px solid var(--ms-amber);
-  border-radius: 0 3px 3px 0;
-  padding: 0.45em 0.7em;
-  margin-bottom: 0.6em;
-  font-family: 'SF Mono', 'Source Code Pro', Menlo, Consolas, monospace;
-  font-size: 0.9em;
+  border-radius: 0 4px 4px 0;
+  padding: 0.5rem 0.75rem;
+  margin: 1.4rem 0 0.7rem;
+  line-height: 1.5;
+}
+
+dl.py > dt code.descname,
+dl.py > dt .sig-name {
+  font-weight: 700;
+  color: var(--ms-blue);
 }
 
 dl.py dd {
-  margin-left: 1.2em;
-  border-left: 1px solid var(--ms-rule);
-  padding-left: 1.2em;
+  margin-left: 0;
+  padding-left: 1.15rem;
+  border-left: 2px solid var(--ms-rule);
 }
 
-/* ---------- media ---------- */
+em.property { color: var(--ms-muted); font-style: normal; }
+
+/* ---------- media and misc ---------- */
 
 div.body img,
 div.body video {
@@ -341,75 +449,144 @@ div.body video {
 
 blockquote {
   border-left: 3px solid var(--ms-amber);
-  background-color: var(--ms-platinum);
-  padding: 0.8em 1.2em;
-  margin: 1.5em 0;
-  border-radius: 0 4px 4px 0;
+  background-color: #f7f8fa;
+  padding: 0.75rem 1.15rem;
+  margin: 1.4rem 0;
+  border-radius: 0 5px 5px 0;
+  color: var(--ms-muted);
 }
 
 hr {
   border: none;
   border-top: 1px solid var(--ms-rule);
-  margin: 2.5em 0;
+  margin: 2.5rem 0;
+}
+
+::selection {
+  background: rgba(251, 133, 0, 0.25);
+}
+
+/* ---------- narrow screens ----------
+ *
+ * Below 1180px alabaster turns the sidebar into a full width block at the top
+ * of the page and hardcodes background #333 with black link text, which is
+ * close to unreadable. Everything here restores the palette for that layout.
+ */
+
+@media screen and (max-width: 1180px) {
+  body { font-size: 16px; }
+
+  div.body {
+    padding: 0;
+  }
+
+  div.body > .section,
+  div.body > section {
+    max-width: 100%;
+  }
+
+  div.sphinxsidebar {
+    background: var(--ms-blue);
+    border-radius: 0;
+    padding: 1.1rem 1.5rem;
+  }
+
+  div.sphinxsidebar h3,
+  div.sphinxsidebar h4,
+  div.sphinxsidebar h3 a {
+    color: var(--ms-orange);
+  }
+
+  div.sphinxsidebar p,
+  div.sphinxsidebar ul {
+    color: var(--ms-sidebar-text);
+  }
+
+  /* alabaster sets these to #000000 on a dark background */
+  div.sphinxsidebar a {
+    color: #eaeef5;
+  }
+
+  div.sphinxsidebar a:hover {
+    color: var(--ms-orange);
+  }
+
+  div.related {
+    border-radius: 0;
+    margin-bottom: 0;
+  }
+
+  /* alabaster hides the footer on narrow screens; keep the credit visible */
+  div.footer {
+    display: block;
+    padding: 1rem 1.5rem 2rem;
+    margin-top: 2rem;
+  }
+}
+
+@media screen and (max-width: 700px) {
+  body { font-size: 15.5px; line-height: 1.68; }
+
+  div.body h1 { font-size: 1.85rem; }
+  div.body h2 { font-size: 1.4rem; }
+  div.body h3 { font-size: 1.18rem; }
+
+  pre {
+    font-size: 0.8em;
+    padding: 0.8rem 0.9rem;
+  }
+
+  dl.py > dt {
+    font-size: 0.8rem;
+    padding: 0.45rem 0.6rem;
+  }
+
+  dl.py dd { padding-left: 0.8rem; }
+
+  table.docutils { font-size: 0.88rem; }
 }
 
 /* ---------- dark mode ---------- */
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --ms-page-bg: #0d1526;
-    --ms-text: var(--ms-platinum);
-    --ms-heading: var(--ms-white);
-    --ms-rule: #2a3450;
-    --ms-code-bg: #131d33;
-    --ms-code-text: var(--ms-platinum);
-    --ms-sidebar-bg: var(--ms-black);
+    --ms-page-bg: #0e1626;
+    --ms-text: #cdd4e0;
+    --ms-heading: #f2f5fa;
+    --ms-muted: #8d97a8;
+    --ms-rule: #263149;
+    --ms-code-bg: #141f33;
+    --ms-code-text: #d8dee9;
+    --ms-sidebar-bg: #070c16;
   }
 
-  a {
-    color: var(--ms-amber);
-    border-bottom-color: #2a3450;
-  }
+  div.body a { color: var(--ms-orange); }
+  div.body a code { color: var(--ms-orange); }
 
   table.docutils tbody tr:nth-child(even) {
-    background-color: rgba(255, 255, 255, 0.04);
+    background-color: rgba(255, 255, 255, 0.03);
   }
 
   div.admonition,
   div.note,
-  div.warning,
   div.tip,
   blockquote,
   dl.py > dt {
-    background-color: #131d33;
+    background-color: #141f33;
   }
+
+  div.warning,
+  div.danger { background-color: #241a0e; }
 
   div.admonition p.admonition-title,
-  div.note p.admonition-title {
-    color: var(--ms-amber);
-  }
+  div.note p.admonition-title,
+  div.tip p.admonition-title { color: var(--ms-amber); }
 
   div.warning p.admonition-title,
-  div.danger p.admonition-title {
-    color: var(--ms-amber);
-  }
+  div.danger p.admonition-title { color: var(--ms-orange); }
 
-  div.footer {
-    color: var(--ms-platinum);
-  }
-}
+  dl.py > dt .sig-name,
+  dl.py > dt code.descname { color: var(--ms-amber); }
 
-/* ---------- narrow screens ---------- */
-
-@media only screen and (max-width: 875px) {
-  div.sphinxsidebar {
-    border-radius: 0;
-  }
-
-  div.body h1 { font-size: 1.8rem; }
-  div.body h2 { font-size: 1.4rem; }
-
-  pre {
-    font-size: 0.8em;
-  }
+  div.body img { opacity: 0.92; }
 }
