@@ -35,7 +35,7 @@ The `mofstructure` module includes a variety of features that simplify common op
 4. **Deconstruction of Metal-Organic Frameworks into Building Units:**
    - `mofstructure` allows users to deconstruct MOFs into their constituent building units, including organic ligands, metal clusters, organic secondary building units (SBUs), and metal SBUs. For each building unit, the module computes important cheminformatic identifiers such as SMILES strings, InChI, and InChIKey. Additionally, it identifies the type of metal SBU and determines the coordination number of the central metal atom, which is crucial for understanding the structural properties of the framework.
 
-5. ** Determination of open metal sites (OMS) in MOFs:**
+5. **Determination of open metal sites (OMS) in MOFs:**
    - The module can identify and characterize open metal sites within MOF structures. This is particularly important for applications such as catalysis, where the presence of OMS can significantly influence the material's performance.
 
 6. **Wrapping Systems Around Unit Cells to Remove the Effect of Periodic Boundary Conditions (PBC):**

@@ -62,6 +62,8 @@ html_theme = 'alabaster'
 html_logo = '_static/logo.png'
 html_static_path = ['_static']
 html_css_files = ['style.css']
+# adds the mobile navigation bar; the stylesheet degrades gracefully without it
+html_js_files = ['nav.js']
 
 html_allow_unicode = True
 html_use_index = True
@@ -70,14 +72,19 @@ html_show_sourcelink = True
 html_show_copyright = True
 html_show_powered_by = False
 
-# Palette: #000000 #14213d #fb8500 (navigation) #fca311 #e5e5e5 #ffffff
-# The colours alabaster renders itself are set here; anything it does not
-# expose as an option is handled in _static/style.css.
+# xcode is chosen by measurement, not taste. Against the #edf2f4 code
+# background, one of its 61 coloured tokens falls below the 4.5:1 contrast
+# threshold, and that one sits at 4.49. Pygments' default style puts 20 tokens
+# below it, including every string literal at 3.13:1.
+pygments_style = 'xcode'
+
+# Palette: #2b2d42 #8d99ae #edf2f4 #f4f3ee #000000, with #fb8500 for
+# navigation, hover and active state. See _static/style.css for the measured
+# contrast constraints on where orange and grey may be used as text.
 #
 # sidebar_width is load bearing: alabaster gives div.bodywrapper a left margin
 # of exactly this value, so the stylesheet keeps the sidebar's padding inside
-# it with box-sizing: border-box. Widening the padding without that makes the
-# sidebar overlap the body text.
+# it with box-sizing: border-box. Without that the sidebar overlaps the text.
 html_theme_options = {
     'description': 'Topology, porosity and building-unit analysis of MOFs',
     'github_user': 'bafgreat',
@@ -88,24 +95,31 @@ html_theme_options = {
     'page_width': '1200px',
     'sidebar_width': '270px',
 
-    'body_text': '#1f2a44',
-    'link': '#14213d',
+    'extra_nav_links': {
+        'Source on GitHub': 'https://github.com/bafgreat/mofstructure',
+        'Package on PyPI': 'https://pypi.org/project/mofstructure/',
+        "Author's website": 'https://www.dingawonanke.com',
+    },
+
+    'body_bg': '#f4f3ee',
+    'body_text': '#2b2d42',
+    'link': '#2b2d42',
     'link_hover': '#fb8500',
     'sidebar_header': '#fb8500',
-    'sidebar_text': '#c8cedb',
-    'sidebar_link': '#eaeef5',
+    'sidebar_text': '#8d99ae',
+    'sidebar_link': '#edf2f4',
     'sidebar_link_underscore': '#fb8500',
-    'sidebar_hr': 'rgba(251, 133, 0, 0.3)',
+    'sidebar_hr': 'rgba(251, 133, 0, 0.35)',
     'sidebar_search_button': '#fb8500',
     'anchor': '#fb8500',
     'anchor_hover_fg': '#fb8500',
-    'gray_1': '#14213d',
-    'gray_2': '#f4f5f7',
-    'gray_3': '#5a6478',
-    'pre_bg': '#f4f5f7',
-    'note_bg': '#f7f8fa',
-    'note_border': '#14213d',
-    'warn_bg': '#fff8f0',
+    'gray_1': '#2b2d42',
+    'gray_2': '#edf2f4',
+    'gray_3': '#8d99ae',
+    'pre_bg': '#edf2f4',
+    'note_bg': '#edf2f4',
+    'note_border': '#2b2d42',
+    'warn_bg': '#edf2f4',
     'warn_border': '#fb8500',
 }
 

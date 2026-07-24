@@ -8,12 +8,13 @@ type: software
 authors:
   - family-names: Wonanke
     given-names: AD Dinga
+    website: "https://www.dingawonanke.com"
   - family-names: Heine
     given-names: Thomas
   - family-names: Longa
     given-names: Antonio
 
-version: "0.1.8.6"
+version: "0.1.8.7"
 date-released: 2026-02-02
 
 repository-code: "https://github.com/bafgreat/mofstructure"

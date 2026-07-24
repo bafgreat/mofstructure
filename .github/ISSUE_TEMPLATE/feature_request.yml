@@ -1,0 +1,26 @@
+name: Feature request
+description: Suggest an analysis or capability
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What do you need
+      description: Describe the analysis you want and what you would do with the result.
+    validations:
+      required: true
+
+  - type: textarea
+    id: chemistry
+    attributes:
+      label: Chemistry behind it
+      description: >
+        If this concerns an unusual building unit or coordination environment,
+        describe it and attach an example structure. Deconstruction rules are
+        much easier to write against a concrete case.
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you do at the moment
+      description: Any workaround you are currently using.

@@ -1,0 +1,68 @@
+name: Bug report
+description: Something does not work, or gives the wrong answer for a structure
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Most problems are specific to one framework. **Attaching the structure
+        file is the single most useful thing you can do** — without it a report
+        usually cannot be reproduced.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you expect, and what did you get instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Command or code
+      description: The exact command line or Python you ran.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: structure
+    attributes:
+      label: Structure file
+      description: >
+        Drag the CIF into this box to attach it, or give its CSD refcode or a
+        link. GitHub does not accept .cif directly, so rename it to .txt or zip
+        it first.
+    validations:
+      required: true
+
+  - type: textarea
+    id: output
+    attributes:
+      label: Output or traceback
+      render: shell
+
+  - type: input
+    id: version
+    attributes:
+      label: mofstructure version
+      description: From `pip show mofstructure`
+      placeholder: "0.1.8.7"
+    validations:
+      required: true
+
+  - type: input
+    id: python
+    attributes:
+      label: Python version and OS
+      placeholder: "3.11 on macOS 14"
+    validations:
+      required: true
+
+  - type: input
+    id: java
+    attributes:
+      label: Java version
+      description: Only needed for topology problems. From `java -version`.
+      placeholder: "openjdk 17.0.9, or 'not installed'"

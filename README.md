@@ -45,6 +45,7 @@ mof.get_oms()                      # open metal sites
 - [Contributing](#contributing)
 - [Citation](#citation)
 - [License](#license)
+- [Author](#author)
 
 ---
 
@@ -210,6 +211,29 @@ for i, sbu in enumerate(metal_sbus):
 cut positions explicit and easy to cap with hydrogen. Use it for SBUs only,
 never when deconstructing into ligands and clusters.
 
+### Ligand names
+
+Building units carry identifiers but not names. To name a ligand, look it up
+from its SMILES against the database that ships with the package:
+
+```python
+from mofstructure.filetyper import load_iupac_names
+from mofstructure.mofdeconstructor import lookup_iupac_name
+
+iupac_names = load_iupac_names()
+
+_, ligands = mof.get_ligands()
+for ligand in ligands:
+    print(lookup_iupac_name(ligand.info['smi'], iupac_names))
+# terephthalic acid
+```
+
+`lookup_iupac_name` saturates the open valences left by deconstruction and
+matches on InChIKey and canonical SMILES, so the fragment does not have to be
+the neutral parent molecule. It returns `None` for a ligand that is not in the
+database. `mofstructure_database` does this for you and stores the result in
+the `ligand_names` field of `ligands_data.json`.
+
 ### Topology from Python
 
 ```python
@@ -272,15 +296,17 @@ O 1.84
 ## Documentation
 
 Full documentation is at
-[bafgreat.github.io/mofstructure](https://bafgreat.github.io/mofstructure/).
+[docs](https://bafgreat.github.io/mofstructure/).
 Release history is in [CHANGELOG.md](CHANGELOG.md).
 
 ## Contributing
 
-Issues and pull requests are welcome at
-[github.com/bafgreat/mofstructure](https://github.com/bafgreat/mofstructure).
-When reporting a problem with a specific framework, please attach the structure
-file, since most edge cases are structure-specific.
+Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md)
+for development setup and what to include in a report.
+
+Most problems are specific to one framework rather than general, so **please
+attach the structure file** when reporting one. A CIF that reproduces the
+problem is worth more than any description of it.
 
 ## Roadmap
 
@@ -303,3 +329,7 @@ If `mofstructure` contributes to your work, please cite:
 ## License
 
 Released under the MIT License. See [LICENSE](LICENSE).
+
+## Author
+
+`mofstructure` is developed by [Dinga Wonanke](https://www.dingawonanke.com).

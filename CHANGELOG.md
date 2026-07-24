@@ -31,11 +31,27 @@ indexed under three keys: its full InChIKey, its canonical SMILES, and its
 InChIKey connectivity block, which ignores protonation. The shipped database
 was rekeyed accordingly.
 
+`get_ligands()` returns ASE atoms objects, not names. Look the name up from
+the SMILES on each fragment:
+
 ```python
-mof = structure.MOFstructure(filename='UiO-66.cif')
+from mofstructure import structure
+from mofstructure.filetyper import load_iupac_names
+from mofstructure.mofdeconstructor import lookup_iupac_name
+
+iupac_names = load_iupac_names()
+
+mof = structure.MOFstructure(filename='RUBTAK01.cif')
 _, ligands = mof.get_ligands()
-# ligand_names now returns 'terephthalic acid' rather than None
+
+for ligand in ligands:
+    print(lookup_iupac_name(ligand.info['smi'], iupac_names))
+# terephthalic acid
 ```
+
+The command line tools do this for you and write the result to the
+`ligand_names` field of `ligands_data.json`, which previously held only
+`null`.
 
 New helpers in `mofdeconstructor`:
 
