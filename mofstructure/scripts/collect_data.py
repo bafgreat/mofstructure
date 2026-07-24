@@ -7,6 +7,7 @@ import argparse
 import pandas as pd
 from mofstructure import structure
 import mofstructure.filetyper as read_write
+from mofstructure.mofdeconstructor import lookup_iupac_name
 
 iupacnames = read_write.load_iupac_names()
 
@@ -111,7 +112,7 @@ def collect_ligand(organic_ligands, base_name, xyz_path):
     for j, mof_ligand in enumerate(organic_ligands):
         smi.append(mof_ligand.info['smi'])
         inchikey.append(mof_ligand.info['inchikey'])
-        iupac.append(iupacnames.get(mof_ligand.info['smi'], None))
+        iupac.append(lookup_iupac_name(mof_ligand.info['smi'], iupacnames))
         inchi.append(mof_ligand.info['inchi'])
         mof_ligand.write(f'{path_to_file}/{base_name}_organic_ligand_{j+1}.xyz')
     if len(smi) > 0:
@@ -133,7 +134,25 @@ def collect_ligand(organic_ligands, base_name, xyz_path):
     return read_write.convert_numpy_types(data_to_json)
 
 
-def compile_data(cif_files, result_folder, verbose=False, oms=False):
+def summary_frame(records, drop=()):
+    '''
+    Build the csv summary of a per structure result dictionary. Structures that
+    failed are recorded as None and cannot be stacked into rows, so they are
+    left out of the summary.
+
+    Parameters
+    ----------
+    records : mapping of MOF name to a dictionary of results, or None
+    drop : columns to leave out, used for bulky text fields
+    '''
+    rows = {name: result for name, result in records.items() if result}
+    data_f = pd.DataFrame.from_dict(rows, orient='index')
+    data_f.index.name = 'mof_names'
+    return data_f.drop(columns=list(drop), errors='ignore')
+
+
+def compile_data(cif_files, result_folder, verbose=False, oms=False,
+                 topology=False, topology_method='ligand_cluster'):
     '''
     A workflow to remove guest, compute porosity and deconstructure
     mofs and creates a MOF database. The function starts with checking and
@@ -158,6 +177,9 @@ def compile_data(cif_files, result_folder, verbose=False, oms=False):
     ----------
     cif_file : a cif file or any ase readable file containing a MOF.
     result_folder : path to output folder
+    topology : compute the underlying net with Systre. Off by default because
+        it shells out to java and costs a few seconds per structure.
+    topology_method : node definition passed to MOFstructure.get_topology
     '''
     if not os.path.exists(result_folder):
         os.makedirs(result_folder)
@@ -172,6 +194,7 @@ def compile_data(cif_files, result_folder, verbose=False, oms=False):
     path2ligand = os.path.join(structure_db, 'ligands_data.json')
     porosity_path =  os.path.join(structure_db, 'porosity_data.json')
     oms_path =  os.path.join(structure_db, 'structure_oms_and_general_info.json')
+    topology_path = os.path.join(structure_db, 'topology_data.json')
 
     if os.path.exists(path2sbu):
         all_sbu_data = read_write.load_data(path2sbu)
@@ -192,6 +215,11 @@ def compile_data(cif_files, result_folder, verbose=False, oms=False):
         all_oms_data = read_write.load_data(oms_path)
     else:
         all_oms_data = {}
+
+    if os.path.exists(topology_path):
+        all_topology_data = read_write.load_data(topology_path)
+    else:
+        all_topology_data = {}
 
 
     seen = list(all_sbu_data.keys())
@@ -231,6 +259,16 @@ def compile_data(cif_files, result_folder, verbose=False, oms=False):
                 else:
                     all_porosity_data[base_name]= None
 
+                if topology:
+                    try:
+                        all_topology_data[base_name] = mof_object.get_topology(
+                            method=topology_method)
+                    except Exception:
+                        # systre shells out to java, so keep a failed net from
+                        # discarding the rest of the record
+                        all_topology_data[base_name] = None
+                    read_write.append_json(all_topology_data, topology_path)
+
                 if len(mof_object.ase_atoms)> 5000:
                     print('system size too large, will run out of application memory')
                     print('so will skip')
@@ -245,9 +283,12 @@ def compile_data(cif_files, result_folder, verbose=False, oms=False):
         except Exception:
             pass
 
-    data_f = pd.DataFrame.from_dict(all_porosity_data, orient='index')
-    data_f.index.name = 'mof_names'
-    data_f.to_csv(structure_db+'/porosity_data.csv')
+    summary_frame(all_porosity_data).to_csv(structure_db+'/porosity_data.csv')
+
+    if all_topology_data:
+        # the cgd net is a multi line block, so keep it out of the summary
+        summary_frame(all_topology_data, drop=['cgd']).to_csv(
+            structure_db+'/topology_data.csv')
 
     if verbose:
         print(f"Saved results to {result_folder}")
@@ -266,6 +307,12 @@ def main():
 
     parser.add_argument('-o', '--oms', action='store_true',
                         help='run oms')
+    parser.add_argument('-t', '--topology', action='store_true',
+                        help='compute the underlying net with systre')
+    parser.add_argument('--topology_method', type=str,
+                        default='ligand_cluster',
+                        choices=['sbus', 'all_node', 'ligand_cluster'],
+                        help='node definition used to build the net')
     parser.add_argument('-s', '--save_dir', type=str,
                         default='MOFDb', help='directory to save output files')
     parser.add_argument('-v', '--verbose', action='store_true',
@@ -273,4 +320,5 @@ def main():
     args = parser.parse_args()
     cif_files = [os.path.join(args.cif_folder, f) for f in os.listdir(
         args.cif_folder) if f.endswith('.cif')]
-    compile_data(cif_files, args.save_dir, args.verbose, args.oms)
+    compile_data(cif_files, args.save_dir, args.verbose, args.oms,
+                 args.topology, args.topology_method)

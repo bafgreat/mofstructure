@@ -1,220 +1,415 @@
-/* Global styles */
-body {
-    font-family: 'Open Sans', Arial, sans-serif;
-    font-size: 18px;
-    line-height: 2;
-    color: #333;
-    background-color: #f4f5f7;
-    padding: 20px;
-    margin: 0;
+/*
+ * mofstructure documentation theme
+ *
+ * Palette
+ *   #000000  black      code, strong text
+ *   #14213d  oxford blue  headings, sidebar, links
+ *   #fca311  amber      accents, hover, active state
+ *   #e5e5e5  platinum   rules, code background, table banding
+ *   #ffffff  white      page background
+ *
+ * These rules layer on top of alabaster, so the selectors below are the ones
+ * alabaster actually emits (div.body, div.sphinxsidebar, div.related and so
+ * on). Anything set through html_theme_options in conf.py is not repeated here.
+ */
+
+:root {
+  --ms-black: #000000;
+  --ms-blue: #14213d;
+  --ms-amber: #fca311;
+  --ms-platinum: #e5e5e5;
+  --ms-white: #ffffff;
+
+  --ms-page-bg: var(--ms-white);
+  --ms-text: var(--ms-blue);
+  --ms-heading: var(--ms-blue);
+  --ms-rule: var(--ms-platinum);
+  --ms-code-bg: var(--ms-platinum);
+  --ms-code-text: var(--ms-black);
+  --ms-sidebar-bg: var(--ms-blue);
+  --ms-sidebar-text: var(--ms-platinum);
 }
 
+/* ---------- page ---------- */
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Open Sans',
+    Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--ms-text);
+  background-color: var(--ms-page-bg);
+}
+
+div.body {
+  color: var(--ms-text);
+  background-color: var(--ms-page-bg);
+  max-width: 100%;
+}
+
+div.bodywrapper {
+  background-color: var(--ms-page-bg);
+}
+
+/* ---------- headings ---------- */
+
+div.body h1,
+div.body h2,
+div.body h3,
+div.body h4,
+div.body h5,
+div.body h6 {
+  font-family: inherit;
+  font-weight: 600;
+  color: var(--ms-heading);
+  line-height: 1.3;
+  margin: 1.6em 0 0.6em;
+}
+
+div.body h1 {
+  font-size: 2.1rem;
+  border-bottom: 3px solid var(--ms-amber);
+  padding-bottom: 0.3em;
+  margin-top: 0;
+}
+
+div.body h2 {
+  font-size: 1.6rem;
+  border-bottom: 1px solid var(--ms-rule);
+  padding-bottom: 0.25em;
+}
+
+div.body h3 { font-size: 1.3rem; }
+div.body h4 { font-size: 1.1rem; }
+
+/* the paragraph anchor alabaster adds on hover */
+a.headerlink {
+  color: var(--ms-amber);
+  text-decoration: none;
+  padding-left: 0.3em;
+  visibility: hidden;
+}
+
+h1:hover > a.headerlink,
+h2:hover > a.headerlink,
+h3:hover > a.headerlink,
+h4:hover > a.headerlink,
+dt:hover > a.headerlink {
+  visibility: visible;
+}
+
+/* ---------- links ---------- */
+
 a {
-    color: #007ACC;
-    text-decoration: none;
+  color: var(--ms-blue);
+  text-decoration: none;
+  border-bottom: 1px solid var(--ms-platinum);
 }
 
 a:hover {
-    text-decoration: underline;
+  color: var(--ms-amber);
+  border-bottom-color: var(--ms-amber);
 }
 
-code {
-    font-family: 'Source Code Pro', monospace;
-    background-color: #f3f3f3;
-    padding: 2px 4px;
-    border-radius: 3px;
-    color: #d63384;
+/* ---------- code ---------- */
+
+code,
+tt,
+code.literal,
+span.pre {
+  font-family: 'SF Mono', 'Source Code Pro', Menlo, Consolas, monospace;
+  font-size: 0.88em;
+  background-color: var(--ms-code-bg);
+  color: var(--ms-code-text);
+  padding: 0.15em 0.4em;
+  border-radius: 3px;
+  border: none;
 }
 
 pre {
-    background-color: #f3f3f3;
-    padding: 15px;
-    border-left: 4px solid #007ACC;
-    overflow: auto;
-    border-radius: 5px;
+  font-family: 'SF Mono', 'Source Code Pro', Menlo, Consolas, monospace;
+  font-size: 0.86em;
+  line-height: 1.55;
+  background-color: var(--ms-code-bg);
+  color: var(--ms-code-text);
+  border: none;
+  border-left: 4px solid var(--ms-amber);
+  border-radius: 0 4px 4px 0;
+  padding: 1em 1.2em;
+  overflow-x: auto;
 }
 
-h1, h2, h3, h4, h5, h6 {
-    color: #2E3A46;
-    font-weight: 500;
-    margin-bottom: 10px;
-    line-height: 2;
+pre code,
+div.highlight pre {
+  background: none;
+  padding: 0;
+  border: none;
 }
 
-h1 {
-    font-size: 2.2rem;
-    border-bottom: 3px solid #007ACC;
-    padding-bottom: 10px;
+div.highlight {
+  background: none;
 }
 
-h2 {
-    font-size: 2rem;
-    border-bottom: 2px solid #007ACC;
-    padding-bottom: 8px;
+/* the copy button from sphinx_copybutton */
+button.copybtn {
+  opacity: 0.4;
 }
 
-h3 {
-    font-size: 1.75rem;
+button.copybtn:hover {
+  opacity: 1;
 }
 
-h4 {
-    font-size: 1.5rem;
+/* ---------- sidebar ---------- */
+
+div.sphinxsidebar {
+  background-color: var(--ms-sidebar-bg);
+  color: var(--ms-sidebar-text);
+  font-size: 0.92em;
+  padding: 1.5em 1.2em;
+  border-radius: 6px;
 }
 
-h5, h6 {
-    font-size: 1.25rem;
+div.sphinxsidebar h3,
+div.sphinxsidebar h4 {
+  color: var(--ms-amber);
+  font-weight: 600;
+  border-bottom: 1px solid rgba(252, 163, 17, 0.35);
+  padding-bottom: 0.4em;
 }
 
-p {
-    margin: 0 0 20px;
+div.sphinxsidebar h3 a {
+  color: var(--ms-amber);
 }
 
-img {
-    max-width: 100%;
-    height: auto;
-    border-radius: 5px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    margin: 20px 0;
+div.sphinxsidebar p,
+div.sphinxsidebar ul {
+  color: var(--ms-sidebar-text);
 }
 
-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 20px 0;
-    font-size: 1rem;
+div.sphinxsidebar a {
+  color: var(--ms-white);
+  border-bottom: none;
 }
 
-th, td {
-    padding: 12px;
-    text-align: left;
-    border-bottom: 1px solid #ddd;
+div.sphinxsidebar a:hover {
+  color: var(--ms-amber);
 }
 
-th {
-    background-color: #007ACC;
-    color: white;
-    font-weight: bold;
+div.sphinxsidebar ul li.toctree-l1 > a {
+  font-weight: 600;
 }
 
-td {
-    background-color: #f9f9f9;
+div.sphinxsidebar input[type='text'] {
+  border: 1px solid var(--ms-platinum);
+  border-radius: 3px;
+  padding: 0.4em;
+}
+
+div.sphinxsidebar input[type='submit'] {
+  background-color: var(--ms-amber);
+  color: var(--ms-blue);
+  border: none;
+  border-radius: 3px;
+  padding: 0.4em 0.8em;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ---------- breadcrumb bar and footer ---------- */
+
+div.related {
+  background-color: var(--ms-blue);
+  color: var(--ms-platinum);
+  border-radius: 4px;
+  padding: 0.5em 1em;
+}
+
+div.related a {
+  color: var(--ms-white);
+  border-bottom: none;
+}
+
+div.related a:hover {
+  color: var(--ms-amber);
+}
+
+div.footer {
+  color: var(--ms-blue);
+  border-top: 1px solid var(--ms-rule);
+  padding-top: 1em;
+  margin-top: 2.5em;
+  font-size: 0.85em;
+}
+
+/* ---------- tables ---------- */
+
+table.docutils {
+  border: none;
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1.5em 0;
+}
+
+table.docutils th {
+  background-color: var(--ms-blue);
+  color: var(--ms-white);
+  font-weight: 600;
+  text-align: left;
+  padding: 0.7em 0.9em;
+  border: none;
+}
+
+table.docutils td {
+  padding: 0.7em 0.9em;
+  border: none;
+  border-bottom: 1px solid var(--ms-rule);
+}
+
+table.docutils tbody tr:nth-child(even) {
+  background-color: rgba(229, 229, 229, 0.4);
+}
+
+/* wide tables scroll instead of pushing the page sideways */
+div.table-wrapper,
+div.body table.docutils {
+  display: block;
+  overflow-x: auto;
+}
+
+/* ---------- admonitions ---------- */
+
+div.admonition,
+div.note,
+div.warning,
+div.danger,
+div.tip {
+  border: none;
+  border-left: 4px solid var(--ms-blue);
+  border-radius: 0 4px 4px 0;
+  background-color: var(--ms-platinum);
+  padding: 0.9em 1.2em;
+  margin: 1.5em 0;
+}
+
+div.admonition p.admonition-title,
+div.note p.admonition-title,
+div.warning p.admonition-title {
+  font-weight: 600;
+  color: var(--ms-blue);
+  margin-bottom: 0.4em;
+}
+
+div.warning,
+div.danger {
+  border-left-color: var(--ms-amber);
+}
+
+div.warning p.admonition-title,
+div.danger p.admonition-title {
+  color: #8a5200;
+}
+
+/* ---------- api entries from autodoc ---------- */
+
+dl.py > dt,
+dl.class > dt,
+dl.function > dt,
+dl.method > dt {
+  background-color: var(--ms-platinum);
+  border-left: 3px solid var(--ms-amber);
+  border-radius: 0 3px 3px 0;
+  padding: 0.45em 0.7em;
+  margin-bottom: 0.6em;
+  font-family: 'SF Mono', 'Source Code Pro', Menlo, Consolas, monospace;
+  font-size: 0.9em;
+}
+
+dl.py dd {
+  margin-left: 1.2em;
+  border-left: 1px solid var(--ms-rule);
+  padding-left: 1.2em;
+}
+
+/* ---------- media ---------- */
+
+div.body img,
+div.body video {
+  max-width: 100%;
+  height: auto;
+  border-radius: 5px;
 }
 
 blockquote {
-    font-style: italic;
-    background-color: #f9f9f9;
-    padding: 20px;
-    border-left: 4px solid #007ACC;
-    border-radius: 4px;
-    margin: 20px 0;
+  border-left: 3px solid var(--ms-amber);
+  background-color: var(--ms-platinum);
+  padding: 0.8em 1.2em;
+  margin: 1.5em 0;
+  border-radius: 0 4px 4px 0;
 }
 
-/* Navigation styles */
-.navbar {
-    background-color: #007ACC;
-    padding: 10px 20px;
-    border-radius: 5px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+hr {
+  border: none;
+  border-top: 1px solid var(--ms-rule);
+  margin: 2.5em 0;
 }
 
-.navbar a {
-    color: white;
-    font-weight: bold;
-    margin: 0 15px;
+/* ---------- dark mode ---------- */
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ms-page-bg: #0d1526;
+    --ms-text: var(--ms-platinum);
+    --ms-heading: var(--ms-white);
+    --ms-rule: #2a3450;
+    --ms-code-bg: #131d33;
+    --ms-code-text: var(--ms-platinum);
+    --ms-sidebar-bg: var(--ms-black);
+  }
+
+  a {
+    color: var(--ms-amber);
+    border-bottom-color: #2a3450;
+  }
+
+  table.docutils tbody tr:nth-child(even) {
+    background-color: rgba(255, 255, 255, 0.04);
+  }
+
+  div.admonition,
+  div.note,
+  div.warning,
+  div.tip,
+  blockquote,
+  dl.py > dt {
+    background-color: #131d33;
+  }
+
+  div.admonition p.admonition-title,
+  div.note p.admonition-title {
+    color: var(--ms-amber);
+  }
+
+  div.warning p.admonition-title,
+  div.danger p.admonition-title {
+    color: var(--ms-amber);
+  }
+
+  div.footer {
+    color: var(--ms-platinum);
+  }
 }
 
-.navbar a:hover {
-    color: #f4f5f7;
+/* ---------- narrow screens ---------- */
+
+@media only screen and (max-width: 875px) {
+  div.sphinxsidebar {
+    border-radius: 0;
+  }
+
+  div.body h1 { font-size: 1.8rem; }
+  div.body h2 { font-size: 1.4rem; }
+
+  pre {
+    font-size: 0.8em;
+  }
 }
-
-/* Sidebar styles */
-.sidebar {
-    background-color: #f4f5f7;
-    padding: 10px;
-    border-right: 1px solid #ddd;
-    position: fixed;
-    width: 500px;
-    height: 100%;
-    overflow-y: auto;
-    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
-}
-
-.sidebar a {
-    display: block;
-    color: #333;
-    padding: 10px 0;
-    font-weight: 200;
-    text-transform: uppercase;
-    letter-spacing: 0.2px;
-}
-
-.sidebar a:hover {
-    background-color: #e6e6e6;
-    color: #007ACC;
-    padding-left: 5px;
-    transition: padding 0.2s ease;
-}
-
-/* Content styles */
-.content {
-    margin-left: 320px;
-    padding: 40px;
-    background-color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    max-width: 900px;
-    margin-bottom: 40px;
-}
-
-.content img {
-    margin-top: 20px;
-    margin-bottom: 20px;
-}
-
-/* Footer styles */
-.footer {
-    background-color: #f4f5f7;
-    padding: 20px;
-    text-align: center;
-    color: #555;
-    border-top: 1px solid #ddd;
-    margin-top: 40px;
-}
-
-.footer a {
-    color: #007ACC;
-    font-weight: bold;
-}
-
-/* Responsive styles */
-@media only screen and (max-width: 1200px) {
-    .content {
-        margin-left: 0;
-        padding: 20px;
-    }
-    .sidebar {
-        position: relative;
-        width: 100%;
-        border-right: none;
-    }
-}
-
-@media only screen and (max-width: 768px) {
-    h1 {
-        font-size: 2rem;
-    }
-
-    h2 {
-        font-size: 1.75rem;
-    }
-
-    .navbar {
-        text-align: center;
-    }
-
-    .navbar a {
-        display: inline-block;
-        margin: 10px 0;
-    }
-}
-

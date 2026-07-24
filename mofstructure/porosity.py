@@ -1,9 +1,28 @@
 #!/usr/bin/python
+'''
+Geometric pore analysis through zeo++.
+
+Accessible volume, accessible surface area and the pore diameters (LCD, PLD and
+the largest free sphere along the percolation path) are computed by handing the
+structure to zeo++ as a CSSR file.
+
+zeo++ aborts the process outright on structures whose Voronoi decomposition
+fails its internal volume check, which no python exception handler can
+intercept. zeo_calculation therefore runs the calculation in a child
+interpreter and returns an empty dictionary when that happens, so one awkward
+structure cannot take down a batch job. compute_zeo_parameters is the same
+calculation without that protection.
+'''
 from __future__ import print_function
 
 __author__ = "Dr. Dinga Wonanke"
 __status__ = "production"
 import os
+import pickle
+import shutil
+import subprocess
+import sys
+import tempfile
 import numpy as np
 from pyzeo.netstorage import AtomNetwork
 from pyzeo.area_volume import volume, surface_area
@@ -12,6 +31,47 @@ import mofstructure.filetyper as File_typer
 
 
 def zeo_calculation(ase_atom, probe_radius=1.86, number_of_steps=10000, high_accuracy=True, rad_file=None):
+    '''
+    Compute the pore geometry of a periodic system in a separate interpreter.
+
+    zeo++ validates its Voronoi decomposition against the cell volume and calls
+    abort() when the check fails, which raises SIGABRT rather than a python
+    exception. No try/except can intercept that, so an unlucky structure takes
+    the whole process down with it. Running the calculation in a child keeps the
+    damage to that one structure.
+
+    Arguments and return value are the same as compute_zeo_parameters, except
+    that a structure zeo++ cannot handle gives an empty dictionary instead of
+    killing the caller.
+    '''
+    workdir = tempfile.mkdtemp(prefix='mofstructure_zeo_')
+    try:
+        with open(os.path.join(workdir, 'input.pkl'), 'wb') as file_handle:
+            pickle.dump({'ase_atom': ase_atom,
+                         'probe_radius': probe_radius,
+                         'number_of_steps': number_of_steps,
+                         'high_accuracy': high_accuracy,
+                         'rad_file': rad_file}, file_handle)
+
+        # cwd is the workdir so the tmp.cssr and tmp.res scratch files land
+        # there and go away with it, even when the child aborts
+        completed = subprocess.run(
+            [sys.executable, '-m', 'mofstructure.porosity', workdir],
+            cwd=workdir, check=False)
+
+        output_file = os.path.join(workdir, 'output.pkl')
+        if completed.returncode != 0 or not os.path.exists(output_file):
+            print(f'zeo++ could not analyse this structure '
+                  f'(exit {completed.returncode}), skipping porosity')
+            return {}
+
+        with open(output_file, 'rb') as file_handle:
+            return pickle.load(file_handle)
+    finally:
+        shutil.rmtree(workdir, ignore_errors=True)
+
+
+def compute_zeo_parameters(ase_atom, probe_radius=1.86, number_of_steps=10000, high_accuracy=True, rad_file=None):
     '''
     Main script to compute geometric structure of porous systems.
     The focus here is on MOF, but the script can run on any porous periodic
@@ -88,6 +148,21 @@ def zeo_calculation(ase_atom, probe_radius=1.86, number_of_steps=10000, high_acc
     return parameters
 
 
+def _run_as_child():
+    '''
+    Entry point used by zeo_calculation, which runs this module as a script so
+    that an abort() inside zeo++ only takes down the child interpreter.
+    '''
+    workdir = sys.argv[1]
+    with open(os.path.join(workdir, 'input.pkl'), 'rb') as file_handle:
+        arguments = pickle.load(file_handle)
+
+    parameters = compute_zeo_parameters(**arguments)
+
+    with open(os.path.join(workdir, 'output.pkl'), 'wb') as file_handle:
+        pickle.dump(parameters, file_handle)
+
+
 def ase_to_zeoobject(ase_atom):
     '''
     Converts an ase atom type to a zeo++ Cssr object
@@ -115,3 +190,7 @@ def ase_to_zeoobject(ase_atom):
         load.append(
             f"{index+1} {element} { position[2]:.4f} {position[1]:.4f}  {position[0]:.4f} 0 0 0 0 0 0 0 0 {charge:.4f}")
     return "\n".join(load)
+
+
+if __name__ == '__main__':
+    _run_as_child()

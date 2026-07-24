@@ -141,27 +141,32 @@ any conflicts or bugs and we will fix it.
 
 
 Updates Version 0.1.8.1
-======================
+=======================
 Made rdkit to be an optional dependency so that mofstructure should
 be compatible with Python 3.12, since there are no recent versions
 of rdkit that are compatible with Python 3.12. Hence if you wish to use
 rdkit, you should install it separately.
 
-  .. code-block:: pip install rdkit
+  .. code-block:: bash
+
+     pip install rdkit
 
 Updates Version 0.1.8.2
-======================
+=======================
 Fixed the python dependency to be compatible with any Python 3.9 and above.
-  .. code-block:: pip install rdkit
+
+  .. code-block:: bash
+
+     pip install rdkit
 
 Updates Version 0.1.8.3
-======================
+=======================
 Major update in the code structuring with the inclusion of MOFstructure class
 which makes the entire code more modular and easy to use. In addition,
 the code can now guess the names of common ligands.
 
 Updates Version 0.1.8.6
-======================
+=======================
 
 Major update in the code structuring with
  the inclusion of TopologyExtractor class which makes
@@ -169,6 +174,7 @@ Major update in the code structuring with
  In addition, the code can now guess the names of common ligands.
  Moreover, we have added a new command line tool to compute the topology of MOFs using Systre.
  This tool is called `mofstructure_topology` and can be used as follows:
+
 .. code-block:: bash
 
    mofstructure_topology cif_folder
@@ -182,6 +188,7 @@ Major update in the code structuring with
 
 
 The topology can also be computing as a library as follows:
+
 .. code-block:: python
 
    from mofstructure.systre import identify_topology
@@ -202,7 +209,9 @@ The topology can also be computing as a library as follows:
 
 
 It can also be called from structure as follows:
+
 .. code-block:: python
+
    from mofstructure import structure
    from ase.io import read
 

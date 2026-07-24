@@ -1,4 +1,21 @@
 #!/usr/bin/python
+'''
+High level entry point to mofstructure.
+
+MOFstructure wraps a single crystal structure and exposes the analyses that are
+normally wanted together: guest removal, porosity, deconstruction into building
+units, topology and open metal sites. Everything is computed on the guest free
+system, so a structure only has to be read once.
+
+    from mofstructure import structure
+
+    mof = structure.MOFstructure(filename='UiO-66.cif')
+    pores = mof.get_porosity()
+    metal_sbus, organic_sbus = mof.get_sbu()
+
+The individual algorithms live in mofdeconstructor, porosity and systre, and can
+be called directly when more control is needed.
+'''
 from __future__ import print_function
 __author__ = "Dr. Dinga Wonanke"
 __status__ = "production"
@@ -24,6 +41,26 @@ logging.basicConfig(level=logging.INFO,
 
 
 class MOFstructure(object):
+    '''
+    A single framework and the analyses that can be run on it.
+
+    Give it either an ASE atoms object or a path to any file ASE can read. The
+    methods return their results rather than writing them, so they can be mixed
+    freely:
+
+        mof = MOFstructure(filename='UiO-66.cif')
+        pores = mof.get_porosity()
+        metal_sbus, organic_sbus = mof.get_sbu()
+        topology = mof.get_topology()
+
+    Guest molecules are stripped internally before each analysis, so a structure
+    that still contains solvent does not need cleaning up first.
+
+    **parameters:**
+        ase_atoms: ASE atoms object, used in preference to filename
+        filename: path to a cif or any other ASE readable structure file
+    '''
+
     def __init__(self,
                  ase_atoms=None,
                  filename=None
@@ -195,7 +232,7 @@ class MOFstructure(object):
                     - dimension
                     - td10
                     - topology_hash
-                    - cgd_crystal2text
+                    - cgd
         """
         guest_free_atoms = self.remove_guest()
 

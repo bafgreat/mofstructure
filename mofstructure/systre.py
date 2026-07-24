@@ -1,4 +1,16 @@
 #!/usr/bin/env python3
+'''
+Topology identification through Systre.
+
+The underlying net of a framework is written as a CGD file and passed to the
+Systre jar bundled in mofstructure/bin, which relaxes the net and matches it
+against the RCSR database. What comes back is the RCSR symbol where one exists,
+the periodicity of the net, the topological density TD10, and the relaxed
+coordinates.
+
+Systre is a java program, so a JRE has to be reachable. find_java looks for one
+explicitly configured, then for jdk4py, then on PATH.
+'''
 from __future__ import annotations
 __author__ = "Dr. Dinga Wonanke"
 __status__ = "production"
@@ -1741,7 +1753,7 @@ def identify_topology_batch(
         recursive: bool
             If True, recurse into subfolders.
 
-        **kwargs:
+        \*\*kwargs:
             Additional keyword arguments passed to `identify_topology()`.
 
     **returns:**

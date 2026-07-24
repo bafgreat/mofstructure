@@ -1,4 +1,18 @@
 #!/usr/bin/python
+'''
+Deconstruction of frameworks into their chemical building units.
+
+The functions here take an ASE atoms object and work out how the framework is
+put together: which atoms form a connected component, where the metal to ligand
+bonds should be cut, and which fragments are symmetry unique. From that the
+system can be split either into secondary building units, which keep the points
+of extension, or into metal clusters and whole organic ligands.
+
+Bonding is perceived from geometry using covalent radii, so the input needs
+sensible coordinates but no bonding information. Cheminformatic identifiers for
+the resulting fragments are produced through openbabel, with rdkit available as
+an alternative.
+'''
 from __future__ import print_function
 __author__ = "Dr. Dinga Wonanke"
 __status__ = "production"
@@ -62,10 +76,12 @@ def inter_atomic_distance_check(ase_atom):
     has a distance below 0.90 Å. Only unique pairs are checked to avoid redundancy.
 
     **Parameters**
+
     ase_atom : ase.Atoms
         An ASE Atoms object containing atomic positions and chemical symbols.
 
     **Returns**
+
     bool
         Returns False if any applicable atom pair has a distance below 0.90 Å.
         Otherwise, returns True.
@@ -119,6 +135,7 @@ def inter_atomic_distance_iterative(ase_atom):
         ase_atom : ASE atoms object
 
     **returns**
+
         boolean :
     '''
     valid = True
@@ -250,6 +267,76 @@ def compute_smi(obmol):
     return smi
 
 
+def saturate_open_valences(smi):
+    '''
+    Fill the open valences left where a ligand was cut away from its metal with
+    implicit hydrogens, recovering the neutral parent molecule. Terephthalate
+    leaves deconstruction as [O]C(=O)c1ccc(cc1)C(=O)[O], two hydrogens short of
+    the terephthalic acid a reference database stores it under.
+
+    **parameters:**
+        smi: SMILES notation of the molecule
+
+    **returns:**
+        pybel molecule, or None if smi cannot be parsed.
+    '''
+    if not smi:
+        return None
+    try:
+        mol = pb.readstring('smi', smi)
+    except (IOError, ValueError):
+        return None
+
+    obmol = mol.OBMol
+    obmol.BeginModify()
+    for atom in ob.OBMolAtomIter(obmol):
+        ob.OBAtomAssignTypicalImplicitHydrogens(atom)
+    obmol.EndModify()
+    return mol
+
+
+def name_lookup_keys(smi):
+    '''
+    Identifiers a molecule is indexed under in the IUPAC name database, most
+    specific first: full InChIKey, canonical SMILES, then the InChIKey
+    connectivity block, which ignores protonation. Building the database and
+    querying it both go through here so the two cannot drift apart.
+
+    **parameters:**
+        smi: SMILES notation of the molecule
+
+    **returns:**
+        list of keys, empty if smi cannot be parsed.
+    '''
+    mol = saturate_open_valences(smi)
+    if mol is None:
+        return []
+
+    inchikey = mol.write('inchikey').strip()
+    can = mol.write('can').strip().split('\t')[0]
+    keys = [key for key in (inchikey, can) if key]
+    if inchikey:
+        keys.append(inchikey[:14])
+    return keys
+
+
+def lookup_iupac_name(smi, iupac_names):
+    '''
+    Find the IUPAC name of a ligand from the SMILES produced by deconstruction.
+
+    **parameters:**
+        smi: SMILES notation of the ligand, as stored in atoms.info['smi']
+        iupac_names: mapping produced by filetyper.load_iupac_names
+
+    **returns:**
+        IUPAC name of the ligand, or None when it is not in the database.
+    '''
+    for key in name_lookup_keys(smi):
+        if key in iupac_names:
+            return iupac_names[key]
+    return None
+
+
 def ase_2_pybel(atoms):
     """
     As simple script to convert from ase atom object to pybel. There are
@@ -356,6 +443,7 @@ def get_neighbour_bond_matrix(sbu, skin=0.30, bo_step=0.10, aromatic=True):
 
     **parameters:**
         sbu : ASE atoms object
+            The building unit whose connectivity is wanted.
         skin : float
             Additional tolerance added to covalent radii (Å).
             Important for capturing slightly elongated coordination bonds.
@@ -373,7 +461,8 @@ def get_neighbour_bond_matrix(sbu, skin=0.30, bo_step=0.10, aromatic=True):
 
         2. bonds:
             Bond order matrix (NxN ndarray).
-            Values:
+            Values::
+
                 0.0  -> no bond
                 1.0  -> single bond
                 2.0  -> double bond (heuristic)
@@ -1083,6 +1172,7 @@ def find_phosphate(ase_atom, graph):
         ase_atom: ASE atom
 
     **returns**
+
         dictionary of key = carbon index and values = oxygen index
     '''
     phosphate = {}
@@ -1098,6 +1188,19 @@ def find_phosphate(ase_atom, graph):
     return phosphate
 
 def get_bond_shift(i, j, bond_offsets):
+    '''
+    Periodic image a bond between two atoms crosses.
+
+    A pair can be bonded through more than one image in a small cell, so the
+    most frequent offset is taken as the representative one.
+
+    **parameters:**
+        i, j: atom indices
+        bond_offsets: mapping of atom pair to the cell offsets seen for it
+
+    **returns:**
+        (x, y, z) cell offset, (0, 0, 0) when the pair is not bonded.
+    '''
     vals = bond_offsets.get((int(i), int(j)), [])
     if not vals:
         return (0, 0, 0)
@@ -1657,6 +1760,8 @@ def is_rodlike(metal_sbu):
     '''
     rod_check = []
     cells = [(2, 1, 1), (1, 2, 1), (1, 1, 2)]
+    if metal_sbu.get_pbc().any() is None:
+        return []
     for index, ijk in enumerate(cells):
         rod = metal_sbu * ijk
         graph, _ = compute_ase_neighbour(rod)

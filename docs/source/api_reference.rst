@@ -3,6 +3,7 @@ API Reference
 
 MOF Structure
 ---------------------
+
 .. automodule:: mofstructure.structure
    :members:
    :undoc-members:
@@ -10,6 +11,7 @@ MOF Structure
 
 MOF Deconstructions
 ---------------------
+
 .. automodule:: mofstructure.mofdeconstructor
    :members:
    :undoc-members:
@@ -18,6 +20,7 @@ MOF Deconstructions
 
 Computing Porosity
 ---------------------
+
 .. automodule:: mofstructure.porosity
    :members:
    :undoc-members:
@@ -25,6 +28,7 @@ Computing Porosity
 
 Computing stacking in 2D systems and inter-layer height
 ---------------------------------------------------------
+
 .. automodule:: mofstructure.cof_stacking
    :members:
    :undoc-members:
@@ -32,12 +36,15 @@ Computing stacking in 2D systems and inter-layer height
 
 Topological Analysis
 -------------------------
+
 .. automodule:: mofstructure.generate_cgd
    :members:
    :undoc-members:
    :show-inheritance:
+
 Systre Topology Identification
--------------------------
+------------------------------
+
 .. automodule:: mofstructure.systre
    :members:
    :undoc-members:

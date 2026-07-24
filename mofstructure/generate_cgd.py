@@ -1,4 +1,14 @@
 #!/usr/bin/env python3
+'''
+Construction of CGD nets from crystal structures.
+
+Systre works on nets rather than atoms, so a framework has to be reduced to
+vertices and edges first. The node definition decides what the net describes,
+and three are available: sbus places a vertex at each secondary building unit,
+all_node keeps every branch point, and ligand_cluster contracts whole ligands
+and metal clusters to single vertices. The same framework can give different
+nets under each, which is expected rather than an error.
+'''
 from __future__ import annotations
 __author__ = "Dr. Dinga Wonanke"
 __status__ = "production"
@@ -200,8 +210,10 @@ def base_edges_with_shifts(
 
     **returns:**
         edges_out: list
-            List of component-level edges of the form:
+            List of component-level edges of the form::
+
                 (u, v, sx, sy, sz)
+
             where u and v are component indices and (sx, sy, sz) is the
             corresponding lattice shift.
     '''

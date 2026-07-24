@@ -1,4 +1,12 @@
 #!/usr/bin/python
+'''
+Curation of covalent organic framework structures.
+
+Wraps the deconstruction machinery for COF specific workflows, where the
+building units are organic on both sides of the bond rather than metal and
+linker, and collects the results into the tabular form used for building
+datasets.
+'''
 from __future__ import print_function
 __author__ = "Dr. Dinga Wonanke"
 __status__ = "production"

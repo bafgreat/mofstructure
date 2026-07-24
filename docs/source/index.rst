@@ -15,6 +15,7 @@ Introduction
    <video width="600" height="400" autoplay loop muted>
       <source src="_static/movie3.mp4" type="video/mp4">
       Your browser does not support the video tag.
+
    </video>
 
 Key Features of `mofstructure`
@@ -63,6 +64,7 @@ The module contains much more functionalities. If you are struggling or wish to 
 
 .. Tutorial
 .. =========
+
 .. .. raw:: html
 
 ..    <iframe src="./doc/how-to-doc.html" width="100%" height="600">

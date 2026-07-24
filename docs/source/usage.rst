@@ -92,6 +92,7 @@ To identify and extract SBUs and linkers from the MOF:
                 all_regions,
                 cheminfo=True,
                 add_dummy=True
+
             )
 
 This code will output the SBUs and linkers along with their cheminformatic information.
@@ -100,6 +101,7 @@ This code will output the SBUs and linkers along with their cheminformatic infor
 Example 6: Determining the Topology of a MOF
 -----------------------------------------------------
 To determine the topology of a MOF using Systre:
+
 .. code-block:: python
 
    from mofstructure.systre import identify_topology
@@ -122,7 +124,9 @@ To determine the topology of a MOF using Systre:
 Example 7: Computing topoology from the command line
 -----------------------------------------------------
 To compute the topology of a MOF from the command line, run:
+
 .. code-block:: bash
 
    mofstructure_topology cif_folder
+
 This command will compute the topology of all CIF files in the specified folder and save the results in a file named `topology_results.csv` in the current directory.

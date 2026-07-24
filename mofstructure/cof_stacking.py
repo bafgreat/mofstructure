@@ -1,4 +1,12 @@
 #!/usr/bin/python
+'''
+Stacking analysis of layered covalent organic frameworks.
+
+Layered COFs are described by how consecutive sheets sit relative to one
+another, which is measured here as the lateral offset between adjacent layers
+and the interlayer spacing along the stacking direction. That separates
+eclipsed AA stacking from the various staggered arrangements.
+'''
 from __future__ import print_function
 __author__ = "Dr. Dinga Wonanke"
 __status__ = "production"

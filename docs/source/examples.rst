@@ -14,6 +14,7 @@ The `MOFstructure` class provides a simple
 and unified interface to most functionalities
 
 .. code-block:: python
+
    from mofstructure import structure
    import mofstructure.filetyper as read_write
 
@@ -67,7 +68,7 @@ Removing Guest Molecules
 ========================
 Many experimentally resolved MOFs contain solvent
 or guest molecules that are not part of the framework.
- These must be removed before analysis.
+These must be removed before analysis.
 
 .. code-block:: python
 
@@ -104,6 +105,7 @@ Available information includes:
 
 Saving building units:
 -----------------------
+
 .. code-block:: python
 
    for i, sbu in enumerate(metal_sbus):
@@ -141,6 +143,7 @@ Porosity Analysis
 Porosity properties are computed using our python wrapper around Zeo++ called pyzeo.
 
 .. code-block:: python
+
    pores = mof.get_porosity(
    probe_radius=1.86,
    number_of_steps=10000,
@@ -163,6 +166,7 @@ Open Metal Sites (OMS)
 Open metal sites are important for adsorption and catalysis.
 
    .. code-block:: python
+
    oms = mof.get_oms()
 
 The returned data typically includes:
@@ -306,6 +310,7 @@ In addition to command-line usage, `mofstructure` can also be used as a Python l
           porphyrin_checker,
           all_regions,
           cheminfo=True
+
       )
 
    By setting `cheminfo=True`, `mofstructure` calls Open Babel to compute cheminformatic information such as SMILES, InChI, and InChIKey, which are stored in `ase_atom.info`. The `metal_sbus` and `organic_sbus` lists contain all unique instances of the metal and organic SBUs, respectively.

@@ -1,4 +1,12 @@
 #!/usr/bin/python
+'''
+Reading and writing of the file formats used across mofstructure.
+
+load_data dispatches on the file extension, so json, csv, pickle, xlsx and
+msgpack can all be read through one call, with anything unrecognised returned
+as raw text. The writers cover the same formats plus the append helpers the
+command line tools use to grow a database file structure by structure.
+'''
 from __future__ import print_function
 __author__ = "Dr. Dinga Wonanke"
 __status__ = "production"
@@ -245,5 +253,18 @@ def load_data(filename):
     return data
 
 def load_iupac_names():
+    '''
+    Load the ligand name database that ships with the package.
+
+    The keys are the identifiers produced by
+    mofdeconstructor.name_lookup_keys, meaning a full InChIKey, a canonical
+    SMILES and an InChIKey connectivity block for every molecule. Query it
+    through mofdeconstructor.lookup_iupac_name rather than by direct indexing,
+    since a ligand taken out of a framework has to be normalised the same way
+    the keys were before it will match.
+
+    **returns:**
+        dictionary mapping a lookup key to an IUPAC name.
+    '''
     msgpack_path = files("mofstructure").joinpath("db/iupacname_smiles.msgpack")
     return load_data(msgpack_path)
