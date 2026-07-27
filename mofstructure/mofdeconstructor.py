@@ -747,43 +747,167 @@ def remove_unbound_guest_and_return_unique(ase_atom):
 
 
 def remove_unbound_guest(ase_atom):
-    '''
-    A simple script to remove guest from a metal organic framework.
-    1) It begins by computing a connected graph component of all the fragments in the system using ASE neighbour list.
-    2) Secondly it selects indices of connected components which contain a metal
-    3) if the there are two or more components, we create a pytmagen graph for each components and filter out all components that are not polymeric
-    4) If there are two or more polymeric components, we check whether these systems there are identical or different and select all polymeric components
+    """
+    Remove unbound guest molecules from periodic frameworks and
+    non-periodic molecular systems.
 
-    **parameters:**
-        ASE atoms
+    For periodic systems, connected fragments that remain connected after
+    repetition along at least one periodic direction are retained.
 
-    **returns:**
-        mof_indices: indices of the guest-free system. The guest-free ase_atom object
-        can be obtained as follows; E.g.
-        guest_free_system = ase_atom[mof_indices]
-    '''
+    For non-periodic systems, the fragment with the greatest total atomic
+    mass is retained. This is useful for organic cages containing smaller
+    solvent or guest molecules.
+
+    1) It begins by computing the connected graph components of all
+       fragments in the system using the ASE neighbour list.
+
+    2) If only one connected component is present, the structure is
+       returned unchanged.
+
+    3) For non-periodic systems (e.g. organic cages), the fragment with
+       the largest total atomic mass is assumed to be the host framework
+       and is retained, while all smaller fragments are treated as guests.
+
+    4) For periodic systems, each connected component is expanded into a
+       supercell along the periodic directions to determine whether it is
+       polymeric.
+
+    5) All polymeric components are retained as the framework, while
+       non-polymeric components are treated as guests.
+
+    6) If no polymeric component can be identified, the fragment with the
+       largest total atomic mass is returned as a fallback.
+
+
+    **parameters**
+    ----------
+    ase_atom : ase.Atoms
+        Periodic framework or non-periodic molecular system.
+
+    **returns**
+    -------
+    list[int]
+        Atom indices belonging to the guest-free host structure.
+
+    >>> guest_free_system = ase_atom[mof_indices]
+    """
     atom_neighbors, _ = compute_ase_neighbour(ase_atom)
     fragments = connected_components(atom_neighbors)
+
+    # Nothing to remove.
     if len(fragments) == 1:
-        return [atom.index for atom in ase_atom]
-    else:
-        polymeric_indices = []
-        for i in range(len(fragments)):
-            super_cell = ase_atom[fragments[i]] * (2, 1, 1)
+        return list(fragments[0])
+
+    pbc = ase_atom.get_pbc()
+
+    # Non-periodic system, such as an organic cage.
+    if not pbc.any():
+        fragment_masses = [
+            sum(ase_atom[index].mass for index in fragment)
+            for fragment in fragments
+        ]
+
+        heaviest_fragment_index = max(
+            range(len(fragments)),
+            key=lambda index: fragment_masses[index],
+        )
+
+        return list(fragments[heaviest_fragment_index])
+
+    # Periodic system.
+    polymeric_indices = []
+
+    repeat_cells = [
+        (2, 1, 1),
+        (1, 2, 1),
+        (1, 1, 2),
+    ]
+
+    for fragment_index, fragment in enumerate(fragments):
+        fragment_atoms = ase_atom[fragment]
+        fragment_is_polymeric = False
+
+        for direction, repeat in enumerate(repeat_cells):
+            # Only repeat along periodic directions.
+            if not pbc[direction]:
+                continue
+
+            # Avoid repeating along an undefined lattice vector.
+            if ase_atom.cell.lengths()[direction] <= 1e-12:
+                continue
+
+            super_cell = fragment_atoms * repeat
             coordination_graph, _ = compute_ase_neighbour(super_cell)
-            pymat_graph = connected_components(coordination_graph)
-            if len(pymat_graph) == 1:
-                polymeric_indices.append(i)
-        if len(polymeric_indices) > 0:
-            mof_indices = []
-            for poly_index in polymeric_indices:
-                mof_indices.extend(fragments[poly_index])
-            if len(mof_indices) == 0:
-                return longest_list(fragments)
-            else:
-                return mof_indices
-        else:
-            return sum(fragments, [])
+            components = connected_components(coordination_graph)
+
+            if len(components) == 1:
+                fragment_is_polymeric = True
+                break
+
+        if fragment_is_polymeric:
+            polymeric_indices.append(fragment_index)
+
+    if polymeric_indices:
+        mof_indices = []
+
+        for fragment_index in polymeric_indices:
+            mof_indices.extend(fragments[fragment_index])
+
+        return mof_indices
+
+    # Fallback: no polymeric fragment was identified.
+    # Retain the heaviest connected fragment instead of returning everything.
+    fragment_masses = [
+        sum(ase_atom[index].mass for index in fragment)
+        for fragment in fragments
+    ]
+
+    heaviest_fragment_index = max(
+        range(len(fragments)),
+        key=lambda index: fragment_masses[index],
+    )
+
+    return list(fragments[heaviest_fragment_index])
+
+
+# def remove_unbound_guest(ase_atom):
+#     '''
+#     A simple script to remove guest from a metal organic framework.
+#     1) It begins by computing a connected graph component of all the fragments in the system using ASE neighbour list.
+#     2) Secondly it selects indices of connected components which contain a metal
+#     3) if the there are two or more components, we create a pytmagen graph for each components and filter out all components that are not polymeric
+#     4) If there are two or more polymeric components, we check whether these systems there are identical or different and select all polymeric components
+
+#     **parameters:**
+#         ASE atoms
+
+#     **returns:**
+#         mof_indices: indices of the guest-free system. The guest-free ase_atom object
+#         can be obtained as follows; E.g.
+#         guest_free_system = ase_atom[mof_indices]
+#     '''
+#     atom_neighbors, _ = compute_ase_neighbour(ase_atom)
+#     fragments = connected_components(atom_neighbors)
+#     if len(fragments) == 1:
+#         return [atom.index for atom in ase_atom]
+#     else:
+#         polymeric_indices = []
+#         for i in range(len(fragments)):
+#             super_cell = ase_atom[fragments[i]] * (2, 1, 1)
+#             coordination_graph, _ = compute_ase_neighbour(super_cell)
+#             pymat_graph = connected_components(coordination_graph)
+#             if len(pymat_graph) == 1:
+#                 polymeric_indices.append(i)
+#         if len(polymeric_indices) > 0:
+#             mof_indices = []
+#             for poly_index in polymeric_indices:
+#                 mof_indices.extend(fragments[poly_index])
+#             if len(mof_indices) == 0:
+#                 return longest_list(fragments)
+#             else:
+#                 return mof_indices
+#         else:
+#             return sum(fragments, [])
 
 
 def connected_components_recursive(graph):
@@ -1745,29 +1869,55 @@ def ligands_and_metal_clusters(ase_atom):
         if temp not in all_regions.values():
             all_regions[i] = temp
 
-    return list_of_connected_components, bonds_to_break, porphyrin_checker, all_regions, breaking_pairs
+    return (list_of_connected_components,
+            bonds_to_break,
+            porphyrin_checker,
+            all_regions,
+            breaking_pairs
+            )
 
 
 def is_rodlike(metal_sbu):
-    '''
-    Simple test to check whether a metal sbu is a rodlike MOF
+    """
+    Determine the periodic directions in which a metal SBU remains connected.
+    This helps to identify rod-like SBUs, which are connected in one or two periodic directions.
 
-    **parameter:**
-        metal_sbu : ase_atom
+    **parameters**
+    ----------
+    metal_sbu : ase.Atoms
+        Metal-containing building unit.
 
-    **returns:**
-        bool : True if the metal sbu is a rodlike MOF, False otherwise
-    '''
+    **returns**
+    -------
+    list[int]
+        Connected periodic directions:
+        0 = x, 1 = y, 2 = z.
+
+        Returns an empty list for a non-periodic structure.
+    """
     rod_check = []
     cells = [(2, 1, 1), (1, 2, 1), (1, 1, 2)]
-    if metal_sbu.get_pbc().any() is None:
+
+    pbc = metal_sbu.get_pbc()
+    cell_lengths = metal_sbu.cell.lengths()
+
+    if not pbc.any():
         return []
+
     for index, ijk in enumerate(cells):
+        if not pbc[index]:
+            continue
+
+        if cell_lengths[index] <= 1e-12:
+            continue
+
         rod = metal_sbu * ijk
         graph, _ = compute_ase_neighbour(rod)
-        list_of_connected_components = connected_components(graph)
-        if len(list_of_connected_components) == 1:
+        components = connected_components(graph)
+
+        if len(components) == 1:
             rod_check.append(index)
+
     return rod_check
 
 

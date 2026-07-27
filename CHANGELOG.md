@@ -3,6 +3,14 @@
 All notable changes to `mofstructure` are recorded here. Versions follow the
 releases published on [PyPI](https://pypi.org/project/mofstructure/).
 
+## 0.1.8.8
+
+### Improvements
+
+- Fixed rodlike detection for non-periodic and partially periodic structures.
+- Added support for guest removal in non-periodic systems (e.g. organic cages) by retaining the heaviest connected fragment.
+- Improved robustness of the deconstruction workflow and updated documentation.
+
 ## 0.1.8.7
 
 This release fixes ligand naming, which never resolved before, and stops a
