@@ -5,9 +5,10 @@ Construction of CGD nets from crystal structures.
 Systre works on nets rather than atoms, so a framework has to be reduced to
 vertices and edges first. The node definition decides what the net describes,
 and three are available: sbus places a vertex at each secondary building unit,
-all_node keeps every branch point, and ligand_cluster contracts whole ligands
-and metal clusters to single vertices. The same framework can give different
-nets under each, which is expected rather than an error.
+all_node keeps every branch point (splitting rod SBUs into their atoms), and
+single_node coarsens all_node by merging each organic group to one vertex. The
+last two reproduce CrystalNets' AllNodes and SingleNodes. The same framework can
+give different nets under each, which is expected rather than an error.
 '''
 from __future__ import annotations
 __author__ = "Dr. Dinga Wonanke"
@@ -15,7 +16,7 @@ __status__ = "production"
 
 import argparse
 import logging
-from collections import Counter, defaultdict
+from collections import defaultdict
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
@@ -171,10 +172,135 @@ def component_atom_images(
     return comp_images
 
 
+def _canonical_translation(vec: Tuple[int, int, int]):
+    '''
+    Reduce a lattice translation to a primitive, sign-canonical form so that a
+    vector and its negative, and any integer multiple, all map to one key.
+
+    A rod running along c is discovered as (0, 0, 1); the same rod found through
+    a longer path may surface as (0, 0, 2). Dividing by the gcd collapses both
+    to (0, 0, 1), and forcing the first non-zero component positive collapses
+    (0, 0, 1) and (0, 0, -1) together.
+    '''
+    x, y, z = (int(vec[0]), int(vec[1]), int(vec[2]))
+    if (x, y, z) == (0, 0, 0):
+        return None
+
+    g = np.gcd.reduce([abs(x), abs(y), abs(z)])
+    if g > 1:
+        x, y, z = x // g, y // g, z // g
+
+    for component in (x, y, z):
+        if component != 0:
+            if component < 0:
+                x, y, z = -x, -y, -z
+            break
+    return (x, y, z)
+
+
+def component_self_translations(
+    components: Sequence[Component],
+    kept_graph: Dict[int, List[int]],
+    kept_offsets: Dict[Tuple[int, int], List[Tuple[int, int, int]]],
+):
+    '''
+    Find the lattice translations along which each component is periodic within
+    itself.
+
+    A discrete building unit (a paddlewheel, a Zr6 cluster) is finite: unwrapping
+    its internal bonds assigns every atom one consistent image, so it has no
+    self-translation. A rod-shaped SBU is an infinite chain, so following its
+    internal bonds eventually returns to an atom already seen but in a different
+    periodic image. That image difference is a translation of the rod, and it is
+    exactly the connectivity that keeps a rod framework three-dimensional.
+
+    ``component_atom_images`` discards these back-edges; this recovers them. Each
+    translation is reduced to a primitive, sign-canonical vector, so a rod yields
+    one vector and a discrete cluster yields none.
+
+    **parameters:**
+        components: list
+            Connected components as lists of atom indices.
+
+        kept_graph: python dictionary
+            Atom-level graph after the broken bonds were removed.
+
+        kept_offsets: python dictionary
+            Periodic offsets of the kept bonds.
+
+    **returns:**
+        python dictionary
+            Mapping of component id -> sorted list of primitive translations
+            (sx, sy, sz). Empty for finite components.
+    '''
+    self_translations: Dict[int, List[Tuple[int, int, int]]] = {}
+
+    for cid, comp in enumerate(components):
+        comp_set = set(int(a) for a in comp)
+        if not comp_set:
+            self_translations[cid] = []
+            continue
+
+        root = next(iter(comp_set))
+        images = {root: (0, 0, 0)}
+        stack = [root]
+        found = set()
+
+        while stack:
+            a = stack.pop()
+            ia = np.array(images[a], dtype=int)
+
+            for b in kept_graph.get(a, []):
+                b = int(b)
+                if b not in comp_set:
+                    continue
+
+                for s in kept_offsets.get((a, b), []):
+                    ib = tuple((ia + np.array(s, dtype=int)).tolist())
+                    if b not in images:
+                        images[b] = ib
+                        stack.append(b)
+                    else:
+                        drift = tuple(
+                            int(ib[k] - images[b][k]) for k in range(3)
+                        )
+                        reduced = _canonical_translation(drift)
+                        if reduced is not None:
+                            found.add(reduced)
+
+        self_translations[cid] = sorted(found)
+
+    return self_translations
+
+
+def kept_bond_graph(atoms, breaking_pairs):
+    '''
+    Build the atom-level graph that remains after the deconstruction cuts.
+
+    Wraps the neighbour search and bond removal so a caller that needs the kept
+    graph for more than one purpose (edges between components and each
+    component's own periodicity, say) can compute it once and pass it around.
+
+    **parameters:**
+        atoms: ASE atoms object
+        breaking_pairs: broken bonds from the deconstructor
+
+    **returns:**
+        (kept_graph, kept_offsets)
+    '''
+    atom_graph, _, bond_offsets = \
+        mofdeconstructor.compute_ase_neighbour_with_offsets(atoms)
+    return remove_broken_bonds_from_breaking_pairs(
+        atom_graph, bond_offsets, breaking_pairs
+    )
+
+
 def base_edges_with_shifts(
     atoms: Atoms,
     components: Sequence[Component],
     breaking_pairs: Sequence[BreakingPair],
+    kept_graph: Optional[Dict[int, List[int]]] = None,
+    kept_offsets: Optional[Dict[Tuple[int, int], List[Tuple[int, int, int]]]] = None,
 ):
     '''
     Build the base component graph with periodic shifts.
@@ -232,11 +358,8 @@ def base_edges_with_shifts(
                 raise ValueError(f"Atom index {ai} appears in multiple components.")
             atom_to_comp[ai] = ci
 
-    atom_graph, _, bond_offsets = mofdeconstructor.compute_ase_neighbour_with_offsets(atoms)
-
-    kept_graph, kept_offsets = remove_broken_bonds_from_breaking_pairs(
-        atom_graph, bond_offsets, breaking_pairs
-    )
+    if kept_graph is None or kept_offsets is None:
+        kept_graph, kept_offsets = kept_bond_graph(atoms, breaking_pairs)
 
     comp_images = component_atom_images(components, kept_graph, kept_offsets)
 
@@ -384,7 +507,6 @@ def cgd_from_region_targets(
     *,
     target_regions: Sequence[int],
     name: str = "net",
-    connect_mode: str = "clique",
     dedup_edges_for_systre: bool = True,
 ):
     '''
@@ -419,11 +541,6 @@ def cgd_from_region_targets(
         name: str
             CGD graph ID.
 
-        connect_mode: str
-            Either "clique" or "chain".
-            - "clique": all incidences are mutually connected
-            - "chain": incidences are connected in sorted order
-
         dedup_edges_for_systre: bool
             If True, remove exact duplicate periodic edges.
 
@@ -441,7 +558,20 @@ def cgd_from_region_targets(
     n_components = len(components)
     target_regions = set(int(r) for r in target_regions)
 
-    base_edges = base_edges_with_shifts(atoms, components, breaking_pairs)
+    # The kept-bond graph is needed both for the edges between components and,
+    # below, for each component's own periodicity, so compute it once and share.
+    kept_graph, kept_offsets = kept_bond_graph(atoms, breaking_pairs)
+    base_edges = base_edges_with_shifts(
+        atoms, components, breaking_pairs, kept_graph, kept_offsets
+    )
+
+    # Rod SBUs are periodic within themselves, and that periodicity is what keeps
+    # a rod framework three-dimensional. base_edges only carries connections
+    # between components, so the intra-rod translations are recovered separately
+    # and emitted as self-edges below. Discrete clusters return nothing here.
+    self_translations = component_self_translations(
+        components, kept_graph, kept_offsets
+    )
 
     adj = defaultdict(list)
     edge_shift = defaultdict(list)
@@ -466,11 +596,10 @@ def cgd_from_region_targets(
     node_id_of_comp = {c: i for i, c in enumerate(target_components)}
     edge_components = [c for c in range(n_components) if c not in node_id_of_comp]
 
-    mode = connect_mode.lower().strip()
-    if mode not in {"clique", "chain"}:
-        raise ValueError("connect_mode must be 'clique' or 'chain'")
-
     edges_out = []
+
+    # linker nodes are numbered after the metal (target) nodes
+    next_linker_node = len(target_components)
 
     for ecomp in edge_components:
         incidences = []
@@ -479,36 +608,44 @@ def cgd_from_region_targets(
             if nb not in node_id_of_comp:
                 continue
             for s in edge_shift.get((nb, ecomp), []):
-                incidences.append((nb, (int(s[0]), int(s[1]), int(s[2]))))
+                node = node_id_of_comp[nb]
+                incidences.append((node, (int(s[0]), int(s[1]), int(s[2]))))
+
+        # A linker binding the same metal node through more than one atom (a
+        # chelating carboxylate, for instance) records the incidence twice with
+        # the same shift. Collapse those so the linker's connectivity reflects
+        # how many distinct metal sites it actually bridges.
+        incidences = sorted(set(incidences))
 
         if len(incidences) < 2:
             continue
 
-        if mode == "chain":
-            incidences = sorted(
-                incidences,
-                key=lambda x: (x[0], x[1][0], x[1][1], x[1][2])
-            )
-            incidence_pairs = list(zip(incidences[:-1], incidences[1:]))
-        else:
-            incidence_pairs = [
-                (incidences[a], incidences[b])
-                for a in range(len(incidences))
-                for b in range(a + 1, len(incidences))
-            ]
-
-        for (cu, su), (cv, sv) in incidence_pairs:
-            u = node_id_of_comp[cu]
-            v = node_id_of_comp[cv]
-
+        if len(incidences) == 2:
+            # A ditopic linker is a plain connection between two metal nodes, so
+            # it contracts to a single edge. Keeping it as a 2-connected node
+            # would only subdivide that edge, giving the same topology.
+            (u, su), (v, sv) = incidences
             sx = int(su[0] - sv[0])
             sy = int(su[1] - sv[1])
             sz = int(su[2] - sv[2])
+            if not (u == v and (sx, sy, sz) == (0, 0, 0)):
+                edges_out.append((u, v, sx, sy, sz))
+            continue
 
-            if u == v and (sx, sy, sz) == (0, 0, 0):
-                continue
+        # A polytopic linker (tritopic BTC and higher) is a branch point, so it
+        # must be its own node joined to each metal it bridges. Contracting it
+        # into a clique instead would inflate every metal's connectivity and
+        # give the wrong net -- this is what turned HKUST-1 into reo (8-c) when
+        # it should be tbo (a 3,4-connected net).
+        lnode = next_linker_node
+        next_linker_node += 1
+        for (u, su) in incidences:
+            edges_out.append((u, lnode, int(su[0]), int(su[1]), int(su[2])))
 
-            edges_out.append((u, v, sx, sy, sz))
+    # give each rod-shaped node its intra-chain connectivity back
+    for comp_id, node_id in node_id_of_comp.items():
+        for (sx, sy, sz) in self_translations.get(comp_id, []):
+            edges_out.append((node_id, node_id, sx, sy, sz))
 
     if dedup_edges_for_systre:
         seen = set()
@@ -556,6 +693,319 @@ def cgd_from_region_targets(
     lines.append("END")
 
     return "\n".join(lines) + "\n"
+
+
+def dedup_periodic_edges(edges):
+    '''
+    Remove duplicate undirected periodic edges. An edge (u, v, s) and its reverse
+    (v, u, -s) are the same edge; a self-edge (u, u, s) and (u, u, -s) likewise.
+    '''
+    seen = set()
+    out = []
+    for u, v, sx, sy, sz in edges:
+        neg = (-sx, -sy, -sz)
+        if (u, (sx, sy, sz)) <= (v, neg):
+            key = (u, v, sx, sy, sz)
+        else:
+            key = (v, u, neg[0], neg[1], neg[2])
+        if key[0] == key[1] and key[2:] == (0, 0, 0):
+            continue
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(key)
+    return out
+
+
+def periodic_graph_cgd(edges, name):
+    '''
+    Format a list of (u, v, sx, sy, sz) edges (0-based nodes) as a CGD
+    PERIODIC_GRAPH that Systre can read.
+    '''
+    lines = [
+        "# Generated by mofstructure.topology (PERIODIC_GRAPH, all-node)",
+        "PERIODIC_GRAPH",
+        f"ID {name}",
+        "EDGES",
+    ]
+    for u, v, sx, sy, sz in edges:
+        lines.append(f"  {u + 1} {v + 1} {sx} {sy} {sz}")
+    lines.append("END")
+    return "\n".join(lines) + "\n"
+
+
+def cgd_all_nodes(
+    atoms: Atoms,
+    components: Sequence[Component],
+    breaking_pairs: Sequence[BreakingPair],
+    regions: Dict[int, List[int]],
+    *,
+    target_regions: Sequence[int],
+    name: str = "net",
+):
+    '''
+    Build the all-node CGD, where a rod SBU keeps its atoms as separate nodes.
+
+    A discrete metal cluster collapses to one node, exactly as
+    ``cgd_from_region_targets`` does, so the net for a discrete-SBU framework is
+    unchanged. A rod SBU is an infinite chain, so collapsing it to one node
+    throws away the chain and drops the framework to a lower-dimensional net. It
+    is instead split: each metal atom and each bridging carboxyl carbon becomes
+    a node, and the oxygen atoms between them contract to edges. This recovers
+    the true net -- MIL-53 gives rna rather than the collapsed pcu.
+
+    **parameters:**
+        atoms: ASE atoms object
+
+        components: connected components from the deconstructor
+
+        breaking_pairs: broken bonds from the deconstructor
+
+        regions: mapping region_id -> component ids
+
+        target_regions: region ids treated as node (metal) regions
+
+        name: CGD graph ID
+
+    **returns:**
+        cgd_text: str
+    '''
+    edges, _ = _all_node_graph(
+        atoms, components, breaking_pairs, regions, target_regions
+    )
+    return periodic_graph_cgd(dedup_periodic_edges(edges), name)
+
+
+def cgd_single_nodes(
+    atoms: Atoms,
+    components: Sequence[Component],
+    breaking_pairs: Sequence[BreakingPair],
+    regions: Dict[int, List[int]],
+    *,
+    target_regions: Sequence[int],
+    name: str = "net",
+):
+    '''
+    Build the single-node CGD, a coarsening of the all-node net.
+
+    Starting from the all-node net, every connected group of organic vertices
+    (the carboxyl-carbon and linker nodes) is merged into a single vertex, while
+    the metal vertices are left as they are. A rod therefore keeps its metals as
+    separate nodes but collapses each linker to one vertex. This is the
+    representation CrystalNets calls SingleNodes; MIL-53 gives bpq. An organic
+    group that is itself periodic is left un-merged, so it cannot swallow a whole
+    periodic chain.
+
+    Arguments are the same as ``cgd_all_nodes``.
+    '''
+    edges, organic = _all_node_graph(
+        atoms, components, breaking_pairs, regions, target_regions
+    )
+    edges = _merge_organic_nodes(edges, organic)
+    return periodic_graph_cgd(dedup_periodic_edges(edges), name)
+
+
+def _all_node_graph(atoms, components, breaking_pairs, regions, target_regions):
+    '''
+    Construct the all-node periodic graph.
+
+    **returns:**
+        edges: list of (u, v, sx, sy, sz) with 0-based node ids
+        organic: dict node_id -> bool, True for carboxyl/linker (organic) nodes
+                 and False for metal (inorganic) nodes
+    '''
+    tm = set(transition_metals())
+    symbols = atoms.get_chemical_symbols()
+    target_regions = set(int(r) for r in target_regions)
+
+    kept_graph, kept_offsets = kept_bond_graph(atoms, breaking_pairs)
+    self_translations = component_self_translations(
+        components, kept_graph, kept_offsets
+    )
+    comp_images = component_atom_images(components, kept_graph, kept_offsets)
+
+    atom_to_comp = {int(a): ci for ci, comp in enumerate(components) for a in comp}
+    comp_to_region = {
+        int(cid): int(rid) for rid, cids in regions.items() for cid in cids
+    }
+    target_comps = [
+        c for c in range(len(components))
+        if comp_to_region.get(c) in target_regions
+    ]
+    rod_comps = {c for c in target_comps if self_translations.get(c)}
+
+    # atoms that carry a broken bond, grouped by their component
+    broken_atoms = defaultdict(set)
+    for pair in breaking_pairs:
+        if len(pair) < 2:
+            continue
+        for atom in (int(pair[0]), int(pair[1])):
+            broken_atoms[atom_to_comp[atom]].add(atom)
+
+    # assign node ids: a discrete cluster is one node; a rod contributes one node
+    # per metal atom and one per bridging (broken-bond) carbon
+    node_of_key = {}
+    organic = {}
+
+    def node_id(key, is_organic):
+        nid = node_of_key.setdefault(key, len(node_of_key))
+        organic[nid] = is_organic
+        return nid
+
+    atom_node = {}
+    for comp in target_comps:
+        comp_atoms = set(int(a) for a in components[comp])
+        if comp in rod_comps:
+            for atom in comp_atoms:
+                if symbols[atom] in tm:
+                    atom_node[atom] = node_id(("metal", atom), False)
+            for atom in broken_atoms[comp]:
+                if symbols[atom] not in tm:
+                    atom_node[atom] = node_id(("bridge", atom), True)
+        else:
+            cluster = node_id(("cluster", comp), False)
+            for atom in comp_atoms:
+                atom_node[atom] = cluster
+
+    edges = []
+
+    # within a rod, each non-node atom (the oxygens) contracts to edges between
+    # the node atoms it bonds, using the real bond offsets so the periodic chain
+    # bond survives
+    for comp in rod_comps:
+        comp_atoms = set(int(a) for a in components[comp])
+        for oxygen in comp_atoms:
+            if oxygen in atom_node:
+                continue
+            incidences = []
+            for neigh in kept_graph.get(oxygen, []):
+                neigh = int(neigh)
+                if neigh not in atom_node:
+                    continue
+                for shift in kept_offsets.get((oxygen, neigh), []):
+                    incidences.append((neigh, tuple(int(x) for x in shift)))
+            for a in range(len(incidences)):
+                for b in range(a + 1, len(incidences)):
+                    (u_atom, su), (v_atom, sv) = incidences[a], incidences[b]
+                    edges.append((
+                        atom_node[u_atom], atom_node[v_atom],
+                        su[0] - sv[0], su[1] - sv[1], su[2] - sv[2],
+                    ))
+
+    # linkers contract to an edge (ditopic) or a node (polytopic) between the
+    # node atoms they attach to
+    incidences = defaultdict(list)
+    for pair in breaking_pairs:
+        if len(pair) < 2:
+            continue
+        i, j = int(pair[0]), int(pair[1])
+        shift = np.array([
+            int(pair[2]) if len(pair) > 2 else 0,
+            int(pair[3]) if len(pair) > 3 else 0,
+            int(pair[4]) if len(pair) > 4 else 0,
+        ], dtype=int)
+        ci, cj = atom_to_comp[i], atom_to_comp[j]
+        if i in atom_node and cj not in target_comps:
+            node_atom, node_comp, link_atom, link_comp, sij = i, ci, j, cj, shift
+        elif j in atom_node and ci not in target_comps:
+            node_atom, node_comp, link_atom, link_comp, sij = j, cj, i, ci, -shift
+        else:
+            continue
+        # a per-atom rod node is its own frame; a cluster node shares one frame
+        origin = (np.zeros(3, dtype=int) if node_comp in rod_comps
+                  else np.array(comp_images[node_comp].get(node_atom, (0, 0, 0))))
+        link_image = np.array(comp_images[link_comp].get(link_atom, (0, 0, 0)))
+        anchor = tuple((origin + sij - link_image).tolist())
+        incidences[link_comp].append((atom_node[node_atom], anchor))
+
+    next_linker_node = len(node_of_key)
+    for link_comp, items in incidences.items():
+        items = sorted(set(items))
+        if len(items) < 2:
+            continue
+        if len(items) == 2:
+            (u, su), (v, sv) = items
+            edges.append((u, v, su[0] - sv[0], su[1] - sv[1], su[2] - sv[2]))
+        else:
+            lnode = next_linker_node
+            next_linker_node += 1
+            organic[lnode] = True
+            for u, su in items:
+                edges.append((u, lnode, su[0], su[1], su[2]))
+
+    return edges, organic
+
+
+def _merge_organic_nodes(edges, organic):
+    '''
+    Collapse each connected group of organic nodes into a single node.
+
+    Metal (inorganic) nodes are untouched. A group of organic nodes joined by
+    organic-organic edges becomes one node, with edge offsets adjusted for each
+    member's image within the group. A group that is itself periodic (a bond
+    closes back on a member in a different cell) is left alone, so a periodic
+    organic chain is never swallowed into one point. This turns the all-node net
+    into the single-node net.
+    '''
+    all_nodes = set()
+    for u, v, *_ in edges:
+        all_nodes.add(u)
+        all_nodes.add(v)
+
+    # adjacency among organic nodes via organic-organic edges, with offsets
+    organic_adj = defaultdict(list)
+    for u, v, sx, sy, sz in edges:
+        if organic.get(u) and organic.get(v):
+            organic_adj[u].append((v, (sx, sy, sz)))
+            organic_adj[v].append((u, (-sx, -sy, -sz)))
+
+    vmap = {}          # old node id -> new node id
+    image_in_group = {}  # organic node -> its image within its merged group
+    next_id = 0
+
+    # inorganic nodes keep their own identity
+    for node in sorted(all_nodes):
+        if not organic.get(node):
+            vmap[node] = next_id
+            next_id += 1
+
+    # organic nodes: group by connectivity, merge unless the group is periodic
+    for seed in sorted(all_nodes):
+        if not organic.get(seed) or seed in vmap:
+            continue
+        image = {seed: (0, 0, 0)}
+        queue = [seed]
+        periodic = False
+        for node in queue:
+            base = image[node]
+            for neigh, off in organic_adj.get(node, []):
+                new_off = (base[0] + off[0], base[1] + off[1], base[2] + off[2])
+                if neigh in image:
+                    if image[neigh] != new_off:
+                        periodic = True
+                else:
+                    image[neigh] = new_off
+                    queue.append(neigh)
+        if periodic:
+            for node in queue:
+                vmap[node] = next_id
+                next_id += 1
+        else:
+            group = next_id
+            next_id += 1
+            for node in queue:
+                vmap[node] = group
+                image_in_group[node] = image[node]
+
+    remapped = []
+    for u, v, sx, sy, sz in edges:
+        du = image_in_group.get(u, (0, 0, 0))
+        dv = image_in_group.get(v, (0, 0, 0))
+        remapped.append((
+            vmap[u], vmap[v],
+            sx + du[0] - dv[0], sy + du[1] - dv[1], sz + du[2] - dv[2],
+        ))
+    return remapped
 
 
 @dataclass
@@ -613,8 +1063,6 @@ class TopologyExtractor:
         *,
         method: str = "sbus",
         name: str = "net",
-        top_k_regions: int = 1,
-        connect_mode: str = "clique",
     ):
         '''
         Build a CGD PERIODIC_GRAPH using one of the supported methods.
@@ -622,19 +1070,16 @@ class TopologyExtractor:
         **parameters:**
             method: str
                 One of:
-                    - "sbus"
-                    - "ligand_cluster"
-                    - "all_node"
+                    - "sbus": each SBU is one node (rods collapse with a
+                      self-edge).
+                    - "all_node": rod SBUs keep their atoms as separate nodes,
+                      recovering the true net (e.g. MIL-53 gives rna, not pcu).
+                    - "single_node": the all-node net with each organic group
+                      merged to one vertex (CrystalNets SingleNodes; MIL-53
+                      gives bpq).
 
             name: str
                 CGD graph ID.
-
-            top_k_regions: int
-                Only used for method="all_node". Number of most-connected regions
-                to keep as node regions.
-
-            connect_mode: str
-                Either "clique" or "chain".
 
         **returns:**
             cgd_text: str
@@ -644,8 +1089,7 @@ class TopologyExtractor:
         method = method.lower().strip()
 
         logger.info(
-            "Building CGD with method='%s', name='%s', top_k_regions=%s, connect_mode='%s'",
-            method, name, top_k_regions, connect_mode
+            "Building CGD with method='%s', name='%s'", method, name
         )
 
         if method == "sbus":
@@ -667,76 +1111,53 @@ class TopologyExtractor:
                 regions=regions,
                 target_regions=target_regions,
                 name=name,
-                connect_mode=connect_mode,
-                dedup_edges_for_systre=True,
-            )
-
-        elif method == "ligand_cluster":
-            components, _, porphyrin, regions, breaking_pairs = mofdeconstructor.ligands_and_metal_clusters(guest_free)
-
-            if not components:
-                raise RuntimeError("Deconstruction failed: no components (ligands_and_metal_clusters).")
-            if not regions:
-                raise RuntimeError("Method 'ligand_cluster' requires regions, but regions is empty.")
-
-            target_regions = regions_with_metal(guest_free, components, regions, porphyrin)
-            if not target_regions:
-                raise RuntimeError("No metal-containing regions found (excluding porphyrin metals) for method='ligand_cluster'.")
-
-            return cgd_from_region_targets(
-                atoms=guest_free,
-                components=components,
-                breaking_pairs=breaking_pairs,
-                regions=regions,
-                target_regions=target_regions,
-                name=name,
-                connect_mode=connect_mode,
                 dedup_edges_for_systre=True,
             )
 
         elif method == "all_node":
-            components, _, _, regions, breaking_pairs = mofdeconstructor.secondary_building_units(guest_free)
+            components, _, porphyrin, regions, breaking_pairs = mofdeconstructor.secondary_building_units(guest_free)
 
             if not components:
                 raise RuntimeError("Deconstruction failed: no components (secondary_building_units).")
             if not regions:
                 raise RuntimeError("Method 'all_node' requires regions, but regions is empty.")
 
-            base_edges = base_edges_with_shifts(guest_free, components, breaking_pairs)
-
-            comp_to_region = {}
-            for rid, comp_ids in regions.items():
-                for cid in comp_ids:
-                    comp_to_region[int(cid)] = int(rid)
-
-            region_score = Counter()
-            for u, v, *_ in base_edges:
-                ru = comp_to_region.get(u, None)
-                rv = comp_to_region.get(v, None)
-                if ru is not None:
-                    region_score[ru] += 1
-                if rv is not None:
-                    region_score[rv] += 1
-
-            ranked = [rid for rid, _ in sorted(region_score.items(), key=lambda x: x[1], reverse=True)]
-            target_regions = ranked[:max(1, int(top_k_regions))]
-
+            target_regions = regions_with_metal(guest_free, components, regions, porphyrin)
             if not target_regions:
-                raise RuntimeError("Method 'all_node' could not select any target regions.")
+                raise RuntimeError("No metal-containing regions found (excluding porphyrin metals) for method='all_node'.")
 
-            return cgd_from_region_targets(
+            return cgd_all_nodes(
                 atoms=guest_free,
                 components=components,
                 breaking_pairs=breaking_pairs,
                 regions=regions,
                 target_regions=target_regions,
                 name=name,
-                connect_mode=connect_mode,
-                dedup_edges_for_systre=True,
+            )
+
+        elif method == "single_node":
+            components, _, porphyrin, regions, breaking_pairs = mofdeconstructor.secondary_building_units(guest_free)
+
+            if not components:
+                raise RuntimeError("Deconstruction failed: no components (secondary_building_units).")
+            if not regions:
+                raise RuntimeError("Method 'single_node' requires regions, but regions is empty.")
+
+            target_regions = regions_with_metal(guest_free, components, regions, porphyrin)
+            if not target_regions:
+                raise RuntimeError("No metal-containing regions found (excluding porphyrin metals) for method='single_node'.")
+
+            return cgd_single_nodes(
+                atoms=guest_free,
+                components=components,
+                breaking_pairs=breaking_pairs,
+                regions=regions,
+                target_regions=target_regions,
+                name=name,
             )
 
         else:
-            raise ValueError("Unknown method. Choose from: 'sbus', 'ligand_cluster', 'all_node'.")
+            raise ValueError("Unknown method. Choose from: 'sbus', 'all_node', 'single_node'.")
 
     @staticmethod
     def write_cgd(cgd_text, path):
@@ -777,7 +1198,7 @@ def build_argparser():
     )
     parser.add_argument(
         "--method",
-        choices=["sbus", "ligand_cluster", "all_node"],
+        choices=["sbus", "all_node", "single_node"],
         default="sbus",
         help="Topology extraction method."
     )
@@ -785,18 +1206,6 @@ def build_argparser():
         "--name",
         default="net",
         help="CGD graph ID (default: net)."
-    )
-    parser.add_argument(
-        "--top-k-regions",
-        type=int,
-        default=1,
-        help="For method='all_node': number of top connected regions to keep as nodes."
-    )
-    parser.add_argument(
-        "--connect-mode",
-        choices=["clique", "chain"],
-        default="clique",
-        help="Contraction connectivity mode."
     )
     return parser
 
@@ -821,8 +1230,6 @@ def main(argv: Optional[Sequence[str]] = None):
         cgd_text = topo.build_cgd(
             method=args.method,
             name=args.name,
-            top_k_regions=args.top_k_regions,
-            connect_mode=args.connect_mode,
         )
     except Exception as exc:
         logger.error("Failed to build CGD: %s", exc, exc_info=True)

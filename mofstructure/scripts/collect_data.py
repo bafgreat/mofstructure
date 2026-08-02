@@ -152,7 +152,7 @@ def summary_frame(records, drop=()):
 
 
 def compile_data(cif_files, result_folder, verbose=False, oms=False,
-                 topology=False, topology_method='ligand_cluster'):
+                 topology=False, topology_method='all_node'):
     '''
     A workflow to remove guest, compute porosity and deconstructure
     mofs and creates a MOF database. The function starts with checking and
@@ -305,14 +305,16 @@ def main():
     parser.add_argument('cif_folder', type=str,
                         help='list of cif files. like glob')
 
-    parser.add_argument('-o', '--oms', action='store_true',
+    parser.add_argument('--oms', action='store_true',
                         help='run oms')
     parser.add_argument('-t', '--topology', action='store_true',
                         help='compute the underlying net with systre')
-    parser.add_argument('--topology_method', type=str,
-                        default='ligand_cluster',
-                        choices=['sbus', 'all_node', 'ligand_cluster'],
-                        help='node definition used to build the net')
+    parser.add_argument('--method', '--topology_method', type=str,
+                        dest='topology_method',
+                        default='all_node',
+                        choices=['sbus', 'all_node', 'single_node'],
+                        help='node definition used to build the net '
+                             '(--topology_method is a deprecated alias)')
     parser.add_argument('-s', '--save_dir', type=str,
                         default='MOFDb', help='directory to save output files')
     parser.add_argument('-v', '--verbose', action='store_true',

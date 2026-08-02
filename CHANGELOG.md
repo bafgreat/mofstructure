@@ -3,12 +3,95 @@
 All notable changes to `mofstructure` are recorded here. Versions follow the
 releases published on [PyPI](https://pypi.org/project/mofstructure/).
 
-## 0.1.8.8
+## 0.1.8.9
 
-### Improvements
+### Topology
 
+Two net-construction bugs made `get_topology` report the wrong RCSR net for
+whole classes of framework. Deconstruction was correct in both cases; only the
+CGD handed to Systre was wrong.
+
+- **Polytopic linkers were contracted into a clique.** Every linker was
+  collapsed into edges directly between the metals it touched. For a ditopic
+  linker that is one edge, which is right, but a tritopic linker (BTC and
+  higher) became a triangle of edges, inflating each metal's connectivity.
+  HKUST-1, a known `tbo` net, came out `reo` (its paddlewheels reading as
+  8-connected instead of 4). A polytopic linker is now its own branch-point
+  node joined to each metal it bridges, so HKUST-1 gives `tbo` with a net
+  structurally identical to the reference (32 three-connected + 24
+  four-connected vertices). Ditopic frameworks are unaffected: UiO-66 stays
+  `fcu`, MOF-5 and the pillared-paddlewheel structures stay `pcu`.
+
+- **Rod SBUs lost their chain connectivity.** An infinite metal–oxo rod
+  (MIL-53 and similar) is periodic within itself, but that periodicity was
+  discarded when the rod was contracted to a node, so the net collapsed to a
+  two-dimensional `sql`.
+
+  `method="all_node"` now splits a rod SBU into its atoms — each metal and each
+  bridging carboxyl carbon becomes a node, and the oxygen atoms between them
+  contract to edges — recovering the true net. MIL-53 (`Cr.cif`) gives `rna`,
+  matching CrystalNets' AllNodes and mofid's AllNode. `method="sbus"` keeps the
+  rod as a single node (giving `pcu`), so the two methods now genuinely differ
+  for rods, as they should. Discrete SBUs are unaffected: HKUST-1 `tbo`,
+  UiO-66 `fcu`, and pillared paddlewheels `pcu` under both methods. Validated
+  against CrystalNets.
+
+- **Added `method="single_node"`**, the coarsening CrystalNets calls
+  SingleNodes. It takes the all-node net and merges each connected group of
+  organic (carboxyl and linker) vertices into one vertex, leaving the metal
+  vertices separate; a periodic organic group is left un-merged. MIL-53 gives
+  `bpq`, again matching CrystalNets. Discrete frameworks are unchanged
+  (HKUST-1 `tbo`, UiO-66 `fcu`). `mofstructure_topology` accepts it as
+  `--method single_node`, and `--method all` now records sbus, all_node and
+  single_node together.
+
+### Fixes
+
+- `find_unique_building_units(..., add_dummy=True)` crashed with an
+  `IndexError`. `find_key_or_value` only matched the first atom of a broken
+  bond, returning `None` for the second, and the `None` broke the ASE indexing
+  that places dummy atoms. Matching is now symmetric, so a dummy is placed at
+  every point of extension.
 - Fixed rodlike detection for non-periodic and partially periodic structures.
 - Added support for guest removal in non-periodic systems (e.g. organic cages) by retaining the heaviest connected fragment.
+
+### Command line
+
+- Added `--method all` to `mofstructure_topology`. It runs the node
+  definitions (`sbus`, `all_node`, `single_node`) and records the nets
+  in one entry per structure: the JSON nests them under a `topologies` key, and
+  the CSV gives each its own columns (`sbus_topology`, `all_node_topology`,
+  and so on), one row per structure, ready to load into a database.
+- Made the console scripts consistent. Every script now accepts `-v/--verbose`
+  (previously missing from `mofstructure_topology`, `mofstructure_systre_cgd`
+  and `cof_stacking`), `mofstructure_database` accepts `--method` as the
+  standard name for `--topology_method` (the old name still works), and
+  `cof_stacking` accepts `-o/--output`.
+- `-o` now means output everywhere. `mofstructure_database` used `-o` for
+  `--oms`; that short form was removed, so use `--oms` (this is a breaking
+  change for anyone who passed `-o` to that command).
+- Fixed the `mofstructure_generate_cgd` entry point, which pointed at a module
+  that no longer exists (`mofstructure.topology`) and failed on every install.
+  It now runs. Reinstall the package to regenerate the console script.
+- `cof_stacking` on a non-layered structure now prints a clear message instead
+  of crashing with a traceback.
+- Fixed `mofstructure_topology --finalise-only`, which required the input
+  files it is meant to skip and so could never run. It now merges the existing
+  batches without any inputs.
+
+### Changes
+
+- Removed the `ligand_cluster` topology method from `get_topology`,
+  `build_cgd`, `mofstructure_topology` and `mofstructure_database`. It
+  duplicated `sbus` on simple frameworks and produced non-standard (UNKNOWN)
+  nets on the rest, and had no CrystalNets equivalent. Use `sbus`, `all_node`
+  or `single_node`. The `ligands_and_metal_clusters` deconstruction it was
+  built on is unchanged and still backs `MOFstructure.get_ligands()`. The
+  `mofstructure_database` topology default is now `all_node`.
+- Removed the `connect_mode` argument from `build_cgd`,
+  `cgd_from_region_targets` and the `mofstructure_topology` CLI. Linker
+  contraction no longer has a clique/chain choice: ditopic linkers become
+  edges and polytopic linkers become nodes, unconditionally.
 - Improved robustness of the deconstruction workflow and updated documentation.
 
 ## 0.1.8.7

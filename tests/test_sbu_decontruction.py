@@ -89,6 +89,24 @@ def test_dut8(dut8):
     assert organic_sbus[1].info['inchikey'] == 'UZUHAWXNGWNYIS-UHFFFAOYSA-N'
 
 
+def test_add_dummy(mof5):
+    '''
+    add_dummy places a dummy atom at each point of extension, marking where a
+    linker was cut. Regression test: find_key_or_value used to return None when
+    the point of extension was the second atom of a broken bond, which crashed
+    the ASE indexing in find_unique_building_units.
+    '''
+    connected_components, breaking, porphyrin, all_regions, _ = \
+        MOF_deconstructor.secondary_building_units(mof5)
+    metal_sbus, organic_sbus, _ = MOF_deconstructor.find_unique_building_units(
+        connected_components, breaking, mof5, porphyrin, all_regions,
+        cheminfo=False, add_dummy=True)
+
+    for sbu in metal_sbus + organic_sbus:
+        n_dummies = sum(1 for atom in sbu if atom.symbol == 'X')
+        assert n_dummies == len(sbu.info['point_of_extension'])
+
+
 # data = get_test_data()
 # mof5, uio66, dut8 = data['MOF5'], data['UIO66'], data['DUT8']
 

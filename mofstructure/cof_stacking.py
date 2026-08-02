@@ -70,12 +70,18 @@ def Main():
     """
     parser = argparse.ArgumentParser(description='Compute the stacking pattern of COFs or layered materials like graphene')
     parser.add_argument('input', type=str, help='Input file or directory')
-    parser.add_argument('--output', type=str, default='cof_stacking_output.json', help='Output file for directory input (default: cof_stacking_output.json)')
+    parser.add_argument('-o', '--output', type=str, default='cof_stacking_output.json', help='Output file for directory input (default: cof_stacking_output.json)')
+    parser.add_argument('-v', '--verbose', action='store_true', help='print verbose output')
     args = parser.parse_args()
     input_path = args.input
     if os.path.isfile(input_path):
         ase_atom = read(input_path)
-        layers, lateral_offsets, interlayer_height = compute_cof_stacking(ase_atom)
+        result = compute_cof_stacking(ase_atom)
+        if result is None:
+            print(f"{input_path} is not a layered structure; "
+                  "no stacking pattern could be computed.")
+            return
+        layers, lateral_offsets, interlayer_height = result
         print("Layers:", layers)
         print("Lateral Offsets:", lateral_offsets)
         print("Interlayer Heights:", interlayer_height)

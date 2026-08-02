@@ -779,17 +779,13 @@ def remove_unbound_guest(ase_atom):
        largest total atomic mass is returned as a fallback.
 
 
-    **parameters**
-    ----------
-    ase_atom : ase.Atoms
-        Periodic framework or non-periodic molecular system.
+    **parameters:**
+        ase_atom : ase.Atoms
+            Periodic framework or non-periodic molecular system.
 
-    **returns**
-    -------
-    list[int]
-        Atom indices belonging to the guest-free host structure.
-
-    >>> guest_free_system = ase_atom[mof_indices]
+    **returns:**
+        list[int]
+            Atom indices belonging to the guest-free host structure.
     """
     atom_neighbors, _ = compute_ase_neighbour(ase_atom)
     fragments = connected_components(atom_neighbors)
@@ -1882,18 +1878,14 @@ def is_rodlike(metal_sbu):
     Determine the periodic directions in which a metal SBU remains connected.
     This helps to identify rod-like SBUs, which are connected in one or two periodic directions.
 
-    **parameters**
-    ----------
-    metal_sbu : ase.Atoms
-        Metal-containing building unit.
+    **parameters:**
+        metal_sbu : ase.Atoms
+            Metal-containing building unit.
 
-    **returns**
-    -------
-    list[int]
-        Connected periodic directions:
-        0 = x, 1 = y, 2 = z.
-
-        Returns an empty list for a non-periodic structure.
+    **returns:**
+        list[int]
+            Connected periodic directions: 0 = x, 1 = y, 2 = z.
+            Empty for a non-periodic structure.
     """
     rod_check = []
     cells = [(2, 1, 1), (1, 2, 1), (1, 1, 2)]
@@ -2448,24 +2440,25 @@ def angle_tolerance_to_rad(angle, tolerance=5):
 
 def find_key_or_value(key_or_value, list_of_list):
     """
-    Search for a key or value in a list of lists. If the key or value is
-    found, returns the corresponding value or key.
+    Given a value and a list of two-element pairs, return the partner it is
+    paired with. Matching is symmetric: for a pair ``[i, j]`` searching ``i``
+    returns ``j`` and searching ``j`` returns ``i``. This is used to find the
+    atom on the far side of a broken bond, so a dummy can be placed there.
 
     **parameters:**
-        key_or_value : int or str
-        list_of_list : list of lists
+        key_or_value : int
+            An atom index to look up.
+        list_of_list : list of pairs
+            Broken bonds, each ``[i, j]``.
 
     **returns:**
-        The corresponding value or key if found, otherwise None.
+        The partner atom index, or None if the value is not in any pair.
     """
     for sublist in list_of_list:
         if key_or_value in sublist:
-            index = sublist.index(key_or_value)
-            # Return the corresponding value in the same sublist (if it exists)
-            if index < len(sublist) - 1:
-                return sublist[index + 1]
-            else:
-                return None
+            for item in sublist:
+                if item != key_or_value:
+                    return item
     return None
 # def add_dummy_to_point_of_extension(ase_atom, point_of_extension, mapped_indices):
 #     '''

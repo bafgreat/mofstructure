@@ -22,14 +22,17 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "inputs",
-        nargs="+",
-        help="One or more files and/or folders.",
+        nargs="*",
+        help="One or more files and/or folders. Not required with "
+             "--finalise-only, which only merges existing batches.",
     )
     parser.add_argument(
         "--method",
-        choices=["sbus", "all_node", "ligand_cluster"],
-        default="ligand_cluster",
-        help="Topology method passed to MOFstructure.get_topology().",
+        choices=["sbus", "all_node", "single_node", "all"],
+        default="all_node",
+        help="Topology method passed to MOFstructure.get_topology(). "
+             "Use 'all' to run sbus, all_node and single_node and record them "
+             "all in one entry per structure.",
     )
     parser.add_argument(
         "--decimals",
@@ -106,6 +109,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Do not compute new files; only merge existing batch files into final outputs.",
     )
     parser.add_argument(
+        "-v",
         "--verbose",
         action="store_true",
         help="Print full topology dictionaries during processing.",
@@ -167,6 +171,19 @@ def _make_record_key(path: Path) -> str:
     return f"{_safe_stem(path)}__{digest}"
 
 
+# the individual node definitions run when method="all"
+ALL_METHODS = ("sbus", "all_node", "single_node")
+
+# stand-in record for a node definition that could not be computed
+_ERROR_TOPOLOGY = {
+    "topology": "ERROR",
+    "dimension": None,
+    "td10": None,
+    "topology_hash": None,
+    "cgd": None,
+}
+
+
 def _compute_topology(
     path: Path,
     *,
@@ -175,14 +192,38 @@ def _compute_topology(
     include_edge_centers: bool,
     fallback_to_input_cgd: bool,
 ) -> Dict[str, object]:
+    '''
+    Compute the topology of one structure.
+
+    For a single method the get_topology fields are returned flat. For
+    method="all" each node definition in ALL_METHODS is computed and the
+    results are nested under a "topologies" mapping keyed by method name, so one
+    record carries every net and drops straight into a database.
+    '''
     structure = MOFstructure(filename=str(path))
-    data = structure.get_topology(
-        method=method,
-        decimals=decimals,
-        include_edge_centers=include_edge_centers,
-        fallback_to_input_cgd=fallback_to_input_cgd,
-    )
-    return convert_numpy_types(data)
+
+    if method != "all":
+        data = structure.get_topology(
+            method=method,
+            decimals=decimals,
+            include_edge_centers=include_edge_centers,
+            fallback_to_input_cgd=fallback_to_input_cgd,
+        )
+        return convert_numpy_types(data)
+
+    topologies = {}
+    for node_method in ALL_METHODS:
+        try:
+            data = structure.get_topology(
+                method=node_method,
+                decimals=decimals,
+                include_edge_centers=include_edge_centers,
+                fallback_to_input_cgd=fallback_to_input_cgd,
+            )
+            topologies[node_method] = convert_numpy_types(data)
+        except Exception:
+            topologies[node_method] = dict(_ERROR_TOPOLOGY)
+    return {"topologies": topologies}
 
 
 def _write_batch(
@@ -274,20 +315,48 @@ def _write_final_json(path: Path, data: Dict[str, Dict[str, object]]) -> None:
         json.dump(ordered, handle, indent=4, sort_keys=True)
 
 
+def _record_topology_summary(record: Dict[str, object]) -> str:
+    """
+    One-line topology summary for progress output. For an "all" record this is
+    ``sbus=<net> all_node=<net> single_node=<net>``; otherwise the net.
+    """
+    topologies = record.get("topologies")
+    if isinstance(topologies, dict):
+        return " ".join(
+            f"{method}={topologies.get(method, {}).get('topology')}"
+            for method in ALL_METHODS
+        )
+    return str(record.get("topology"))
+
+
 def _write_final_csv(path: Path, data: Dict[str, Dict[str, object]]) -> None:
     """
     Summary CSV only. Heavy CGD text fields are intentionally not written here.
+
+    For "all" records each node definition gets its own columns
+    (``<method>_topology`` and so on), one row per structure, so the table loads
+    straight into a database.
     """
     path.parent.mkdir(parents=True, exist_ok=True)
 
-    fieldnames = [
-        "record_id",
-        "MOF name",
-        "topology",
-        "dimension",
-        "td10",
-        "topology_hash",
-    ]
+    is_all = any(
+        isinstance(row.get("topologies"), dict) for row in data.values()
+    )
+
+    if is_all:
+        fields = ("topology", "dimension", "td10", "topology_hash")
+        fieldnames = ["record_id", "MOF name"]
+        for method in ALL_METHODS:
+            fieldnames.extend(f"{method}_{field}" for field in fields)
+    else:
+        fieldnames = [
+            "record_id",
+            "MOF name",
+            "topology",
+            "dimension",
+            "td10",
+            "topology_hash",
+        ]
 
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
@@ -295,16 +364,17 @@ def _write_final_csv(path: Path, data: Dict[str, Dict[str, object]]) -> None:
 
         for key in sorted(data):
             row = data[key]
-            writer.writerow(
-                {
-                    "record_id": key,
-                    "MOF name": row.get("mof_name"),
-                    "topology": row.get("topology"),
-                    "dimension": row.get("dimension"),
-                    "td10": row.get("td10"),
-                    "topology_hash": row.get("topology_hash"),
-                }
-            )
+            out = {"record_id": key, "MOF name": row.get("mof_name")}
+            if is_all:
+                topologies = row.get("topologies") or {}
+                for method in ALL_METHODS:
+                    net = topologies.get(method, {})
+                    for field in ("topology", "dimension", "td10", "topology_hash"):
+                        out[f"{method}_{field}"] = net.get(field)
+            else:
+                for field in ("topology", "dimension", "td10", "topology_hash"):
+                    out[field] = row.get(field)
+            writer.writerow(out)
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
@@ -375,14 +445,13 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 include_edge_centers=args.include_edge_centers,
                 fallback_to_input_cgd=args.fallback_to_input_cgd,
             )
-        except Exception as exc:
-            topo_data = {
-                "topology": "ERROR",
-                "dimension": None,
-                "td10": None,
-                "topology_hash": None,
-                "cgd": None
-            }
+        except Exception:
+            if args.method == "all":
+                topo_data = {
+                    "topologies": {m: dict(_ERROR_TOPOLOGY) for m in ALL_METHODS}
+                }
+            else:
+                topo_data = dict(_ERROR_TOPOLOGY)
 
         record = {
             "mof_name": filepath.stem,
@@ -394,7 +463,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         batch_sources.append(resolved)
         processed_new += 1
 
-        print(f"{filepath}\t{record.get('topology')}")
+        print(f"{filepath}\t{_record_topology_summary(record)}")
         if args.verbose:
             print(json.dumps(record, indent=2, sort_keys=True))
 

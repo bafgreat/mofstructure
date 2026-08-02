@@ -143,13 +143,25 @@ mofstructure_topology net.cgd
 mofstructure_topology ./folder
 ```
 
-The net depends on how you define a node, and three definitions are available.
-The same framework can legitimately give a different net under each.
+The net depends on how you define a node, and several definitions are
+available. The same framework can legitimately give a different net under each —
+for a rod MOF like MIL-53, `all_node` gives `rna` and `single_node` gives `bpq`
+(matching CrystalNets), while `sbus` collapses the rod to `pcu`.
 
 ```bash
-mofstructure_topology structure.cif --method all_node
-mofstructure_topology ./folder --method ligand_cluster
-mofstructure_topology ./folder --method sbus
+mofstructure_topology structure.cif --method all_node      # every branch point a node
+mofstructure_topology ./folder --method single_node        # organic groups merged
+mofstructure_topology ./folder --method sbus               # each SBU one node
+mofstructure_topology ./folder --method all                # all three, one record each
+```
+
+Use `--method all` to compute all three at once. Each structure gets a single
+record holding every net — nested under a `topologies` key in the JSON, and one
+column group per method in the CSV — so the output drops straight into a
+database:
+
+```bash
+mofstructure_topology ./folder --method all
 ```
 
 For large datasets, write results to disk in batches:

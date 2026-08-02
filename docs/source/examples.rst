@@ -28,7 +28,7 @@ and unified interface to most functionalities
    guest_free_mof = mofdata.remove_guest()
 
    # get the topology of the MOF
-   topology = mofdata.get_topology(method="all_node") # method can be "all_node" or "sbus" or "ligand_cluster"
+   topology = mofdata.get_topology(method="all_node") # "all_node", "single_node" or "sbus"
 
    print(topology['topology']) # prints the topology name, e.g. pcu, dia, etc.
    print(topology['dimension']) # prints the dimension of the topology, e.g. 3 for 3D, 2 for 2D, etc.
@@ -126,9 +126,9 @@ This is possible becuase of the deconstruction into building units, which allows
 
 Available methods:
 
-- all_node: full atomic network
-- sbus: SBU-based coarse graining
-- ligand_cluster: ligand-based abstraction
+- all_node: rod SBUs split into their atoms (CrystalNets AllNodes)
+- single_node: all_node with organic groups merged (CrystalNets SingleNodes)
+- sbus: each SBU as one node
 
 The output includes:
 - RCSR topology name

@@ -61,6 +61,12 @@ def build_argparser() -> argparse.ArgumentParser:
         action="store_true",
         help="Fallback to the input PERIODIC_GRAPH CGD if relaxed output is unavailable.",
     )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Print where the Systre log and error files were written.",
+    )
     return parser
 
 
@@ -93,6 +99,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     Path(args.systre_log).write_text(result.stdout or "", encoding="utf-8")
     Path(args.systre_err).write_text(result.stderr or "", encoding="utf-8")
+
+    if args.verbose:
+        print(f"Systre log written to {args.systre_log}")
+        print(f"Systre errors written to {args.systre_err}")
 
     if args.keep_periodic_graph is not None:
         cgd_text = runner._input_cgd_text() if hasattr(runner, "_input_cgd_text") else None

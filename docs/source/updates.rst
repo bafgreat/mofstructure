@@ -1,3 +1,70 @@
+Updates Version 0.1.8.9
+=======================
+
+This release corrects two topology bugs, fixes a crash when adding dummy atoms,
+and removes a redundant option. Deconstruction was already correct in the
+topology cases; only the net handed to Systre was wrong.
+
+Topology
+--------
+
+**Polytopic linkers were contracted into a clique.** Every linker was collapsed
+into edges directly between the metals it touched. For a ditopic linker that is
+one edge, which is right, but a tritopic linker (BTC and higher) became a
+triangle of edges, inflating each metal's connectivity. HKUST-1, a known
+``tbo`` net, came out ``reo``. A polytopic linker is now its own branch-point
+node joined to each metal it bridges, so HKUST-1 gives ``tbo``. Ditopic
+frameworks are unaffected: UiO-66 stays ``fcu``, MOF-5 and pillared paddlewheels
+stay ``pcu``.
+
+**Rod SBUs lost their chain connectivity.** An infinite metal-oxo rod (MIL-53
+and similar) is periodic within itself, but that periodicity was discarded when
+the rod was contracted to a node, collapsing the net to a two-dimensional
+``sql``. ``method="all_node"`` now splits a rod into its atoms -- each metal and
+each bridging carboxyl carbon becomes a node -- recovering the true net. MIL-53
+gives ``rna`` (matching CrystalNets AllNodes and mofid), while ``method="sbus"``
+keeps the rod as one node (``pcu``). Discrete SBUs are unchanged (HKUST-1
+``tbo``, UiO-66 ``fcu``).
+
+**New ``method="single_node"``.** This is the coarsening CrystalNets calls
+SingleNodes: the all-node net with each connected group of organic vertices
+merged to one vertex, metals left separate. MIL-53 gives ``bpq``, matching
+CrystalNets. ``mofstructure_topology --method all`` now records sbus, all_node
+and single_node together.
+
+Fixes
+-----
+
+``find_unique_building_units(..., add_dummy=True)`` crashed with an
+``IndexError`` because the helper that locates the far side of a broken bond
+only matched the first atom of the pair. Matching is now symmetric, so a dummy
+atom is placed at every point of extension.
+
+Command line
+------------
+
+``mofstructure_topology`` gained ``--method all``, which runs the node
+definitions (``sbus``, ``all_node``, ``single_node``) and records the nets in
+one entry per structure. The JSON nests them under a ``topologies`` key and the
+CSV gives each its own columns, ready to load into a database.
+
+The ``ligand_cluster`` method was removed: it duplicated ``sbus`` on simple
+frameworks and gave non-standard nets on the rest. Use ``sbus``, ``all_node``
+or ``single_node``.
+
+The console scripts were made consistent: every script accepts
+``-v/--verbose``, ``mofstructure_database`` accepts ``--method`` (with
+``--topology_method`` kept as an alias), and ``-o`` now means output
+everywhere. ``mofstructure_database`` previously used ``-o`` for ``--oms``;
+that short form was removed, so use ``--oms``.
+
+Changes
+-------
+
+The ``connect_mode`` argument was removed from ``build_cgd`` and the
+``mofstructure_topology`` CLI. Linker contraction no longer has a clique/chain
+choice: ditopic linkers become edges and polytopic linkers become nodes.
+
 Updates Version 0.1.8.7
 =======================
 
@@ -93,7 +160,6 @@ Major update in the code structuring with
 
    mofstructure_topology cif_folder --method all_node
    mofstructure_topology cif_folder --method sbus
-   mofstructure_topology cif_folder --method ligand_cluster
 
    # Can be directly used on a single CIF file as well
    mofstructure_topology cif_file.cif
