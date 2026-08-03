@@ -1145,6 +1145,36 @@ def find_carboxylates(ase_atom, graph):
     return carboxyl
 
 
+def find_nitroxylates(ase_atom, graph):
+    '''
+    A simple aglorimth to search for nitroxylates found in the system.
+    ::
+
+            M
+            |
+         -N-O
+            |
+            M
+
+    **parameters:**
+        - ase_atom: ASE atom
+
+    **returns:**
+        - dictionary of key = nitrogen index and values = oxygen index
+    '''
+    nitroxyl = {}
+    for atoms in ase_atom:
+        if atoms.symbol == 'N':
+            index = atoms.index
+            oxygen = [i for i in graph[index] if ase_atom[i].symbol == 'O']
+            if len(oxygen) == 1:
+                oxy_metal = sum(
+                    [[j for j in graph[i] if ase_atom[j].symbol in transition_metals()] for i in oxygen], [])
+                if len(oxy_metal) >= 1:
+                    nitroxyl[index] = oxygen
+    return nitroxyl
+
+
 def find_carbonyl_sulphate(ase_atom, graph):
     """
     A simple aglorimth to search for Carbonyl sulphate  found in the system.
@@ -1354,6 +1384,7 @@ def secondary_building_units(ase_atom):
     all_phosphites = find_phosphite(ase_atom, graph)
     all_sulphites = find_sulfides(ase_atom, graph)
     cos_group = find_COS(ase_atom, graph)
+    nitroxylates = find_nitroxylates(ase_atom, graph)
     ferocene_metal = all_ferrocene_metals(ase_atom, graph)
     all_metals = [i.index for i in ase_atom if i.symbol in transition_metals()]
     all_metals = [
@@ -1473,7 +1504,8 @@ def secondary_building_units(ase_atom):
         if ase_atom[atoms].symbol == 'O':
             seen = sum(list(carboxylates.values())
                        + list(all_sulphates.values())
-                       + list(cos_group.values()), [])
+                       + list(cos_group.values())
+                       + list(nitroxylates.values()), [])
             if atoms not in seen:
                 connected = graph[atoms]
                 metal = [
@@ -1511,6 +1543,14 @@ def secondary_building_units(ase_atom):
                         sx, sy, sz = get_bond_shift(atoms, Nitrogen[0], bond_offsets)
                         breaking_pairs.append([atoms, Nitrogen[0], sx, sy, sz])
 
+        if atoms in list(nitroxylates.keys()):
+            connected = graph[atoms]
+            oxygen = nitroxylates[atoms]
+            if len(oxygen) == 1:
+                bonds_to_break.append([atoms] + oxygen)
+                sx, sy, sz = get_bond_shift(atoms, oxygen[0], bond_offsets)
+                breaking_pairs.append([atoms, oxygen[0], sx, sy, sz])
+
         if ase_atom[atoms].symbol == 'N':
             connected = graph[atoms]
             metal = [
@@ -1526,7 +1566,8 @@ def secondary_building_units(ase_atom):
             seen = sum(list(carboxylates.values())
                        + list(all_sulphates.values())
                        + list(all_sulphites.values())
-                       + list(cos_group.values()), []
+                       + list(cos_group.values())
+                       + list(nitroxylates.values()), []
                        )
             if atoms not in seen:
                 connected = graph[atoms]
