@@ -144,9 +144,8 @@ mofstructure_topology ./folder
 ```
 
 The net depends on how you define a node, and several definitions are
-available. The same framework can legitimately give a different net under each —
-for a rod MOF like MIL-53, `all_node` gives `rna` and `single_node` gives `bpq`
-(matching CrystalNets), while `sbus` collapses the rod to `pcu`.
+available. The same framework can legitimately give a different net
+depending on the topology method. For instance, for a rod MOF like MIL-53, `all_node` gives `rna` and `single_node` gives `bpq` while `sbus` collapses the rod to `pcu`.
 
 ```bash
 mofstructure_topology structure.cif --method all_node      # every branch point a node
@@ -165,7 +164,7 @@ incidence, so chelation does not artificially increase the topological degree.
 
 A ditopic ligand stays a vertex, which subdivides the edge it makes, and RCSR
 lists no subdivided nets — UiO-66 comes back as `UNKNOWN` even though the net is
-right. That is deliberate: the point of this method is how the ligands meet the
+right. That is deliberate: the point of this method is how the ligands links to the metal
 clusters, not the RCSR symbol, and the topology hash still identifies the net.
 Pass `collapse_ditopic=True` to `ligand_cluster_graph` or `cgd_ligand_cluster`
 to splice ditopic ligands into edges instead, which recovers the nameable net
@@ -179,6 +178,15 @@ from mofstructure import structure
 
 mof = structure.MOFstructure(filename='UiO-66.cif')
 print(mof.get_ligand_cluster_fingerprint())
+```
+
+The same fingerprint is available from the command line for one file or a
+folder. It writes the complete records to JSON and an index-friendly summary
+to CSV:
+
+```bash
+mofstructure_fingerprint UiO-66.cif
+mofstructure_fingerprint ./cif_files --json fingerprints.json --csv fingerprints.csv
 ```
 
 It counts each ligand and cluster species per metal-cluster unit, with how many

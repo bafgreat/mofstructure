@@ -195,6 +195,7 @@ def compile_data(cif_files, result_folder, verbose=False, oms=False,
     porosity_path =  os.path.join(structure_db, 'porosity_data.json')
     oms_path =  os.path.join(structure_db, 'structure_oms_and_general_info.json')
     topology_path = os.path.join(structure_db, 'topology_data.json')
+    fingerprint_path = os.path.join(structure_db, 'fingerprint_data.json')
 
     if os.path.exists(path2sbu):
         all_sbu_data = read_write.load_data(path2sbu)
@@ -221,6 +222,11 @@ def compile_data(cif_files, result_folder, verbose=False, oms=False,
     else:
         all_topology_data = {}
 
+    if os.path.exists(fingerprint_path):
+        all_fingerprint_data = read_write.load_data(fingerprint_path)
+    else:
+        all_fingerprint_data = {}
+
 
     seen = list(all_sbu_data.keys())
 
@@ -229,6 +235,19 @@ def compile_data(cif_files, result_folder, verbose=False, oms=False,
             mof_object = structure.MOFstructure(filename=cif_file)
 
             base_name = os.path.basename(cif_file).split('.')[0]
+            # Fingerprints are inexpensive and do not require Systre. Compute
+            # them for new structures and backfill databases created before
+            # fingerprint_data.json was introduced.
+            if not all_fingerprint_data.get(base_name):
+                try:
+                    all_fingerprint_data[base_name] = (
+                        mof_object.get_ligand_cluster_fingerprint())
+                except Exception:
+                    # A fingerprint failure must not discard porosity, SBU,
+                    # ligand or OMS results for an otherwise readable MOF.
+                    all_fingerprint_data[base_name] = None
+                read_write.append_json(all_fingerprint_data, fingerprint_path)
+
             if base_name not in seen:
                 print("======================================\n")
                 print(f'     processing : {base_name}     \n')
@@ -289,6 +308,15 @@ def compile_data(cif_files, result_folder, verbose=False, oms=False,
         # the cgd net is a multi line block, so keep it out of the summary
         summary_frame(all_topology_data, drop=['cgd']).to_csv(
             structure_db+'/topology_data.csv')
+
+    if all_fingerprint_data:
+        # The full nested chemical/connectivity description remains in JSON;
+        # the compact columns used for database indexing go into the CSV.
+        fingerprint_summary = summary_frame(all_fingerprint_data)
+        if not fingerprint_summary.empty:
+            fingerprint_summary[
+                ['fingerprint_hash', 'cluster_units']
+            ].to_csv(structure_db+'/fingerprint_data.csv')
 
     if verbose:
         print(f"Saved results to {result_folder}")
