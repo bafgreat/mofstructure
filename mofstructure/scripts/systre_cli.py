@@ -28,10 +28,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--method",
-        choices=["sbus", "all_node", "single_node", "all"],
+        choices=["sbus", "ligand_cluster", "all_node", "single_node", "all"],
         default="all_node",
         help="Topology method passed to MOFstructure.get_topology(). "
-             "Use 'all' to run sbus, all_node and single_node and record them "
+             "Use 'all' to run every method and record them "
              "all in one entry per structure.",
     )
     parser.add_argument(
@@ -172,7 +172,7 @@ def _make_record_key(path: Path) -> str:
 
 
 # the individual node definitions run when method="all"
-ALL_METHODS = ("sbus", "all_node", "single_node")
+ALL_METHODS = ("sbus", "ligand_cluster", "all_node", "single_node")
 
 # stand-in record for a node definition that could not be computed
 _ERROR_TOPOLOGY = {
@@ -318,7 +318,7 @@ def _write_final_json(path: Path, data: Dict[str, Dict[str, object]]) -> None:
 def _record_topology_summary(record: Dict[str, object]) -> str:
     """
     One-line topology summary for progress output. For an "all" record this is
-    ``sbus=<net> all_node=<net> single_node=<net>``; otherwise the net.
+    one ``method=<net>`` item per node definition; otherwise the net.
     """
     topologies = record.get("topologies")
     if isinstance(topologies, dict):

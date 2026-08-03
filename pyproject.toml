@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "mofstructure"
-version = "0.1.8.9"
+version = "0.1.9.0"
 description = "A comprehensive Python toolkit for deconstructing metal-organic frameworks (MOFs) into building units, analysing porosity, removing unbound guest molecules, determining framework topology with RCSR net identification and generating cheminformatics descriptors for structural components."
 keywords = ["guest removal", "InChIKeys", "InChI", "SMILES", "PLD", "LCD", "MOF", "COF", "zeolites", "accessible surface area", "void fraction", "coordination number", "porosity", "zeo++", "SBU", "point of extension", "topology", "cgd", "periodic graph", "systre", "topological analysis", "RCSR", "reticular chemistry structure resource", "building unit", "metal cluster", "organic linker", "topological node", "topological edge"]
 authors = ["Dinga Wonanke <dak52@uclive.ac.nz>"]
@@ -26,9 +26,11 @@ networkx = ">=2.6.3"
 openbabel-wheel = "3.1.1.22"
 pyzeo = ">=0.1.1"
 rdkit = {version = ">=2022.9.5", optional = true}
+plotly = {version = ">=5.0", optional = true}
 msgpack = "^1.1.0"
 omsdetector-forked = "^2026.1.6"
 jdk4py = "^21.0.8.1"
+kaleido = "^1.3.0"
 
 [tool.poetry.scripts]
 mofstructure = "mofstructure.scripts.buildingunits:main"
@@ -53,6 +55,7 @@ sphinx-copybutton = "^0.5.2"
 
 [tool.poetry.extras]
 rdkit = ["rdkit"]
+draw = ["plotly"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning"]

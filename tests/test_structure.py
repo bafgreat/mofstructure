@@ -30,6 +30,6 @@ def test_structure():
     assert topology.get('topology') == 'pcu'
     assert topology.get('dimension') == 3
     assert topology.get('td10') == 1561
-    assert topology.get('topology_hash') == '4b5eb714e48dcff8cb1c03182dcc3a09e8fe132b7d9f922f26ceec6e80505f3e'
+    assert topology.get('topology_hash') == 'f67362dace7cfecdb0ac2a67aeadf06494eaf5b24dc339bb15b6b083f868bac5'
 
 

@@ -3,6 +3,55 @@
 All notable changes to `mofstructure` are recorded here. Versions follow the
 releases published on [PyPI](https://pypi.org/project/mofstructure/).
 
+## 0.1.9.0
+
+### Topology
+
+- Added a chemically explicit `ligand_cluster` representation in which complete
+  organic ligands and metal clusters are the two vertex classes. Edges record
+  distinct periodic ligand--cluster coordination incidences; multiple donor
+  bonds within one contact are consolidated without merging contacts to
+  different periodic images. Polytopic and ditopic ligands remain explicit
+  vertices. `collapse_ditopic=True` is available when a conventional contracted
+  RCSR net is required.
+- Made contracted nets invariant to atom ordering, cell origin and supercell
+  choice. Contact translations for periodic rods and sheets are now reduced
+  modulo the component translation lattice. This fixes order-dependent results
+  for MIL-53, whose `sbus` topology now remains `pcu` across equivalent input
+  representations.
+- Excluded singly coordinated dangling ligands, coordinated solvent and capping
+  modulators from the Systre net, preventing degree-one collisions from hiding
+  the underlying framework topology.
+- Made `topology_hash` independent of Systre's input-dependent node labels.
+  Existing hashes from earlier releases will not match the new values. Relaxed
+  coordinates may still differ by an ideal-space-group origin choice.
+
+### Descriptors
+
+- Added `MOFstructure.get_ligand_cluster_fingerprint()`. The fingerprint records
+  ligand and cluster species, periodic connectivity, denticity, terminal
+  ligands and refinement information without requiring Systre to identify the
+  net. Its normalized counts and `fingerprint_hash` are invariant to atom
+  ordering, cell origin and supercell expansion.
+
+### Visualization
+
+- Added `MOFstructure.draw_topology()` for interactive 3D inspection of the
+  extracted net over the framework geometry. It supports `sbus`, `all_node`,
+  `single_node` and `ligand_cluster`, periodic supercells, optional framework
+  and unit-cell layers, HTML export and static image export.
+- Corrected drawing across periodic boundaries by retaining graph translations,
+  self-edges and distinct periodic incidences. Every displayed connection ends
+  at a visible node image, and zero-length self-edges are removed.
+- Added a method-specific centre-to-centre view of SBU/metal and organic/linker
+  centres. Connections use solid green lines, while the abstract topology layer
+  can be enabled separately with `show_topology=True`.
+
+### Packaging and documentation
+
+- Added the optional `draw` extra for Plotly-based visualization and documented
+  the topology drawing and ligand--cluster fingerprint APIs.
+
 ## 0.1.8.9
 
 ### Topology

@@ -129,6 +129,33 @@ Available methods:
 - all_node: rod SBUs split into their atoms (CrystalNets AllNodes)
 - single_node: all_node with organic groups merged (CrystalNets SingleNodes)
 - sbus: each SBU as one node
+- ligand_cluster: complete organic ligands and metal clusters as the two vertex
+  classes of a coordination-incidence net
+
+In ``ligand_cluster``, a ligand remains a vertex even when it is ditopic.
+Several donor bonds from one ligand to the same periodic image of a metal
+cluster form one incidence, while connections to different cluster images
+remain distinct. Keeping ditopic ligands means the net is a subdivided one,
+which RCSR does not list, so frameworks such as UiO-66 report ``UNKNOWN`` with
+the topology hash still identifying the net. Pass ``collapse_ditopic=True`` to
+``ligand_cluster_graph`` or ``cgd_ligand_cluster`` to splice those ligands into
+edges and recover the nameable net.
+
+To describe how ligands meet clusters without going through Systre:
+
+.. code-block:: python
+
+   fingerprint = mof.get_ligand_cluster_fingerprint()
+   print(fingerprint["ligands"])   # {'C8H4O4': {'count': '6', 'contacts': {2: '6'}, ...}}
+   print(fingerprint["terminal"])  # coordinated solvent and dangling linkers
+   print(fingerprint["fingerprint_hash"])
+
+Counts are quoted per metal-cluster repeat unit as exact fractions, so the
+fingerprint is unchanged by atom ordering, by the cell origin, and by being
+given a supercell, while defects do move it: a missing linker lowers a
+cluster's connectivity, a linker bound at only one end appears under
+``terminal`` with its own formula, and a carboxylate reduced from bridging to
+monodentate appears in the denticity histogram.
 
 The output includes:
 - RCSR topology name
@@ -137,6 +164,26 @@ The output includes:
 - TD10 value
 - Topology hash for uniqueness
 - systre optimised cgd string representation
+
+Drawing the net
+---------------
+
+``draw_topology`` traces the net over the real framework and returns an
+interactive plotly figure. It needs the optional ``plotly`` extra
+(``pip install mofstructure[draw]``).
+
+.. code-block:: python
+
+   fig = mof.draw_topology(method="all_node", filename="net.html")
+
+The drawing preserves the lattice translation of every periodic edge, including
+self-edges of rod and sheet nodes. Framework atoms and bonds and the unit-cell
+boundary are displayed behind the net and can be hidden from the legend. Pass
+``show_structure=False`` or ``show_unit_cell=False`` for a net-only figure.
+An independent mapping layer displays complete linker centres, SBU centres and
+their coordination incidences for every topology method, including ``sbus``.
+Pass ``show_linker_sbu=False`` to hide this chemical mapping.
+   fig.show()
 
 Porosity Analysis
 =================

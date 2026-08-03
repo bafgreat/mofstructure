@@ -151,14 +151,25 @@ class RelaxedComponent:
             python dictionary
                 JSON-serializable normalized topology payload.
         '''
-        nodes = [
-            {
-                "label": str(label),
-                "xyz": _round_coord(xyz, decimals),
-                "coordination_number": int(self.coordination_number.get(label, 0)),
-            }
-            for label, xyz in sorted(self.nodes.items(), key=lambda kv: _sort_key(kv[0]))
-        ]
+        # The label is the number Systre happened to give the node it picked to
+        # represent an orbit, and that number follows the order the atoms came
+        # in. Two files describing the same crystal with the atoms listed
+        # differently produce the same net under different labels, so the label
+        # is left out and the nodes are ordered by what they are rather than by
+        # what they were called. The relaxed coordinates are still only fixed up
+        # to the origin of the ideal space group, which Systre may choose
+        # differently from run to run, so this hash identifies a net but two
+        # hashes differing does not prove two nets differ.
+        nodes = sorted(
+            (
+                {
+                    "xyz": _round_coord(xyz, decimals),
+                    "coordination_number": int(self.coordination_number.get(label, 0)),
+                }
+                for label, xyz in self.nodes.items()
+            ),
+            key=lambda node: (node["coordination_number"], node["xyz"]),
+        )
 
         edges = [
             {
@@ -168,13 +179,9 @@ class RelaxedComponent:
             for p, q in _canonicalize_edges(self.edges, decimals=decimals)
         ]
 
-        edge_centers = [
-            _round_coord(center, decimals)
-            for center in sorted(
-                (_round_coord(center, decimals) for center in self.edge_centers),
-                key=lambda xyz: (xyz[0], xyz[1], xyz[2]),
-            )
-        ]
+        edge_centers = sorted(
+            _round_coord(center, decimals) for center in self.edge_centers
+        )
 
         return {
             "dimension": int(self.dimension),

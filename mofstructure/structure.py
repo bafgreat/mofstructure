@@ -35,6 +35,7 @@ import mofstructure.mofdeconstructor as MOF_deconstructor
 from mofstructure.porosity import zeo_calculation
 import mofstructure.filetyper as read_write
 from mofstructure.systre import SystreTopology
+from mofstructure.generate_cgd import ligand_cluster_fingerprint
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
@@ -268,6 +269,370 @@ class MOFstructure(object):
                 include_edge_centers=include_edge_centers,
             ),
         }
+
+    def get_ligand_cluster_fingerprint(self):
+        """
+        Describe how the ligands meet the metal clusters.
+
+        Where ``get_topology`` asks Systre to name the net, this reads the
+        deconstruction directly, so it answers for every framework, including
+        the ones Systre leaves unnamed or refuses. It counts each ligand and
+        cluster species, how many clusters each ligand bridges, and with what
+        denticity, which is what makes it sensitive to defects: a missing
+        linker lowers a cluster's connectivity, a linker hanging by one end is
+        listed under ``terminal`` alongside its formula, and a carboxylate that
+        has dropped from bridging to monodentate shows in the denticity
+        histogram. It does not change when the atoms are listed in a different
+        order, when the cell origin moves, or when the same crystal is given as
+        a supercell.
+
+        **return:**
+            python dictionary
+                Mapping containing:
+                    - clusters
+                    - ligands
+                    - terminal
+                    - refinement
+                    - formula_units
+                    - fingerprint_hash
+        """
+        return ligand_cluster_fingerprint(self.remove_guest())
+
+    def draw_topology(self, method="all_node", supercell=(1, 1, 1),
+                      filename=None, show=False, show_structure=True,
+                      show_unit_cell=True, show_linker_sbu=True,
+                      show_topology=False):
+        '''
+        Draw the complete topological network over the real framework geometry.
+
+        Each node sits at the real centroid of the atoms it represents (metal
+        atoms/clusters and the carboxyl and linker vertices), and edges follow
+        the framework connectivity, including bonds that cross the cell. The
+        figure is presented as a molecular structure rather than an axis-based
+        plot: rotate, zoom and hover a node for its coordination.  Nodes in
+        neighbouring periodic images are included whenever an edge reaches
+        them, so every visible edge has a visible node at both ends.
+
+        **parameters:**
+            method: str
+                Node definition: "sbus", "all_node", "single_node" or
+                "ligand_cluster".
+
+            supercell: tuple of three ints
+                How many cells to draw along a, b, c. (1, 1, 1) draws one cell
+                plus the edges leaving it.
+
+            filename: str, optional
+                If given, write the figure to this path. An .html file stays
+                interactive; other extensions (.png, .pdf, ...) need the
+                optional 'kaleido' package.
+
+            show: bool
+                If True, open the figure in a browser.
+
+            show_structure: bool
+                If True, draw the framework atoms and bonds behind the net.
+
+            show_unit_cell: bool
+                If True, draw the boundary of the displayed unit cells.
+
+            show_linker_sbu: bool
+                If True, show the centre-to-centre network produced by the
+                selected topology method.  Its nodes and connections therefore
+                change when the method changes.
+
+            show_topology: bool
+                If True, also show the abstract topology nodes and blue edges.
+                It is False by default so the SBU–linker connectivity remains
+                visually unambiguous.
+
+        **returns:**
+            plotly.graph_objects.Figure
+        '''
+        try:
+            import plotly.graph_objects as go
+        except ImportError as exc:
+            raise ImportError(
+                "draw_topology needs plotly. Install it with 'pip install plotly'."
+            ) from exc
+
+        from mofstructure.generate_cgd import net_geometry
+
+        guest_free = self.remove_guest()
+        method = method.lower().strip()
+        positions, kinds, edges, cell = net_geometry(guest_free, method=method)
+
+        degree = {nid: 0 for nid in positions}
+        for u, v, *_ in edges:
+            if u == v:
+                degree[u] += 2
+            else:
+                degree[u] += 1
+                degree[v] += 1
+
+        reps = [
+            (i, j, k)
+            for i in range(int(supercell[0]))
+            for j in range(int(supercell[1]))
+            for k in range(int(supercell[2]))
+        ]
+
+        # Edge translations and node positions use the same periodic gauge.
+        # Applying the stored translation preserves self-edges and distinct
+        # connections to different images of the same node.
+        edge_x, edge_y, edge_z = [], [], []
+        # Keep every node instance touched by a displayed edge.  In particular,
+        # an edge leaving the requested supercell must show its destination
+        # node; otherwise the line appears to end in empty space and the
+        # connectivity is ambiguous.
+        visible_nodes = {
+            (nid, tuple(cell_shift))
+            for cell_shift in reps for nid in positions
+        }
+        for cell_shift in reps:
+            base = np.array(cell_shift) @ cell
+            for u, v, sx, sy, sz in edges:
+                start = positions[u] + base
+                edge_shift = np.array((sx, sy, sz), dtype=int)
+                end = positions[v] + base + edge_shift @ cell
+                if np.linalg.norm(end - start) < 1e-6:
+                    continue
+                visible_nodes.add((u, tuple(cell_shift)))
+                visible_nodes.add((v, tuple(np.asarray(cell_shift) + edge_shift)))
+                edge_x += [start[0], end[0], None]
+                edge_y += [start[1], end[1], None]
+                edge_z += [start[2], end[2], None]
+
+        traces = []
+
+        if show_structure:
+            atom_x, atom_y, atom_z = [], [], []
+            for translation in reps:
+                shifted = guest_free.positions + np.array(translation) @ cell
+                atom_x.extend(shifted[:, 0])
+                atom_y.extend(shifted[:, 1])
+                atom_z.extend(shifted[:, 2])
+            traces.append(go.Scatter3d(
+                x=atom_x, y=atom_y, z=atom_z, mode="markers",
+                marker=dict(size=3, color="#64748b", opacity=0.20),
+                hoverinfo="skip", name="framework atoms",
+            ))
+
+            atom_graph, _, atom_offsets = \
+                MOF_deconstructor.compute_ase_neighbour_with_offsets(guest_free)
+            bond_x, bond_y, bond_z = [], [], []
+            for translation in reps:
+                seen_bonds = set()
+                base = np.array(translation) @ cell
+                for i, neighbours in atom_graph.items():
+                    for j in neighbours:
+                        j = int(j)
+                        for shift in atom_offsets.get((int(i), j), []):
+                            shift = tuple(int(x) for x in shift)
+                            reverse = (j, int(i), -shift[0], -shift[1], -shift[2])
+                            key = (int(i), j, *shift)
+                            canonical = min(key, reverse)
+                            if canonical in seen_bonds:
+                                continue
+                            seen_bonds.add(canonical)
+                            start = guest_free.positions[int(i)] + base
+                            end = guest_free.positions[j] + base + np.array(shift) @ cell
+                            bond_x += [start[0], end[0], None]
+                            bond_y += [start[1], end[1], None]
+                            bond_z += [start[2], end[2], None]
+            traces.append(go.Scatter3d(
+                x=bond_x, y=bond_y, z=bond_z, mode="lines",
+                line=dict(color="#94a3b8", width=1), opacity=0.32,
+                hoverinfo="skip",
+                name="framework bonds",
+            ))
+
+        if show_unit_cell:
+            cell_x, cell_y, cell_z = [], [], []
+            corners = [(i, j, k) for i in (0, 1) for j in (0, 1) for k in (0, 1)]
+            cell_edges = []
+            for corner in corners:
+                for axis in range(3):
+                    neighbour = list(corner)
+                    if neighbour[axis] == 0:
+                        neighbour[axis] = 1
+                        cell_edges.append((corner, tuple(neighbour)))
+            for translation in reps:
+                for a, b in cell_edges:
+                    start = (np.array(translation) + np.array(a)) @ cell
+                    end = (np.array(translation) + np.array(b)) @ cell
+                    cell_x += [start[0], end[0], None]
+                    cell_y += [start[1], end[1], None]
+                    cell_z += [start[2], end[2], None]
+            traces.append(go.Scatter3d(
+                x=cell_x, y=cell_y, z=cell_z, mode="lines",
+                line=dict(color="#94a3b8", width=2, dash="dot"),
+                opacity=0.55,
+                hoverinfo="skip", name="unit cell",
+            ))
+
+        if show_topology:
+            traces.append(go.Scatter3d(
+                x=edge_x, y=edge_y, z=edge_z, mode="lines",
+                line=dict(color="#2563eb", width=5),
+                hoverinfo="none", name="topology edges",
+            ))
+
+        if show_linker_sbu:
+            # Use the selected method's graph.  A method-independent
+            # ligand_cluster overlay made all four drawings look alike and hid
+            # the contractions that define each topological representation.
+            map_positions, map_kinds, map_edges = positions, kinds, edges
+
+            contact_x, contact_y, contact_z = [], [], []
+            visible_map_nodes = {
+                (node, tuple(translation))
+                for translation in reps for node in map_positions
+            }
+            contact_degree = {node: 0 for node in map_positions}
+            for translation in reps:
+                base = np.array(translation) @ cell
+                for u, v, sx, sy, sz in map_edges:
+                    edge_shift = np.array((sx, sy, sz), dtype=int)
+                    destination = np.asarray(translation) + edge_shift
+                    contact_degree[u] += 1 if translation == reps[0] else 0
+                    contact_degree[v] += 1 if translation == reps[0] else 0
+                    start = map_positions[u] + base
+                    end = map_positions[v] + base + edge_shift @ cell
+                    visible_map_nodes.add((u, tuple(translation)))
+                    visible_map_nodes.add((v, tuple(destination)))
+                    contact_x += [start[0], end[0], None]
+                    contact_y += [start[1], end[1], None]
+                    contact_z += [start[2], end[2], None]
+            traces.append(go.Scatter3d(
+                x=contact_x, y=contact_y, z=contact_z, mode="lines",
+                line=dict(color="#008000", width=7, dash="solid"),
+                hoverinfo="none", name=f"{method} connections",
+            ))
+
+            mapping_styles = {
+                "metal": ("SBU / metal centres", "square", "#dc2626", 8),
+                "organic": (
+                    "organic / linker centres", "diamond", "#9333ea", 7
+                ),
+            }
+            for kind, (label, symbol, color, size) in mapping_styles.items():
+                mapped = sorted(
+                    (node, shift)
+                    for node, shift in visible_map_nodes
+                    if map_kinds[node] == kind
+                )
+                if not mapped:
+                    continue
+                coords = np.array([
+                    map_positions[node] + np.array(shift) @ cell
+                    for node, shift in mapped
+                ])
+                text = [
+                    f"{method}: {label[:-1]} {node}<br>connections "
+                    f"{contact_degree[node]}"
+                    for node, _ in mapped
+                ]
+                traces.append(go.Scatter3d(
+                    x=coords[:, 0], y=coords[:, 1], z=coords[:, 2],
+                    mode="markers",
+                    marker=dict(
+                        size=size, symbol=symbol, color=color,
+                        line=dict(color="#ffffff", width=1),
+                    ),
+                    text=text, hoverinfo="text", name=label,
+                ))
+
+        if show_topology:
+            palette = {"metal": "#fb8500", "organic": "#14213d"}
+            for kind in ("metal", "organic"):
+                nodes = [nid for nid in positions if kinds[nid] == kind]
+                if not nodes:
+                    continue
+                instances = sorted(
+                    (nid, shift) for nid, shift in visible_nodes if nid in nodes
+                )
+                coords = np.array([
+                    positions[nid] + np.array(shift) @ cell
+                    for nid, shift in instances
+                ])
+                text = [
+                    f"{kind} node {nid}<br>coordination {degree[nid]}"
+                    for nid, _ in instances
+                ]
+                traces.append(go.Scatter3d(
+                    x=coords[:, 0], y=coords[:, 1], z=coords[:, 2],
+                    mode="markers",
+                    marker=dict(
+                        size=10 if kind == "metal" else 7,
+                        color=palette[kind],
+                        line=dict(color="#000000", width=1),
+                    ),
+                    text=text, hoverinfo="text",
+                    name=f"{kind} nodes",
+                ))
+
+        title = f"{method} net"
+        topo = self.get_topology(method=method).get("topology")
+        if topo:
+            title = f"{title} — {topo}"
+
+        fig = go.Figure(data=traces)
+        fig.update_layout(
+            title=dict(
+                text=title,
+                x=0.5,
+                xanchor="center",
+                font=dict(size=21, color="#17231b"),
+            ),
+            showlegend=True,
+            paper_bgcolor="#f4f7f5",
+            plot_bgcolor="#f4f7f5",
+            font=dict(
+                family="Inter, Avenir, Helvetica, Arial, sans-serif",
+                color="#33413a",
+            ),
+            margin=dict(l=8, r=8, b=8, t=58),
+            hoverlabel=dict(
+                bgcolor="#ffffff",
+                bordercolor="#008000",
+                font=dict(color="#17231b", size=13),
+            ),
+            legend=dict(
+                x=0.99,
+                y=0.99,
+                xanchor="right",
+                yanchor="top",
+                bgcolor="rgba(255,255,255,0.82)",
+                bordercolor="rgba(23,35,27,0.18)",
+                borderwidth=1,
+                font=dict(size=12),
+                itemsizing="constant",
+            ),
+            scene=dict(
+                # A topology is a structure, not a chart.  Suppress axes,
+                # ticks and grid planes while retaining Plotly's useful 3-D
+                # rotation and hover interaction.
+                xaxis=dict(visible=False),
+                yaxis=dict(visible=False),
+                zaxis=dict(visible=False),
+                bgcolor="#f4f7f5",
+                aspectmode="data",
+                camera=dict(
+                    eye=dict(x=1.45, y=1.45, z=1.15),
+                    projection=dict(type="orthographic"),
+                ),
+            ),
+        )
+
+        if filename:
+            if str(filename).lower().endswith(".html"):
+                fig.write_html(filename)
+            else:
+                fig.write_image(filename)
+        if show:
+            fig.show()
+        return fig
 
     def get_oms(self):
         """

@@ -312,7 +312,7 @@ def main():
     parser.add_argument('--method', '--topology_method', type=str,
                         dest='topology_method',
                         default='all_node',
-                        choices=['sbus', 'all_node', 'single_node'],
+                        choices=['sbus', 'ligand_cluster', 'all_node', 'single_node'],
                         help='node definition used to build the net '
                              '(--topology_method is a deprecated alias)')
     parser.add_argument('-s', '--save_dir', type=str,
