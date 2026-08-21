@@ -10,16 +10,17 @@ of extension, or into metal clusters and whole organic ligands.
 
 Bonding is perceived from geometry using covalent radii, so the input needs
 sensible coordinates but no bonding information. Cheminformatic identifiers for
-the resulting fragments are produced through openbabel, with rdkit available as
-an alternative.
+the resulting fragments come from openbabel when it is installed and from rdkit
+otherwise, so neither toolkit is a hard requirement; see
+`cheminformatics_backend`.
 '''
-from __future__ import print_function
 __author__ = "Dr. Dinga Wonanke"
 __status__ = "production"
+import os
 from itertools import combinations
 import numpy as np
 import networkx as nx
-from pymatgen.analysis.local_env import JmolNN, VoronoiNN
+from pymatgen.analysis.local_env import JmolNN
 from pymatgen.analysis.graphs import StructureGraph
 from pymatgen.io.ase import AseAtomsAdaptor
 from ase.data import chemical_symbols, covalent_radii, atomic_numbers
@@ -27,19 +28,62 @@ from ase import neighborlist, geometry
 from ase.neighborlist import NeighborList
 from collections import defaultdict, Counter
 
-# from ase import Atoms
 
 try:
     from openbabel import pybel as pb
     from openbabel import openbabel as ob
+    HAS_OPENBABEL = True
 except ModuleNotFoundError:
-    print('install openbabel if you wish to use compute_openbabel_cheminformatic function')
-    print("pip install openbabel-wheel==3.1.1.22")
+    HAS_OPENBABEL = False
+
 try:
     from rdkit import Chem
     from rdkit.Chem import rdDetermineBonds
+    from rdkit import RDLogger
+    RDLogger.DisableLog('rdApp.*')
+    HAS_RDKIT = True
 except ModuleNotFoundError:
-    pass
+    HAS_RDKIT = False
+
+
+def cheminformatics_backend():
+    '''
+    Toolkit used to turn a fragment into SMILES, InChI and an InChIKey.
+
+    openbabel is preferred because the identifiers shipped with the package,
+    including the IUPAC name database, were built with it. rdkit stands in
+    when openbabel is not installed, so a missing toolkit costs coverage
+    rather than stopping the analysis. Setting MOFSTRUCTURE_CHEMINFO to
+    `openbabel` or `rdkit` overrides the choice.
+
+    **returns:**
+        str
+            'openbabel' or 'rdkit'.
+
+    **raises:**
+        ImportError
+            When neither toolkit is installed, or the requested one is not.
+    '''
+    requested = os.environ.get('MOFSTRUCTURE_CHEMINFO', '').strip().lower()
+    if requested:
+        available = {'openbabel': HAS_OPENBABEL, 'rdkit': HAS_RDKIT}
+        if requested not in available:
+            raise ImportError(
+                f"MOFSTRUCTURE_CHEMINFO is set to '{requested}'; it must be "
+                "'openbabel' or 'rdkit'")
+        if not available[requested]:
+            raise ImportError(
+                f"MOFSTRUCTURE_CHEMINFO asks for {requested}, which is not "
+                "installed")
+        return requested
+    if HAS_OPENBABEL:
+        return 'openbabel'
+    if HAS_RDKIT:
+        return 'rdkit'
+    raise ImportError(
+        "cheminformatic identifiers need openbabel or rdkit. Install one of "
+        "them, for example 'pip install openbabel-wheel==3.1.1.22' or "
+        "'pip install rdkit'")
 
 
 def transition_metals():
@@ -66,7 +110,7 @@ def is_alkali(symbols):
     Check wether symbols in a list are alkali
     """
     symbols = np.array([symbols]).flatten()
-    alkali = ['Li','Na','K','Rb','Cs','Fr','Be','Mg','Ca','Sr','Ba','Ra']
+    alkali = ['Li', 'Na', 'K', 'Rb', 'Cs', 'Fr', 'Be', 'Mg', 'Ca', 'Sr', 'Ba', 'Ra']
     return np.isin(symbols, alkali)
 
 
@@ -108,10 +152,10 @@ def inter_atomic_distance_check2(ase_atom):
     '''
     Checks whether any non-hydrogen atom in the ASE atoms object has a neighbor
     within 0.90 Å (ignoring self-distances). This is used to detect overly close contacts,
-    while ignoring R–H bonds (i.e., cases where the central atom is hydrogen).
+    while ignoring R-H bonds (i.e., cases where the central atom is hydrogen).
 
     **parameters:**
-        ase_atom : ASE atoms object
+        - ase_atom : ASE atoms object
 
     **returns:**
         bool: False if any non-hydrogen atom has a neighbor (other than itself) within 0.90 Å; True otherwise.
@@ -127,15 +171,15 @@ def inter_atomic_distance_check2(ase_atom):
         return False
     return True
 
+
 def inter_atomic_distance_iterative(ase_atom):
     '''
     A function that checks whether two atoms are within a distance 1.0 Amstrong unless it is an R-H bond
 
     **parameters:**
-        ase_atom : ASE atoms object
+        - ase_atom : ASE atoms object
 
-    **returns**
-
+    **returns:**
         boolean :
     '''
     valid = True
@@ -156,12 +200,12 @@ def covalent_radius(element):
     of an element.
 
     **parameters:**
-        element: chemical symbol of an atom
-        type.string
+        - element: str
+            Chemical symbol of an atom.
 
     **returns:**
-        covalent_radii: covalent radius of the elements.
-        type.float
+        float
+            Covalent radius of the element.
     '''
     a_n = atomic_numbers[element]
     return covalent_radii[a_n]
@@ -173,7 +217,7 @@ def ase_2_xyz(atoms):
     pybel in order to perfom some cheminformatics.
 
     **parameters:**
-        atoms : ASE atoms object
+        - atoms : ASE atoms object
 
     **returns:**
         a_str : string block of the atom object in xyz format
@@ -204,7 +248,7 @@ def obmol_2_rdkit(obmol):
     rdkit molecule object.
 
     **parameters:**
-        obmol : openbabel molecule object
+        - obmol : openbabel molecule object
 
     **returns:**
         rdmol : rdkit molecule object.
@@ -234,7 +278,7 @@ def compute_inchis(obmol):
     https://iupac.org/who-we-are/divisions/division-details/inchi
 
     **parameters:**
-        obmol: openbabel molecule object
+        - obmol: openbabel molecule object
 
     **returns:**
         inChi, inChiKey: iupac inchi and inchikeys for thesame molecule.
@@ -256,7 +300,7 @@ def compute_smi(obmol):
     https://en.wikipedia.org/wiki/Simplified_molecular-input_line-entry_system
 
     **parameters:**
-        obmol : openbabel molecule object
+        - obmol : openbabel molecule object
 
     **returns:**
         smi: SMILES notatation of the molecule.
@@ -275,7 +319,7 @@ def saturate_open_valences(smi):
     the terephthalic acid a reference database stores it under.
 
     **parameters:**
-        smi: SMILES notation of the molecule
+        - smi: SMILES notation of the molecule
 
     **returns:**
         pybel molecule, or None if smi cannot be parsed.
@@ -284,7 +328,7 @@ def saturate_open_valences(smi):
         return None
     try:
         mol = pb.readstring('smi', smi)
-    except (IOError, ValueError):
+    except (OSError, ValueError):
         return None
 
     obmol = mol.OBMol
@@ -295,6 +339,42 @@ def saturate_open_valences(smi):
     return mol
 
 
+def _saturate_open_valences_rdkit(smi):
+    '''
+    rdkit counterpart of `saturate_open_valences`.
+
+    Deconstruction leaves a radical where the bond to the metal was cut.
+    Clearing the radical count and letting rdkit add implicit hydrogens
+    recovers the neutral parent, as adding typical implicit hydrogens does
+    in openbabel.
+
+    **parameters:**
+        - smi: str
+            SMILES notation of the molecule.
+
+    **returns:**
+        rdkit.Chem.Mol, or None when rdkit cannot parse the SMILES. Aromatic
+        radicals such as the imidazolate `[n]1ccnc1` are the common case:
+        rdkit will not kekulize them, where openbabel accepts them.
+    '''
+    if not smi:
+        return None
+    mol = Chem.MolFromSmiles(smi, sanitize=False)
+    if mol is None:
+        return None
+    for atom in mol.GetAtoms():
+        atom.SetNumRadicalElectrons(0)
+        atom.SetFormalCharge(0)
+        atom.SetNoImplicit(False)
+    try:
+        mol.UpdatePropertyCache(strict=False)
+        if Chem.SanitizeMol(mol, catchErrors=True):
+            return None
+    except (ValueError, RuntimeError):
+        return None
+    return mol
+
+
 def name_lookup_keys(smi):
     '''
     Identifiers a molecule is indexed under in the IUPAC name database, most
@@ -302,18 +382,30 @@ def name_lookup_keys(smi):
     connectivity block, which ignores protonation. Building the database and
     querying it both go through here so the two cannot drift apart.
 
+    The database was built with openbabel. An InChIKey is defined by the IUPAC
+    algorithm and comes out the same from either toolkit, so the first and
+    third keys still match under rdkit; canonical SMILES is toolkit specific,
+    so the second key only matches the toolkit that wrote the database.
+
     **parameters:**
-        smi: SMILES notation of the molecule
+        - smi: SMILES notation of the molecule
 
     **returns:**
         list of keys, empty if smi cannot be parsed.
     '''
-    mol = saturate_open_valences(smi)
-    if mol is None:
-        return []
+    if cheminformatics_backend() == 'openbabel':
+        mol = saturate_open_valences(smi)
+        if mol is None:
+            return []
+        inchikey = mol.write('inchikey').strip()
+        can = mol.write('can').strip().split('\t')[0]
+    else:
+        mol = _saturate_open_valences_rdkit(smi)
+        if mol is None:
+            return []
+        inchikey = Chem.inchi.MolToInchiKey(mol) or ''
+        can = Chem.MolToSmiles(mol) or ''
 
-    inchikey = mol.write('inchikey').strip()
-    can = mol.write('can').strip().split('\t')[0]
     keys = [key for key in (inchikey, can) if key]
     if inchikey:
         keys.append(inchikey[:14])
@@ -325,8 +417,8 @@ def lookup_iupac_name(smi, iupac_names):
     Find the IUPAC name of a ligand from the SMILES produced by deconstruction.
 
     **parameters:**
-        smi: SMILES notation of the ligand, as stored in atoms.info['smi']
-        iupac_names: mapping produced by filetyper.load_iupac_names
+        - smi: SMILES notation of the ligand, as stored in atoms.info['smi']
+        - iupac_names: mapping produced by filetyper.load_iupac_names
 
     **returns:**
         IUPAC name of the ligand, or None when it is not in the database.
@@ -349,7 +441,7 @@ def ase_2_pybel(atoms):
     https://openbabel.org/docs/dev/UseTheLibrary/Python_Pybel.html
 
     **parameters:**
-        atoms : ASE atoms object
+        - atoms : ASE atoms object
 
     **returns:**
         pybel: pybel molecular object.
@@ -379,7 +471,7 @@ def compute_openbabel_cheminformatic(ase_atom):
     atoms together.
 
     **parameters:**
-        atoms : ASE atoms object
+        - atoms : ASE atoms object
 
     **returns:**
         smi, inChi, inChiKey
@@ -394,6 +486,71 @@ def compute_openbabel_cheminformatic(ase_atom):
     inChi,  inChiKey = compute_inchis(obmol)
     smi = compute_smi(obmol)
     return smi, inChi, inChiKey
+
+
+def _perceive_bonds_rdkit(xyz_string):
+    '''
+    Assign bond orders to a fragment whose charge is not known in advance.
+
+    A linker cut from its metal is an anion: trimesate leaves deconstruction
+    three charges short of the acid, terephthalate two. rdkit has to be told
+    that charge and refuses the fragment when told the wrong one, so the
+    charges common in coordination chemistry are tried in turn and the first
+    that works is taken.
+
+    The order matters. rdkit accepts more than one charge for some fragments,
+    and the extra charges are the chemically wrong readings: terephthalate is
+    perceived at -2 as the dianion with two intact carboxylates, and again at
+    -4 as a tetraanion with double bonds to the ring, which is not
+    terephthalate at all. Taking the least charged reading that succeeds picks
+    the first of those. rdkit also reports a charge of its own when it
+    complains, but that report is -4 here, so it cannot be trusted either.
+
+    **parameters:**
+        - xyz_string: str
+            The fragment as an xyz block.
+
+    **returns:**
+        rdkit.Chem.Mol with bond orders assigned, or None when no charge in
+        the range gives a molecule rdkit will accept.
+    '''
+    for charge in (0, -1, -2, -3, -4, -5, -6):
+        mol = Chem.MolFromXYZBlock(xyz_string)
+        if mol is None:
+            return None
+        mol = Chem.Mol(mol)
+        try:
+            rdDetermineBonds.DetermineConnectivity(mol)
+            rdDetermineBonds.DetermineBonds(mol, charge=charge)
+        except (ValueError, RuntimeError):
+            continue
+        return mol
+    return None
+
+
+def compute_cheminformatic(ase_atom):
+    '''
+    SMILES, InChI and InChIKey of a fragment, through whichever toolkit is
+    installed.
+
+    openbabel is used when present, since the identifiers distributed with the
+    package were generated with it. rdkit stands in otherwise. The two agree on
+    the InChI and the InChIKey, which are defined by the IUPAC algorithm rather
+    than by the toolkit, but each has its own canonical SMILES, so a SMILES
+    from one will not compare equal to a SMILES from the other.
+
+    **parameters:**
+        - ase_atom: ase.Atoms
+            The fragment to identify.
+
+    **returns:**
+        tuple
+            (smi, inchi, inchikey). Any of them is None when the toolkit
+            could not perceive the fragment.
+    '''
+    if cheminformatics_backend() == 'openbabel':
+        return compute_openbabel_cheminformatic(ase_atom)
+    return compute_cheminformatic_from_rdkit(ase_atom)
 
 
 def compute_cheminformatic_from_rdkit(ase_atom):
@@ -417,13 +574,18 @@ def compute_cheminformatic_from_rdkit(ase_atom):
         ase_atom.set_pbc(False)
 
     xyz_string = ase_2_xyz(ase_atom)
-    rdxyz = Chem.MolFromXYZBlock(xyz_string)
-    rdmol = Chem.Mol(rdxyz)
-    rdDetermineBonds.DetermineConnectivity(rdmol)
-    rdDetermineBonds.DetermineBonds(rdmol, charge=0)
-    smi = Chem.MolToSmiles(Chem.RemoveHs(rdmol))
-    inChi = Chem.inchi.MolToInchi(rdmol)
-    inChiKey = Chem.inchi.MolToInchiKey(rdmol)
+    rdmol = _perceive_bonds_rdkit(xyz_string)
+    if rdmol is None:
+        # A fragment cut from a framework carries open valences that rdkit
+        # cannot always perceive. Losing the identifiers of one building unit
+        # must not lose the rest of the deconstruction.
+        return None, None, None
+    try:
+        smi = Chem.MolToSmiles(Chem.RemoveHs(rdmol))
+        inChi = Chem.inchi.MolToInchi(rdmol)
+        inChiKey = Chem.inchi.MolToInchiKey(rdmol)
+    except (ValueError, RuntimeError):
+        return None, None, None
     return smi, inChi, inChiKey
 
 
@@ -438,18 +600,18 @@ def get_neighbour_bond_matrix(sbu, skin=0.30, bo_step=0.10, aromatic=True):
            single, double, and triple bonds.
         3) Applies MOF-specific rules for metals, alkali metals,
            and hydrogen atoms.
-        4) Optionally detects planar 5–10 membered rings and
+        4) Optionally detects planar 5-10 membered rings and
            assigns aromatic bond order (1.5).
 
     **parameters:**
-        sbu : ASE atoms object
+        - sbu : ASE atoms object
             The building unit whose connectivity is wanted.
-        skin : float
+        - skin : float
             Additional tolerance added to covalent radii (Å).
             Important for capturing slightly elongated coordination bonds.
-        bo_step : float
+        - bo_step : float
             Distance reduction step used to define higher bond orders.
-        aromatic : bool
+        - aromatic : bool
             If True, perform aromatic ring detection and correction.
 
     **returns:**
@@ -468,8 +630,8 @@ def get_neighbour_bond_matrix(sbu, skin=0.30, bo_step=0.10, aromatic=True):
                 2.0  -> double bond (heuristic)
                 3.0  -> triple bond (heuristic)
                 1.5  -> aromatic bond
-                0.5  -> metal–organic coordination-like bond
-                0.25 -> metal–metal weak bond
+                0.5  -> metal-organic coordination-like bond
+                0.25 -> metal-metal weak bond
     '''
     bonds = np.zeros((len(sbu), len(sbu)))
     symbols = np.array(sbu.get_chemical_symbols())
@@ -614,7 +776,7 @@ def compute_ase_neighbour_with_offsets(ase_atom):
     **parameters:**
         ASE atoms
 
-    **return:**
+    **returns:**
         atom_neighbors: dict[int, list[int]]
         matrix: adjacency matrix
         bond_offsets: dict[(i, j)] -> list[(sx, sy, sz)]
@@ -673,10 +835,10 @@ def dfsutil_graph_method(graph, temp, node, visited):
     It is used here a a util for searching connected components in the MOF graph
 
     **parameters:**
-        graph: any python dictionary
-        temp: a python list to hold nodes that have been visited
-        node: a key in the python dictionary (graph), which is used as the starting or root node
-        visited: python list containing nodes that have been traversed.
+        - graph: any python dictionary
+        - temp: a python list to hold nodes that have been visited
+        - node: a key in the python dictionary (graph), which is used as the starting or root node
+        - visited: python list containing nodes that have been traversed.
 
     **returns:**
         python dictionary
@@ -780,7 +942,7 @@ def remove_unbound_guest(ase_atom):
 
 
     **parameters:**
-        ase_atom : ase.Atoms
+        - ase_atom : ase.Atoms
             Periodic framework or non-periodic molecular system.
 
     **returns:**
@@ -866,46 +1028,6 @@ def remove_unbound_guest(ase_atom):
     return list(fragments[heaviest_fragment_index])
 
 
-# def remove_unbound_guest(ase_atom):
-#     '''
-#     A simple script to remove guest from a metal organic framework.
-#     1) It begins by computing a connected graph component of all the fragments in the system using ASE neighbour list.
-#     2) Secondly it selects indices of connected components which contain a metal
-#     3) if the there are two or more components, we create a pytmagen graph for each components and filter out all components that are not polymeric
-#     4) If there are two or more polymeric components, we check whether these systems there are identical or different and select all polymeric components
-
-#     **parameters:**
-#         ASE atoms
-
-#     **returns:**
-#         mof_indices: indices of the guest-free system. The guest-free ase_atom object
-#         can be obtained as follows; E.g.
-#         guest_free_system = ase_atom[mof_indices]
-#     '''
-#     atom_neighbors, _ = compute_ase_neighbour(ase_atom)
-#     fragments = connected_components(atom_neighbors)
-#     if len(fragments) == 1:
-#         return [atom.index for atom in ase_atom]
-#     else:
-#         polymeric_indices = []
-#         for i in range(len(fragments)):
-#             super_cell = ase_atom[fragments[i]] * (2, 1, 1)
-#             coordination_graph, _ = compute_ase_neighbour(super_cell)
-#             pymat_graph = connected_components(coordination_graph)
-#             if len(pymat_graph) == 1:
-#                 polymeric_indices.append(i)
-#         if len(polymeric_indices) > 0:
-#             mof_indices = []
-#             for poly_index in polymeric_indices:
-#                 mof_indices.extend(fragments[poly_index])
-#             if len(mof_indices) == 0:
-#                 return longest_list(fragments)
-#             else:
-#                 return mof_indices
-#         else:
-#             return sum(fragments, [])
-
-
 def connected_components_recursive(graph):
     '''
     Find the connected fragments in a graph. Should work for any graph defined as a dictionary
@@ -938,9 +1060,14 @@ def dfs_iterative(graph, start, visited):
     This function is used as a utility for identifying connected components in the MOF graph.
 
     **parameters:**
-        graph: a python dictionary where keys represent nodes and values are lists of neighboring nodes.
-        start: a key in the python dictionary (graph), which is used as the starting or root node for the DFS.
-        visited: a dictionary containing nodes that have been visited (True if visited, False otherwise).
+        - graph: dict
+            Keys are nodes, values are lists of neighbouring nodes.
+
+        - start: hashable
+            Key in `graph` used as the root node for the DFS.
+
+        - visited: dict
+            Nodes already visited, True when visited and False otherwise.
 
     **returns:**
         A python list containing the nodes in the connected component starting from 'start'.
@@ -966,7 +1093,8 @@ def connected_components_iterative(graph):
     Find the connected fragments in a graph. Should work for any graph defined as a dictionary.
 
     **parameters:**
-        graph: a python dictionary representing the graph where keys are nodes and values are lists of adjacent nodes.
+        - graph: dict
+            Keys are nodes, values are lists of adjacent nodes.
 
     **returns:**
         A python list of lists containing the connected components.
@@ -991,7 +1119,8 @@ def connected_components(graph):
     This function chooses the connected components method based on the size of the graph.
 
     **parameters:**
-        graph: A dictionary representing a graph, where keys are nodes and values are lists of adjacent nodes.
+        - graph: dict
+            Keys are nodes, values are lists of adjacent nodes.
 
     **returns:**
         A list of lists, where each sublist represents a connected component in the graph.
@@ -1046,8 +1175,8 @@ def metal_in_porphyrin(ase_atom, graph):
     https://en.wikipedia.org/wiki/Transition_metal_porphyrin_complexes
 
     **parameters:**
-        ase_atom: ASE atom
-        graph: python dictionary containing neigbours
+        - ase_atom: ASE atom
+        - graph: python dictionary containing neigbours
 
     **returns:**
         list of indices consisting of index of metal atoms found in the ASE atom
@@ -1075,8 +1204,8 @@ def metal_in_porphyrin2(ase_atom, graph):
     Check whether a metal is found at the centre of a phorphirin
 
     **parameters:**
-        ase_atom: ASE atom
-        graph: python dictionary containing neigbours
+        - ase_atom: ASE atom
+        - graph: python dictionary containing neigbours
 
     **returns:**
         list of indices consisting of index of metal atoms found in the ASE atom
@@ -1187,7 +1316,7 @@ def find_carbonyl_sulphate(ase_atom, graph):
         O
 
     **parameters:**
-        ase_atom: ASE atom
+        - ase_atom: ASE atom
 
     **returns:**
         dictionary of key = carbon index and values = oxygen index
@@ -1219,7 +1348,7 @@ def find_sulfides(ase_atom, graph):
         S
 
     **parameters:**
-        ase_atom: ASE atom
+        - ase_atom: ASE atom
 
     **returns:**
         dictionary of key = carbon index and values = sulphur index
@@ -1252,7 +1381,7 @@ def find_phosphite(ase_atom, graph):
         P
 
     **parameters:**
-        ase_atom: ASE atom
+        - ase_atom: ASE atom
 
     **returns:**
         dictionary of key = carbon index and values = phosphorous index
@@ -1283,7 +1412,7 @@ def find_COS(ase_atom, graph):
         S
 
     **parameters:**
-        ase_atom: ASE atom
+        - ase_atom: ASE atom
 
     **returns:**
         dictionary of key = carbon index and values = sulphur index
@@ -1319,10 +1448,9 @@ def find_phosphate(ase_atom, graph):
        O
 
     **parameters:**
-        ase_atom: ASE atom
+        - ase_atom: ASE atom
 
-    **returns**
-
+    **returns:**
         dictionary of key = carbon index and values = oxygen index
     '''
     phosphate = {}
@@ -1337,6 +1465,7 @@ def find_phosphate(ase_atom, graph):
                     phosphate[index] = oxygen
     return phosphate
 
+
 def get_bond_shift(i, j, bond_offsets):
     '''
     Periodic image a bond between two atoms crosses.
@@ -1345,8 +1474,8 @@ def get_bond_shift(i, j, bond_offsets):
     most frequent offset is taken as the representative one.
 
     **parameters:**
-        i, j: atom indices
-        bond_offsets: mapping of atom pair to the cell offsets seen for it
+        - i, j: atom indices
+        - bond_offsets: mapping of atom pair to the cell offsets seen for it
 
     **returns:**
         (x, y, z) cell offset, (0, 0, 0) when the pair is not bonded.
@@ -1355,6 +1484,7 @@ def get_bond_shift(i, j, bond_offsets):
     if not vals:
         return (0, 0, 0)
     return Counter(vals).most_common(1)[0][0]
+
 
 def secondary_building_units(ase_atom):
     """
@@ -1365,7 +1495,7 @@ def secondary_building_units(ase_atom):
     3) Look for oxygen that is connected to metal and two carbon. cut at metal oxygen bond
 
     **parameters:**
-        ase_atom: ASE atom
+        - ase_atom: ASE atom
 
     **returns:**
         list_of_connected_components: list of connected components,in which each list contains atom indices
@@ -1430,7 +1560,6 @@ def secondary_building_units(ase_atom):
                     sx, sy, sz = get_bond_shift(atoms, met, bond_offsets)
                     breaking_pairs.append([atoms, met, sx, sy, sz])
 
-
         if atoms in list(all_sulphates.keys()):
             connected = graph[atoms]
             all_carbon_indices = [
@@ -1441,7 +1570,6 @@ def secondary_building_units(ase_atom):
                 sx, sy, sz = get_bond_shift(atoms, all_carbon_indices[0], bond_offsets)
 
                 breaking_pairs.append([atoms, all_carbon_indices[0], sx, sy, sz])
-
 
             if len(all_carbon_indices) > 1:
                 for oxy in oxygen:
@@ -1635,7 +1763,6 @@ def secondary_building_units(ase_atom):
                 sx, sy, sz = get_bond_shift(c_h, metal, bond_offsets)
                 breaking_pairs.append([c_h, metal, sx, sy, sz])
 
-
     for bonds in bonds_to_break:
         bond_matrix[bonds[0], bonds[1]] = 0
         bond_matrix[bonds[1], bonds[0]] = 0
@@ -1651,7 +1778,6 @@ def secondary_building_units(ase_atom):
 
     all_pm_structures = [sorted(ase_atom[i].symbols)
                          for i in list_of_connected_components]
-    len_symbols = [len(i) for i in all_pm_structures]
     for i in range(len(all_pm_structures)):
         temp = []
         for j in range(len(all_pm_structures)):
@@ -1666,6 +1792,7 @@ def secondary_building_units(ase_atom):
         all_regions,
         breaking_pairs
     ]
+
 
 def rings_and_atom_ring_lookup(graph, use_mcb=True):
     """
@@ -1719,7 +1846,7 @@ def ligands_and_metal_clusters(ase_atom):
     Here we select the largest connected component
 
     **parameters:**
-        ase_atom: ASE atom
+        - ase_atom: ASE atom
 
     **returns:**
         list_of_connected_components: list of connected components, in which each list contains atom indices
@@ -1729,7 +1856,6 @@ def ligands_and_metal_clusters(ase_atom):
     '''
     # graph, bond_matrix = compute_ase_neighbour(ase_atom)
     graph, bond_matrix, bond_offsets = compute_ase_neighbour_with_offsets(ase_atom)
-
 
     porphyrin_checker = metal_in_porphyrin2(ase_atom, graph)
 
@@ -1920,7 +2046,7 @@ def is_rodlike(metal_sbu):
     This helps to identify rod-like SBUs, which are connected in one or two periodic directions.
 
     **parameters:**
-        metal_sbu : ase.Atoms
+        - metal_sbu : ase.Atoms
             Metal-containing building unit.
 
     **returns:**
@@ -1960,8 +2086,8 @@ def all_ferrocene_metals(ase_atom, graph):
     These metals should not be considered during mof-constructions
 
     **parameters:**
-        ase_atom: ASE atom
-        graph : dictionary containing neigbour lists
+        - ase_atom: ASE atom
+        - graph : dictionary containing neigbour lists
 
     **returns:**
         list_of_metals: list of indices of ferrocene metals
@@ -2195,16 +2321,16 @@ def find_unique_building_units(list_of_connected_components, bonds_to_break,
     3. compute cheminformatics data using Open Babel.
 
     **parameters:**
-        list_of_connected_components : list of connected components
-        bonds_to_break : list of lists of atom indices at breaking point
-        ase_atom : ASE atoms object
-        porphyrin_checker : list of indices of porphyrins
-        all_regions : dictionary of regions
-        wrap_system : boolean, default True
-        cheminfo : boolean, default False
-        add_dummy: boolean, default False
-        add_dummy keyword enables the addition of dumnmy atoms which can then be replaced
-        by hydrogen to neutralize the building blocks.
+        - list_of_connected_components : list of connected components
+        - bonds_to_break : list of lists of atom indices at breaking point
+        - ase_atom : ASE atoms object
+        - porphyrin_checker : list of indices of porphyrins
+        - all_regions : dictionary of regions
+        - wrap_system : boolean, default True
+        - cheminfo : boolean, default False
+        - add_dummy: boolean, default False
+            Adds dummy atoms, which can then be replaced by hydrogen to
+            neutralise the building blocks.
 
     **returns:**
         mof_metal: list of metal indices
@@ -2220,8 +2346,8 @@ def find_unique_building_units(list_of_connected_components, bonds_to_break,
         components = list_of_connected_components[all_regions[frag][0]]
         all_breaking_point = sum(bonds_to_break, [])
         point_of_extension = [i for i in all_breaking_point if i in components]
-        mapped_indices = dict(
-            [(i, j) for i, j in zip(components, range(len(components)))])
+        mapped_indices = {
+            i: j for i, j in zip(components, range(len(components)))}
         molecule_to_write = ase_atom[components]
         molecule_to_write.info['point_of_extension'] = [
             mapped_indices[i] for i in point_of_extension]
@@ -2248,12 +2374,10 @@ def find_unique_building_units(list_of_connected_components, bonds_to_break,
             molecule_to_write = wrap_systems_in_unit_cell(molecule_to_write)
 
         if cheminfo:
-            smi, chem_inchi, chem_inchiKey = compute_openbabel_cheminformatic(
+            smi, chem_inchi, chem_inchiKey = compute_cheminformatic(
                 molecule_for_prop)
             molecule_to_write.info['smi'] = smi
             molecule_to_write.info['inchi'] = str(chem_inchi)
-            molecule_to_write.info['inchikey'] = str(chem_inchiKey)
-
             molecule_to_write.info['inchikey'] = str(chem_inchiKey)
         atom_indices_mapping = [
             list_of_connected_components[i] for i in all_regions[key]]
@@ -2292,7 +2416,7 @@ def find_unique_building_units(list_of_connected_components, bonds_to_break,
                 ferocene_metal = all_ferrocene_metals(
                     molecule_for_prop, graph_sbu)
                 non_ferocene_metal = [
-                    i for i in metal if not i in ferocene_metal]
+                    i for i in metal if i not in ferocene_metal]
                 if len(non_ferocene_metal) == 0:
                     mof_linker.append(molecule_to_write)
                     continue
@@ -2361,9 +2485,10 @@ def mof_regions(ase_atom, list_of_connected_components, bonds_to_break):
     unique building units.
 
     **parameters:**
-        ase_atom: ASE atom
-        list_of_connected_components : list of list, wherein each list correspond to atom indices of a specific building unit
-        bonds_to_break : list of lists of atom indices at breaking point
+        - ase_atom: ASE atom
+        - list_of_connected_components : list of list
+            Each list holds the atom indices of one building unit.
+        - bonds_to_break : list of lists of atom indices at breaking point
 
     **returns:**
         Move an index from any position in the list to the front
@@ -2379,7 +2504,7 @@ def mof_regions(ase_atom, list_of_connected_components, bonds_to_break):
         for j in range(len(all_pm_structures)):
             if all_pm_structures[i] == all_pm_structures[j]:
                 temp.append(j)
-        if not temp in all_regions.values():
+        if temp not in all_regions.values():
             all_regions[i] = temp
 
     for idx in range(len(all_regions .keys())):
@@ -2398,12 +2523,13 @@ def wrap_systems_in_unit_cell(ase_atom, max_iter=30, skin=0.3):
     boundary condition such that all atoms outside the box will appear reconnected.
 
     **parameters:**
-        ase_atom : ASE atoms object
-        max_iter : int, optional (default=30) Maximum number of iterations for reconnection
-        skin : float, optional (default=0.3) Skin distance for bond reconnection
+        - ase_atom : ASE atoms object
+        - max_iter : int, optional (default=30) Maximum number of iterations for reconnection
+        - skin : float, optional (default=0.3) Skin distance for bond reconnection
 
     **returns:**
-        - ase_atom : ASE atoms object with reconnected atoms wrapped in a periodic boundary condition
+        - ase_atom : ASE atoms object
+            Reconnected atoms, wrapped in the periodic boundary condition.
     '''
     if not any(ase_atom.get_pbc()):
         return ase_atom
@@ -2464,9 +2590,9 @@ def angle_tolerance_to_rad(angle, tolerance=5):
     Convert angle from degrees to radians with tolerance.
 
     **parameters:**
-        angle: float
+        - angle: float
             Angle in degrees.
-        tolerance: float
+        - tolerance: float
             Tolerance in degrees, default is 5.
 
     **returns:**
@@ -2487,9 +2613,9 @@ def find_key_or_value(key_or_value, list_of_list):
     atom on the far side of a broken bond, so a dummy can be placed there.
 
     **parameters:**
-        key_or_value : int
+        - key_or_value : int
             An atom index to look up.
-        list_of_list : list of pairs
+        - list_of_list : list of pairs
             Broken bonds, each ``[i, j]``.
 
     **returns:**
@@ -2501,139 +2627,3 @@ def find_key_or_value(key_or_value, list_of_list):
                 if item != key_or_value:
                     return item
     return None
-# def add_dummy_to_point_of_extension(ase_atom, point_of_extension, mapped_indices):
-#     '''
-#     Add a dummy atom to the point of extension, ensuring that it forms an angle
-#     of approximately 120° with the central atom and its neighbors, and is always
-#     added outward.
-
-#     parameters
-#     ----------
-#     ase_atom: Atoms object
-#         The original atom structure.
-#     point_of_extension: list
-#         List of indices where dummy atoms are to be added.
-#     mapped_indices: dict
-#         Dictionary mapping internal indices to atomic indices.
-
-#     returns
-#     -------
-#     new_atom: Atoms object
-#         Atoms object containing the original atoms plus the newly added dummy atoms.
-#     '''
-#     distance = 1.0  # Distance for adding new dummy atom
-#     all_positions = []
-
-#     # Compute neighbor information
-#     graph, bond_matrix = compute_ase_neighbour(ase_atom)
-
-#     for idx in point_of_extension:
-#         atom_idx = mapped_indices[idx]
-#         neighbours = graph[atom_idx].tolist()
-#         x0, y0, z0 = ase_atom[atom_idx].position
-
-#         if len(neighbours) == 1:
-#             # Add the dummy atom directly along the x-axis if there's only one neighbor
-#             x = x0 + distance
-#             y = y0
-#             z = z0
-#             new_position = [x, y, z]
-#             all_positions.append(new_position)
-
-#         elif len(neighbours) == 2:
-#             # Get the positions of the two neighboring atoms
-#             pos1 = ase_atom[neighbours[0]].position
-#             pos2 = ase_atom[neighbours[1]].position
-
-#             # Calculate vectors from the central atom to the neighbors
-#             vec1 = pos1 - np.array([x0, y0, z0])
-#             vec2 = pos2 - np.array([x0, y0, z0])
-
-#             # Normalize the vectors
-#             vec1 /= np.linalg.norm(vec1)
-#             vec2 /= np.linalg.norm(vec2)
-
-#             # Compute the normal to the plane (cross product of vec1 and vec2)
-#             normal = np.cross(vec1, vec2)
-#             normal /= np.linalg.norm(normal)
-
-#             # Calculate the bisector direction (outward)
-#             bisector = (vec1 + vec2) / np.linalg.norm(vec1 + vec2)
-
-#             # Ensure the bisector points outward
-#             if np.dot(bisector, normal) < 0:
-#                 bisector = -bisector
-
-#             # Rotate the bisector by 120 degrees to get the new atom's position
-#             bond_angle_rad = angle_tolerance_to_rad(120)  # Desired angle
-
-#             # Use the rotation matrix for in-plane rotation around the normal
-#             cos_angle = np.cos(bond_angle_rad)
-#             sin_angle = np.sin(bond_angle_rad)
-#             rotation_matrix = np.array([
-#                 [cos_angle + normal[0]**2 * (1 - cos_angle), normal[0] * normal[1] * (1 - cos_angle) - normal[2] * sin_angle, normal[0] * normal[2] * (1 - cos_angle) + normal[1] * sin_angle],
-#                 [normal[1] * normal[0] * (1 - cos_angle) + normal[2] * sin_angle, cos_angle + normal[1]**2 * (1 - cos_angle), normal[1] * normal[2] * (1 - cos_angle) - normal[0] * sin_angle],
-#                 [normal[2] * normal[0] * (1 - cos_angle) - normal[1] * sin_angle, normal[2] * normal[1] * (1 - cos_angle) + normal[0] * sin_angle, cos_angle + normal[2]**2 * (1 - cos_angle)]
-#             ])
-
-#             new_direction = np.dot(rotation_matrix, bisector)
-#             new_position = np.array([x0, y0, z0]) + distance * new_direction
-
-#             all_positions.append(new_position)
-
-#     # Create a new Atoms object for the dummy atoms
-#     symbols = ['X' for _ in all_positions]  # Use 'X' as a placeholder symbol for dummy atoms
-#     new_atom = Atoms(symbols=symbols, positions=all_positions)
-
-#     return new_atom
-
-
-# def calculate_coordinates_atom(atom_type, bond_angle, atom_position, distance=0.9, tolerance=5):
-#     """
-#     Function to calculate to compute the coordinates of atoms to add to a give atoms. This
-#     will mostly be used to add hydrogen atoms or dummies.
-#     parameters
-#     ----------
-#     atom_type: str
-#     bond_angle: float
-#     atom_position: ndarray
-#     distance: float
-#     tolerance: float
-#     returns the coordinates of the atoms
-
-#     """
-#     angle_variation = np.random.uniform(-tolerance, tolerance)
-#     adjusted_bond_angle = bond_angle + angle_variation
-#     bond_angle_rad = np.deg2rad(adjusted_bond_angle)
-
-#     x0, y0, z0 = atom_position
-
-#     if atom_type == "sp3":
-#         # Tetrahedral: Place the hydrogen along the x-axis at distance d
-#         x = x0 + distance
-#         y = y0
-#         z = z0
-#     elif atom_type == "sp2":
-#         # Trigonal planar: Place the hydrogen in the xy-plane
-#         x = x0 + distance * np.cos(bond_angle_rad / 2)
-#         y = y0 + distance * np.sin(bond_angle_rad / 2)
-#         z = z0
-#     elif atom_type == "sp":
-#         # Linear: Place the hydrogen along the x-axis at distance d
-#         x = x0 + distance
-#         y = y0
-#         z = z0
-#     elif atom_type == "trigonal_pyramidal":
-#         # Trigonal pyramidal: Place the hydrogen in the xz-plane
-#         x = x0 + distance * np.cos(bond_angle_rad / 2)
-#         y = y0
-#         z = z0 + distance * np.sin(bond_angle_rad / 2)
-#     elif atom_type == "bent":
-#         # Bent: Place the hydrogen in the xz-plane
-#         x = x0 + distance * np.cos(bond_angle_rad / 2)
-#         y = y0
-#         z = z0 + distance * np.sin(bond_angle_rad / 2)
-#     else:
-#         raise ValueError("Unsupported atom type")
-
-#     return [x, y, z]

@@ -42,10 +42,18 @@ Topological Analysis
    :undoc-members:
    :show-inheritance:
 
-Systre Topology Identification
-------------------------------
+Topology Identification
+-----------------------
 
-.. automodule:: mofstructure.systre
+.. automodule:: mofstructure.topology
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Periodic Net Analysis
+---------------------
+
+.. automodule:: mofstructure.graph_net
    :members:
    :undoc-members:
    :show-inheritance:

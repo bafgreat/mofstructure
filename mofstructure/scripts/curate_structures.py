@@ -1,4 +1,11 @@
 #!/usr/bin/python
+'''
+Command line entry point for `mofstructure_curate`.
+
+Prepares a folder of structures for analysis by removing unbound guests and
+writing the guest free framework, so later steps measure the framework rather
+than what happens to be sitting in its pores.
+'''
 from __future__ import print_function
 __author__ = "Dr. Dinga Wonanke"
 __status__ = "production"
@@ -9,14 +16,12 @@ import mofstructure.mofdeconstructor as MOF_deconstructor
 import mofstructure.filetyper as read_write
 
 
-
 def remove_guest(ase_atom):
     '''
     Simple function to remove guest molecules in porous system
     '''
     index_non_guest = MOF_deconstructor.remove_unbound_guest(ase_atom)
     return ase_atom[index_non_guest]
-
 
 
 def curate_data(cif_files, result_folder, verbose=False):
@@ -57,7 +62,7 @@ def curate_data(cif_files, result_folder, verbose=False):
     else:
         general_info = {}
 
-    if  isinstance(cif_files, str) and os.path.isfile(cif_files):
+    if isinstance(cif_files, str) and os.path.isfile(cif_files):
         basename = os.path.basename(cif_files)
         general_info[basename] = {}
         mof_object = structure.MOFstructure(filename=cif_files)
@@ -107,7 +112,7 @@ def main():
         cif_files = args.cif_folder
     elif os.path.isdir(args.cif_folder):
         cif_files = [os.path.join(args.cif_folder, f)
-        for f in os.listdir(args.cif_folder)
-        if f.endswith('.cif') and not f.startswith('._')]
+                     for f in os.listdir(args.cif_folder)
+                     if f.endswith('.cif') and not f.startswith('._')]
 
     curate_data(cif_files, args.save_dir, args.verbose)

@@ -13,35 +13,36 @@ system, so a structure only has to be read once.
     pores = mof.get_porosity()
     metal_sbus, organic_sbus = mof.get_sbu()
 
-The individual algorithms live in mofdeconstructor, porosity and systre, and can
-be called directly when more control is needed.
+The individual algorithms live in mofdeconstructor, porosity, generate_cgd and
+graph_net, and can be called directly when more control is needed. Topology is
+identified in Python; no Java runtime is involved.
 '''
-from __future__ import print_function
 __author__ = "Dr. Dinga Wonanke"
 __status__ = "production"
 import os
-from functools import reduce
-import operator
-import argparse
-import pandas as pd
 import shutil
+import warnings
 import tempfile
-import json
 import numpy as np
 import logging
 from ase.io import read
-from omsdetector_forked import MofCollection, mof
+from omsdetector_forked import mof
 import mofstructure.mofdeconstructor as MOF_deconstructor
+from mofstructure.porosity import DEFAULT_TIMEOUT as porosity_timeout
 from mofstructure.porosity import zeo_calculation
 import mofstructure.filetyper as read_write
-from mofstructure.systre import SystreTopology
+from mofstructure.generate_cgd import TopologyExtractor
 from mofstructure.generate_cgd import ligand_cluster_fingerprint
+
+# Marks an argument the caller did not pass, so a deprecated one is warned
+# about only when it is actually used.
+_UNSET = object()
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 
 
-class MOFstructure(object):
+class MOFstructure:
     '''
     A single framework and the analyses that can be run on it.
 
@@ -58,8 +59,8 @@ class MOFstructure(object):
     that still contains solvent does not need cleaning up first.
 
     **parameters:**
-        ase_atoms: ASE atoms object, used in preference to filename
-        filename: path to a cif or any other ASE readable structure file
+        - ase_atoms: ASE atoms object, used in preference to filename
+        - filename: path to a cif or any other ASE readable structure file
     '''
 
     def __init__(self,
@@ -79,7 +80,7 @@ class MOFstructure(object):
         Simple function to remove guest molecules in porous system.
         Note that this can work for any periodic system.
 
-        **return:**
+        **returns:**
             ase_atoms (ase.Atoms): atom object with guest removed.
         '''
         index_non_guest = MOF_deconstructor.remove_unbound_guest(self.ase_atoms)
@@ -94,7 +95,7 @@ class MOFstructure(object):
             cheminfo (bool): If True, computes cheminformatic identifiers such as SMILES, InChI, and InChIKey.
             add_dummy (bool): If True, adds dummy atoms at the points of extension.
 
-        **return:**
+        **returns:**
             metal_sbu (list): A list of unique metal secondary building units
             linker_sbu (list): A list of unique organic secondary building units
         """
@@ -129,7 +130,7 @@ class MOFstructure(object):
             cheminfo (bool): If True, computes cheminformatic identifiers such as SMILES, InChI, and InChIKey.
             add_dummy (bool): If True, adds dummy atoms at the points of extension.
 
-        **return:**
+        **returns:**
             metal_clusters (list): A list of unique metal atoms or clusters.
             organic_ligands (list): A list of unique organic ligands.
         """
@@ -159,74 +160,135 @@ class MOFstructure(object):
                      probe_radius=1.86,
                      number_of_steps=10000,
                      rad_file=None,
-                     high_accuracy=True):
+                     high_accuracy=True,
+                     timeout=porosity_timeout):
         '''
         A function to compute porosity data for a system.
 
-        **parameters**
+        **parameters:**
 
-            probe_radius (float): Radius of the probe (default: 1.86).
-            number_of_steps (int): Number of GCMC simulation cycles (default: 10000).
-            high_accuracy (bool): If True, perform high-accuracy computations.
-            rad_file: Optional file containing user defined atom radii. Must have the `.rad` extension
+            - probe_radius: float
+                Radius of the probe (default: 1.86).
 
-        **return:**
-            pore (dict): A dictionary containing:
-                - AV_Volume_fraction: Accessible volume void fraction.
-                - AV_A^3: Accessible volume in A^2.
-                - AV_cm^3/g: Accessible volume in cm³/g. This value is often infinite because it divides the computed
-                    volume by Avogadro's number.
-                - ASA_A^2: Accessible surface area in A^2.
-                - ASA_m^2/cm^3: Accessible surface area in m2/cm3.
-                - Number_of_channels: Number of channels (i.e., pores) present in the system.
-                - LCD_A: The largest cavity diameter, defined as the diameter of the largest sphere that can be
-                    inserted into the porous system without overlapping any atoms.
-                - lfpd_A: The largest included sphere along the free sphere path, i.e., the largest sphere that can be
-                    inserted into the pore.
-                - PLD_A: The pore limiting diameter, defined as the largest sphere that can freely diffuse through the
-                    porous network without overlapping any atoms.
+            - number_of_steps: int
+                Number of GCMC simulation cycles (default: 10000).
+
+            - high_accuracy: bool
+                If True, perform high-accuracy computations.
+
+            - rad_file: str
+                Optional file of user defined atom radii. Must have the
+                `.rad` extension.
+
+            - timeout: float
+                Seconds allowed for one structure before zeo++ is killed. A
+                structure that runs past it returns the record below with
+                None in place of each number.
+
+        **returns:**
+            pore: dict
+                The same keys whatever happens, so a directory of structures
+                gives rows of one shape:
+
+                - av_volume_fraction: Accessible volume void fraction.
+                - av_a3: Accessible volume in A^3.
+                - asa_a2: Accessible surface area in A^2.
+                - asa_m2_per_cm3: Accessible surface area in m2/cm3.
+                - number_of_channels: Number of channels, that is pores,
+                  present in the system.
+                - lcd_a: The largest cavity diameter, the diameter of the
+                  largest sphere that can be inserted into the porous system
+                  without overlapping any atoms.
+                - lfpd_a: The largest included sphere along the free sphere
+                  path, that is the largest sphere that can be inserted into
+                  the pore.
+                - pld_a: The pore limiting diameter, the largest sphere that
+                  can freely diffuse through the porous network without
+                  overlapping any atoms.
+                - porosity_status: 'ok', 'timeout' or 'failed:<code>'.
         '''
         guest_free_atoms = self.remove_guest()
         if rad_file is None:
             pores = zeo_calculation(guest_free_atoms,
                                     probe_radius=probe_radius,
                                     number_of_steps=number_of_steps,
-                                    high_accuracy=high_accuracy
+                                    high_accuracy=high_accuracy,
+                                    timeout=timeout
                                     )
         else:
             pores = zeo_calculation(guest_free_atoms,
                                     probe_radius=probe_radius,
                                     number_of_steps=number_of_steps,
                                     high_accuracy=high_accuracy,
-                                    rad_file=rad_file)
+                                    rad_file=rad_file,
+                                    timeout=timeout)
         return read_write.convert_numpy_types(pores)
 
     def get_topology(
         self,
         method="all_node",
         *,
-        decimals=8,
-        include_edge_centers=True,
+        decimals=_UNSET,
+        include_edge_centers=_UNSET,
         fallback_to_input_cgd=False,
+        timeout=300,
+        refine_cgd=False,
     ):
         """
         Compute topology information for the guest-free system.
 
+        Identification is done in Python by `mofstructure.topology`. It was
+        validated against Systre on 196 real frameworks across three corpora
+        without a single disagreement, and against a third implementation,
+        CrystalNets, on a further 111.
+
+        Two fields have changed meaning and the old ones are kept beside them
+        rather than being quietly redefined:
+
+        `topology_hash` was a digest of Systre's *relaxed geometry*, rounded
+        coordinates and cell. It is now the digest of the canonical key, which
+        is a stronger identifier: the same net written in a supercell, with
+        its atoms reordered or its origin moved, hashes the same, where the
+        geometric digest does not. Values stored under the old scheme will not
+        match, which is why `key_version` travels with it.
+
+        `cgd` is now written from the ideal embedding this package derives
+        from the topology rather than from Systre's relaxation. Both describe
+        the same net; they differ in setting, since Systre reports a
+        conventional cell and this reports the primitive one, so a cubic
+        a=4.899 there appears here as a=4.492 with 45 and 60 degree angles.
+
         **parameters:**
-            method: str
-                Topology extraction method passed to SystreTopology.
+            - method: str
+                Deconstruction to use; any that `TopologyExtractor.build_cgd`
+                accepts, or "auto" to choose from the structure.
 
-            decimals: int
-                Number of decimal places used when hashing the relaxed topology payload.
+            - decimals: int
+                Deprecated and ignored, removal planned. The key is exact and
+                integral, so the digest no longer depends on a rounding
+                choice.
 
-            include_edge_centers: bool
-                If True, include edge-center comments in the CRYSTAL2 text.
+            - include_edge_centers: bool
+                Deprecated and ignored, removal planned; the embedding writes
+                no edge centres.
 
-            fallback_to_input_cgd: bool
-                If True, return a CRYSTAL2 wrapper from the input CGD when no
-                relaxed component can be parsed from Systre output.
+            - fallback_to_input_cgd: bool
+                If True, return the deconstruction's own CGD when no ideal
+                embedding can be built, which happens for a net that is not
+                3-periodic.
 
-        **return:**
+            - timeout: int or None
+                Seconds allowed for identification, None for no limit.
+
+            - refine_cgd: bool
+                Write the CGD from an embedding refined for uniform edge
+                lengths rather than from the exact barycentric one. The exact
+                embedding is reproducible and belongs beside the key; the
+                refined one is what a builder such as AuToGraFS wants, since
+                a spread of two between longest and shortest edge means a
+                linker cannot span both.
+
+        **returns:**
             python dictionary
                 Mapping containing:
                     - topology
@@ -234,49 +296,100 @@ class MOFstructure(object):
                     - td10
                     - topology_hash
                     - cgd
+                    - key, key_hash, key_version
+                    - topology_source, names
+                    - status
         """
-        guest_free_atoms = self.remove_guest()
+        from mofstructure.graph_net.embedding import to_cgd
+        from mofstructure.graph_net.invariants import topological_density
+        from mofstructure.topology import analyse, quotient_graph
 
-        runner = SystreTopology(
-            guest_free_atoms,
-            method=method,
-            name="net",
-            keep_tmp=False,
+        for name, value in (("decimals", decimals),
+                            ("include_edge_centers", include_edge_centers)):
+            if value is not _UNSET:
+                warnings.warn(
+                    f"{name} is ignored and will be removed in a future "
+                    "release; the canonical key is exact, so neither "
+                    "rounding nor edge centres affect the result",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+
+        guest_free_atoms = self.remove_guest()
+        record = analyse(guest_free_atoms, method=method, timeout=timeout)
+
+        empty = {
+            "topology": None,
+            "dimension": None,
+            "td10": None,
+            "topology_hash": None,
+            "cgd": None,
+            "key": None,
+            "key_hash": None,
+            "key_version": record.get("key_version"),
+            "topology_source": None,
+            "names": {},
+            "status": record["status"],
+        }
+        if record["status"] != "ok" or not record["components"]:
+            empty["detail"] = record.get("detail")
+            if fallback_to_input_cgd:
+                try:
+                    empty["cgd"] = TopologyExtractor(
+                        ase_atoms=guest_free_atoms
+                    ).build_cgd(method=record.get("method", method), name="net")
+                except Exception:  # noqa: BLE001 - the fallback is optional
+                    pass
+            return empty
+
+        # A framework in several pieces has several nets; the largest is the
+        # framework proper and the rest are usually interpenetrating copies of
+        # it, so it is the one reported here. The whole list stays available
+        # through `mofstructure.topology.analyse`.
+        component = max(record["components"], key=lambda c: c.get("n_edges") or 0)
+        out = dict(empty)
+        out.update(
+            {
+                "topology": component.get("topology"),
+                "dimension": component.get("periodicity"),
+                "key": component.get("key"),
+                "key_hash": component.get("key_hash"),
+                "key_version": component.get("key_version"),
+                "topology_hash": component.get("key_hash"),
+                "topology_source": component.get("topology_source"),
+                "names": component.get("names") or {},
+                "status": "ok",
+            }
         )
 
-        result = runner.identify()
-        comp = runner.best_component()
-
-        if comp is None:
-            return {
-                "topology": result.topology,
-                "dimension": None,
-                "td10": None,
-                "topology_hash": None,
-                "cgd": runner.crystal2_text(
-                    include_edge_centers=include_edge_centers,
-                    fallback_to_input_cgd=fallback_to_input_cgd,
-                ),
-            }
-
-        return {
-            "topology": result.topology,
-            "dimension": comp.dimension,
-            "td10": comp.td10,
-            "topology_hash": comp.topology_hash(decimals=decimals),
-            "cgd": comp.crystal2_text(
-                name=comp.rcsr_name or "net",
-                include_edge_centers=include_edge_centers,
-            ),
-        }
+        graph = None
+        try:
+            cgd_text = TopologyExtractor(ase_atoms=guest_free_atoms).build_cgd(
+                method=record["method"], name="net"
+            )
+            graph = quotient_graph(cgd_text)
+            largest = max(graph.components(), key=lambda c: c.n_edges)
+            out["td10"] = round(topological_density(largest, 10)["mean"])
+            out["cgd"] = to_cgd(
+                largest,
+                name=out["topology"] or "net",
+                key=out["key"],
+                rcsr=out["topology"],
+                refine=refine_cgd,
+            )
+        except Exception as exc:  # noqa: BLE001 - reported, never swallowed
+            logging.info("topology: no ideal embedding for this net (%s)", exc)
+            if fallback_to_input_cgd and graph is not None:
+                out["cgd"] = cgd_text
+        return out
 
     def get_ligand_cluster_fingerprint(self):
         """
         Describe how the ligands meet the metal clusters.
 
-        Where ``get_topology`` asks Systre to name the net, this reads the
-        deconstruction directly, so it answers for every framework, including
-        the ones Systre leaves unnamed or refuses. It counts each ligand and
+        Where ``get_topology`` names the net, this reads the deconstruction
+        directly, so it answers for every framework, including the ones no
+        archive names and the ones that have no stable net at all. It counts each ligand and
         cluster species, how many clusters each ligand bridges, and with what
         denticity, which is what makes it sensitive to defects: a missing
         linker lowers a cluster's connectivity, a linker hanging by one end is
@@ -286,7 +399,7 @@ class MOFstructure(object):
         order, when the cell origin moves, or when the same crystal is given as
         a supercell.
 
-        **return:**
+        **returns:**
             python dictionary
                 Mapping containing:
                     - clusters
@@ -314,36 +427,36 @@ class MOFstructure(object):
         them, so every visible edge has a visible node at both ends.
 
         **parameters:**
-            method: str
+            - method: str
                 Node definition: "sbus", "all_node", "single_node" or
                 "ligand_cluster".
 
-            supercell: tuple of three ints
+            - supercell: tuple of three ints
                 How many cells to draw along a, b, c. (1, 1, 1) draws one cell
                 plus the edges leaving it.
 
-            filename: str, optional
+            - filename: str, optional
                 If given, write the figure to this path. An .html file stays
                 interactive; other extensions (.png, .pdf, ...) need the
                 optional 'kaleido' package.
 
-            show: bool
+            - show: bool
                 If True, open the figure in a browser.
 
-            show_structure: bool
+            - show_structure: bool
                 If True, draw the framework atoms and bonds behind the net.
 
-            show_unit_cell: bool
+            - show_unit_cell: bool
                 If True, draw the boundary of the displayed unit cells.
 
-            show_linker_sbu: bool
+            - show_linker_sbu: bool
                 If True, show the centre-to-centre network produced by the
                 selected topology method.  Its nodes and connections therefore
                 change when the method changes.
 
-            show_topology: bool
+            - show_topology: bool
                 If True, also show the abstract topology nodes and blue edges.
-                It is False by default so the SBU–linker connectivity remains
+                It is False by default so the SBU-linker connectivity remains
                 visually unambiguous.
 
         **returns:**
@@ -575,7 +688,7 @@ class MOFstructure(object):
         title = f"{method} net"
         topo = self.get_topology(method=method).get("topology")
         if topo:
-            title = f"{title} — {topo}"
+            title = f"{title}: {topo}"
 
         fig = go.Figure(data=traces)
         fig.update_layout(
@@ -666,17 +779,14 @@ class MOFstructure(object):
             if not json_files:
                 raise FileNotFoundError(f"No JSON file found in temporary directory: {tmp_dir}")
 
-
             json_file = os.path.join(tmp_dir, json_files[0])
             data = read_write.load_data(json_file)
-
 
             general_info["metals"] = data.get("metal_species")
             general_info["has_oms"] = data.get("has_oms")
             general_info["density"] = data.get("density")
             general_info["uc_volume"] = data.get("uc_volume")
             general_info["error_in_systems"] = data.get("problematic")
-
 
             metal_sites_dic = data.get("metal_sites")
             if metal_sites_dic is not None:
@@ -699,9 +809,7 @@ class MOFstructure(object):
         finally:
             shutil.rmtree(tmp_dir)
 
-
         return general_info
-
 
 
 def get_coordination_environment(coordination_spheres, metal_element, coordination_number):
@@ -715,7 +823,7 @@ def get_coordination_environment(coordination_spheres, metal_element, coordinati
         coordination_number (int): The desired number of neighbors (coordination number).
 
     Returns:
-        List[str]: A list of species symbols (neighbors) bonded to the metal center.
+        list[str]: A list of species symbols (neighbors) bonded to the metal center.
                    Returns an empty list if no matching environment is found.
     """
     metal_element = str(metal_element)

@@ -1,11 +1,16 @@
 #!/usr/bin/python
+'''
+Command line entry point for `mofstructure_building_units`.
+
+Deconstructs every structure in a folder into its secondary building units
+and its complete ligands and metal clusters, writing each unit as an xyz file
+and the cheminformatic identifiers of each as json.
+'''
 from __future__ import print_function
 __author__ = "Dr. Dinga Wonanke"
 __status__ = "production"
 import os
 import argparse
-import json
-from ase.io import read
 from mofstructure import structure
 import mofstructure.filetyper as read_write
 from mofstructure.mofdeconstructor import lookup_iupac_name
@@ -29,7 +34,6 @@ def collect_sbus(metal_sbus, organic_sbus, base_name, xyz_path):
         os.makedirs(path_to_file)
 
     data_to_json = {}
-    structural_data = {}
     data_to_json['sbu_smile'] = []
     data_to_json['sbu_inchikey'] = []
     data_to_json['sbu_inchi'] = []
@@ -37,14 +41,13 @@ def collect_sbus(metal_sbus, organic_sbus, base_name, xyz_path):
     data_to_json['sbu_type'] = []
     data_to_json['linker_smile'] = []
     data_to_json['linker_inchikey'] = []
-    data_to_json['linker_inchi'] =[]
+    data_to_json['linker_inchi'] = []
     data_to_json['n_sbu_point_of_extension'] = []
     data_to_json['n_linker_point_of_extension'] = []
     data_to_json['sbu_type'] = ''
     data_to_json['n_metal_sbus'] = len(metal_sbus)
     data_to_json['n_organic_sbus'] = len(organic_sbus)
     sbu_type, smi, inchikey, inchi, point_of_extension = [], [], [], [], []
-
 
     for i, sbu_metal in enumerate(metal_sbus):
         if len(metal_sbus) > 0:
@@ -84,7 +87,6 @@ def collect_sbus(metal_sbus, organic_sbus, base_name, xyz_path):
             except AttributeError:
                 pass
 
-
     if len(smi) > 0:
         data_to_json['linker_smile'] = smi
     if len(inchikey) > 0:
@@ -106,10 +108,9 @@ def collect_ligand(organic_ligands, base_name, xyz_path):
     path_to_file : result directory or folder
     '''
     data_to_json = {}
-    structural_data = {}
     path_to_file = f'{xyz_path}/{base_name}'
     if not os.path.exists(path_to_file):
-        os.makedirs(path_to_file )
+        os.makedirs(path_to_file)
     data_to_json['n_ligands'] = len(organic_ligands)
     smi, inchikey, inchi, iupac = [], [], [], []
     for j, mof_ligand in enumerate(organic_ligands):
@@ -168,10 +169,10 @@ def compile_data(cif_files, result_folder, verbose=False):
 
     if not os.path.exists(result_folder):
         os.makedirs(result_folder)
-    structure_db = os.path.join(result_folder, "Structure_Data")
+    structure_db = os.path.join(result_folder, read_write.STRUCTURE_DATA)
     if not os.path.exists(structure_db):
         os.makedirs(structure_db)
-    xyz_path = os.path.join(result_folder, "XYZ_DB")
+    xyz_path = os.path.join(result_folder, read_write.XYZ_DB)
     if not os.path.exists(xyz_path):
         os.makedirs(xyz_path)
 
@@ -239,7 +240,8 @@ def main():
                         help='list of cif files. like glob')
 
     parser.add_argument('-s', '--save_dir', type=str,
-                        default='MOFDb', help='directory to save output files')
+                        default=read_write.DEFAULT_SAVE_DIR,
+                        help='directory to save output files')
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='print verbose output')
     args = parser.parse_args()

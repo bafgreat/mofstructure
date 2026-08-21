@@ -7,7 +7,6 @@ msgpack can all be read through one call, with anything unrecognised returned
 as raw text. The writers cover the same formats plus the append helpers the
 command line tools use to grow a database file structure by structure.
 '''
-from __future__ import print_function
 __author__ = "Dr. Dinga Wonanke"
 __status__ = "production"
 import os
@@ -22,6 +21,15 @@ import ase
 import pandas as pd
 import msgpack
 from importlib.resources import files
+
+# Folder the command line tools write their database into. mofstructure
+# handles MOFs, COFs and zeolites alike, so the name follows the package
+# rather than one class of material.
+DEFAULT_SAVE_DIR = "MOFstructureDB"
+# Subfolders of the save directory. Every command must agree on these or a
+# run stops adding to one database and starts building a second.
+STRUCTURE_DATA = "Structure_Data"
+XYZ_DB = "XYZ_DB"
 
 
 class AtomsEncoder(json.JSONEncoder):
@@ -110,6 +118,33 @@ def append_json_atom(data,  encoder, filename):
         json.dump(data, f_obj, indent=4, sort_keys=False, cls=encoder)
 
 
+def summary_frame(records, drop=()):
+    '''
+    Build the csv summary of a per structure result dictionary.
+
+    A structure that failed outright is recorded as None rather than as a
+    dictionary of results. Such an entry has no fields to become columns, and
+    stacking it raises, so it is left out of the summary rather than allowed
+    to take down the write at the end of a long run.
+
+    **parameters:**
+        - records: mapping
+            Structure name to a dictionary of results, or None.
+
+        - drop: iterable of str
+            Columns to leave out, used for bulky text fields.
+
+    **returns:**
+        pandas.DataFrame
+            One row per structure that produced results, indexed by name.
+    '''
+    rows = {name: result for name, result in records.items()
+            if isinstance(result, dict) and result}
+    data_f = pd.DataFrame.from_dict(rows, orient='index')
+    data_f.index.name = 'mof_names'
+    return data_f.drop(columns=list(drop), errors='ignore')
+
+
 def append_json(new_data, filename):
     '''
     append a new data in an existing json file
@@ -129,13 +164,15 @@ def append_json(new_data, filename):
         file.seek(0)
         # convert back to json.
         json.dump(file_data, file, indent=4, sort_keys=True)
+        # drop any tail left by a longer previous version of the file.
+        file.truncate()
 
 
 def read_json(file_name):
     '''
     load a json file
     '''
-    with open(file_name, 'r', encoding='utf-8') as f_obj:
+    with open(file_name, encoding='utf-8') as f_obj:
         data = json.load(f_obj)
 
     return data
@@ -145,7 +182,7 @@ def csv_read(csv_file):
     '''
     Read a csv file
     '''
-    f_obj = open(csv_file, 'r', encoding='utf-8')
+    f_obj = open(csv_file, encoding='utf-8')
     data = csv.reader(f_obj)
     return data
 
@@ -154,7 +191,7 @@ def get_contents(filename):
     '''
     Read a file and return a list content
     '''
-    with open(filename, 'r', encoding='utf-8') as f_obj:
+    with open(filename, encoding='utf-8') as f_obj:
         contents = f_obj.readlines()
     return contents
 
@@ -215,7 +252,7 @@ def convert_numpy_types(data):
     **parameter:**
         data (dict): data to jsonify
 
-    **return:**
+    **returns:**
         data (dic): jsonified data
     '''
     if isinstance(data, dict):
@@ -229,12 +266,12 @@ def convert_numpy_types(data):
     else:
         return data
 
+
 def load_data(filename):
     '''
     function that recognises file extenion and chooses the correction
     function to load the data.
     '''
-    # file_ext = filename[filename.rindex('.')+1:]
     basename = os.path.basename(filename)
     file_ext = basename.split('.')[-1]
 
@@ -251,6 +288,7 @@ def load_data(filename):
     else:
         data = get_contents(filename)
     return data
+
 
 def load_iupac_names():
     '''

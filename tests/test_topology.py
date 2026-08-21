@@ -1,332 +1,428 @@
-#!/usr/bin/python
-from __future__ import print_function
-import os
-import numpy as np
+#!/usr/bin/env python3
+'''
+Tests for the public topology API.
+
+`mofstructure.topology` is the layer that takes a structure and returns its
+net, so what is worth asserting here is not that the identification is
+correct - `test_graph_net.py` establishes that against the literature and
+against two independent implementations - but that the layer around it holds
+together:
+
+  * a MOF, a COF and a zeolite must come back in the *same* shape, since the
+    point of the record is that results are comparable across chemistry,
+  * the material classifier must not be fooled by the tetrahedral metals a
+    zeolite shares with a MOF,
+  * a structure that cannot be deconstructed must be reported, not raised,
+    because the common use is a directory of thousands,
+  * and the key must survive a change of representation, which is what makes
+    it usable as a database handle.
+
+Reference topologies are the uncontested ones: HKUST-1 is tbo and RUBTAK01 is
+fcu. A zeolite is headlined by its IZA framework-type code, so ABW reports ABW
+and EDI reports EDI, while the RCSR symbol of the same net stays in `names`.
+'''
+from __future__ import annotations
+
+import json
+import warnings
+from pathlib import Path
+
 import pytest
-from ase.io import read
-from mofstructure import structure
-from .load_test import get_test_data
-from mofstructure.systre import identify_topology
-from mofstructure.generate_cgd import ligand_cluster_graph, net_geometry
 
-TEST_DATA = os.path.join(os.path.dirname(__file__), "test_data")
+from mofstructure.filetyper import DEFAULT_SAVE_DIR as SAVE
+from mofstructure.filetyper import STRUCTURE_DATA
+from mofstructure.scripts.topology import main
+from mofstructure.graph_net.periodic_graph import PeriodicGraph
+from mofstructure.topology import _identify_into
+from mofstructure.topology import (
+    DEFAULT_METHOD,
+    MOF_METHODS,
+    analyse,
+    analyse_methods,
+    classify,
+    quotient_graph,
+)
 
-@pytest.fixture(scope="module")
-def data():
-    return get_test_data()
+DATA = Path(__file__).resolve().parent / "test_data"
 
-
-@pytest.fixture(scope="module")
-def mof5(data):
-    return data['MOF5']
-
-
-@pytest.fixture(scope="module")
-def uio66(data):
-    return data['UIO66']
+warnings.filterwarnings("ignore")
 
 
-@pytest.fixture(scope="module")
-def dut8(data):
-    return data['DUT8']
+class TestClassification:
+    '''Choosing the deconstruction that suits a structure.'''
+
+    @pytest.mark.parametrize(
+        "filename,expected",
+        [
+            ("HKUST-1.cif", "mof"),
+            ("RUBTAK01.cif", "mof"),
+            ("ABW.cif", "zeolite"),
+            ("EDI.cif", "zeolite"),
+        ],
+    )
+    def test_material_is_recognised(self, filename, expected):
+        '''Each shipped structure is placed in the right class.'''
+        assert classify(str(DATA / filename)) == expected
+
+    def test_zeolite_is_not_mistaken_for_a_mof(self):
+        '''
+        A silicate is a zeolite even though silicon sits in the metal list.
+
+        The classifier tests for a zeolite first precisely because several
+        tetrahedral elements - Zn, Co, Fe, Ti - are metals, and asking about
+        metals first would send every one of those frameworks down the MOF
+        path, where there is no cluster to cut at.
+        '''
+        assert classify(str(DATA / "ABW.cif")) != "mof"
 
 
-def sbu_data(ase_atom):
+class TestRecordShape:
+    '''One answer shape, whatever the material.'''
+
+    REQUIRED = {
+        "interpenetration",
+        "key",
+        "key_hash",
+        "key_version",
+        "n_edges",
+        "n_vertices",
+        "names",
+        "periodicity",
+        "topology",
+        "topology_source",
+    }
+
+    @pytest.mark.parametrize(
+        "filename", ["HKUST-1.cif", "ABW.cif", "EDI.cif"]
+    )
+    def test_every_component_carries_the_same_fields(self, filename):
+        '''
+        A MOF and a zeolite answer with identical fields.
+
+        The materials are deconstructed along completely different lines, so
+        an implementation that let the material show through in the reply
+        would make the results incomparable. This is the assertion that keeps
+        them comparable.
+        '''
+        record = analyse(str(DATA / filename), timeout=300)
+        assert record["status"] == "ok"
+        assert record["components"]
+        for component in record["components"]:
+            assert self.REQUIRED <= set(component)
+
+    def test_key_is_present_even_when_the_net_is_named(self):
+        '''The key is the identification and is always reported.'''
+        record = analyse(str(DATA / "HKUST-1.cif"), timeout=300)
+        assert record["key"]
+        assert record["key_hash"].startswith(record["key_version"])
+
+
+class TestKnownTopologies:
+    '''Agreement with topologies that are not in dispute.'''
+
+    @pytest.mark.parametrize(
+        "filename,expected",
+        [
+            ("HKUST-1.cif", "tbo"),
+            ("RUBTAK01.cif", "fcu"),
+            ("ABW.cif", "ABW"),
+            ("EDI.cif", "EDI"),
+        ],
+    )
+    def test_topology_matches_the_literature(self, filename, expected):
+        '''
+        The ABW case is worth its place: its net is sra in the RCSR, which has
+        no net called abw, so a zeolite headlined from the RCSR would carry a
+        name unrecognisable to the field it comes from. Reporting the IZA code
+        is what makes the column read the way a zeolite paper does, and the
+        RCSR symbol is still there in `names`.
+        '''
+        record = analyse(str(DATA / filename), timeout=300)
+        assert record["topology"] == expected
+
+    def test_zeolite_also_reports_its_framework_code(self):
+        '''A zeolite carries both names, and both are kept.'''
+        record = analyse(str(DATA / "ABW.cif"), timeout=300)
+        names = record["components"][0]["names"]
+        assert names.get("rcsr") == "sra"
+        assert names.get("iza") == "ABW"
+
+
+class TestInvariance:
+    '''The key identifies the net, not the way it was written.'''
+
+    def test_key_survives_a_supercell_and_a_shifted_origin(self):
+        '''
+        The same framework in a doubled cell, with atoms reordered and the
+        origin moved, must give the same key. This is the property that lets
+        a key be stored as a database handle: without it, two files of one
+        material would look like two materials.
+
+        The method is pinned rather than left to `DEFAULT_METHOD`. What is
+        under test is that a key survives a change of representation, which
+        is a property of the identification and not of any one node
+        definition; LECQEQ01 has no stable net under `all_node`, so taking
+        the default would test whether that structure happens to suit the
+        current default instead.
+        '''
+        variants = (
+            Path(__file__).resolve().parents[1]
+            / "analysis"
+            / "results"
+            / "controlled_perturbation_smoke"
+            / "variants"
+        )
+        if not variants.exists():
+            pytest.skip("perturbation variants not present in this checkout")
+        keys = set()
+        for kind in ("pristine", "supercell-2x", "reordered-atoms",
+                     "shifted-origin"):
+            path = variants / f"LECQEQ01_fair__{kind}.cif"
+            if not path.exists():
+                continue
+            record = analyse(str(path), method="sbus", timeout=300)
+            assert record["status"] == "ok"
+            keys.add(record["key"])
+        assert len(keys) == 1, "the key moved between representations"
+
+
+class TestFailuresAreReported:
+    '''An ordinary failure is a status, not an exception.'''
+
+    def test_unreadable_input_is_reported(self, tmp_path):
+        '''A file ASE cannot read comes back as an error record.'''
+        bad = tmp_path / "not-a-structure.cif"
+        bad.write_text("this is not a crystal\n")
+        record = analyse(str(bad))
+        assert record["status"] in ("error", "deconstruction_failed", "no_net")
+        assert "detail" in record
+
+    def test_empty_deconstruction_is_not_a_crash(self):
+        '''A CGD with no edges is reported as having no net.'''
+        with pytest.raises(ValueError):
+            quotient_graph("PERIODIC_GRAPH\nID x\nEDGES\nEND\n")
+
+
+class TestMethods:
+    '''Choosing between the several nets a MOF has.'''
+
+    def test_a_mof_offers_more_than_one_deconstruction(self):
+        '''
+        A MOF has no single correct net. The alternatives answer different
+        questions rather than competing, so they are all offered.
+        '''
+        assert len(MOF_METHODS) > 1
+        assert DEFAULT_METHOD["cof"] == "cof"
+        assert DEFAULT_METHOD["zeolite"] == "zeol"
+        assert "zeol" not in MOF_METHODS and "cof" not in MOF_METHODS
+
+    def test_analyse_methods_reports_every_method_it_tried(self):
+        '''
+        Each method appears in the result, including any that failed, so a
+        missing answer is visible rather than silently absent.
+        '''
+        results = analyse_methods(str(DATA / "HKUST-1.cif"), timeout=300)
+        assert set(results) == set(MOF_METHODS)
+        for record in results.values():
+            assert "status" in record
+
+
+class TestEmbedding:
+    '''The two geometric realisations, and what each is for.'''
+
+    def test_refinement_makes_the_edges_more_uniform(self):
+        '''
+        The exact embedding minimises squared edge length, which tolerates a
+        few long edges; the refined one evens them out. A builder spanning
+        each edge with a linker needs the second, which is the whole reason
+        it exists.
+        '''
+        from mofstructure.generate_cgd import TopologyExtractor
+        from mofstructure.graph_net.embedding import (
+            ideal_embedding,
+            refined_embedding,
+        )
+        from mofstructure.topology import quotient_graph
+
+        cgd = TopologyExtractor(filename=str(DATA / "SARSUC.cif")).build_cgd(
+            method="sbus", name="net"
+        )
+        component = max(quotient_graph(cgd).components(), key=lambda c: c.n_edges)
+        exact = ideal_embedding(component)
+        refined = refined_embedding(component)
+        assert exact["refined"] is False
+        assert refined["refined"] is True
+        assert refined["edge_length_spread"] < exact["edge_length_spread"]
+        assert refined["edge_length_spread"] < 1.05
+
+    def test_exact_embedding_is_reproducible(self):
+        '''
+        The exact embedding is the one stored beside a key, so it has to come
+        out the same every time. The refined one carries no such promise,
+        which is why the flag distinguishing them exists.
+        '''
+        from mofstructure.generate_cgd import TopologyExtractor
+        from mofstructure.graph_net.embedding import ideal_embedding
+        from mofstructure.topology import quotient_graph
+
+        cgd = TopologyExtractor(filename=str(DATA / "SARSUC.cif")).build_cgd(
+            method="sbus", name="net"
+        )
+        component = max(quotient_graph(cgd).components(), key=lambda c: c.n_edges)
+        first = ideal_embedding(component)
+        second = ideal_embedding(component)
+        assert first["cell"] == second["cell"]
+        assert first["positions"] == second["positions"]
+
+    def test_cgd_states_which_embedding_it_holds(self):
+        '''A geometry that cannot be reproduced must say so in the file.'''
+        from mofstructure.structure import MOFstructure
+
+        mof = MOFstructure(filename=str(DATA / "SARSUC.cif"))
+        exact = mof.get_topology(method="all_node")["cgd"]
+        refined = mof.get_topology(method="all_node", refine_cgd=True)["cgd"]
+        assert "exact barycentric, reproducible" in exact
+        assert "not reproducible bit for bit" in refined
+
+
+class TestCommandLineOutput:
     '''
-    Function to compile secondary building units and regions of MOFs.
+    The command writes where the rest of the package writes.
 
-    Parameters
-    ----------
-    ase_atom : ASE atoms object
+    A user builds one folder per project: `mofstructure_database` fills it,
+    and a topology run has to land in the same place, under the same key, or
+    the folder stops being a single database.
     '''
-    res = identify_topology(ase_atom)
-    return res.topology
 
+    def test_records_land_in_the_shared_structure_database(self, tmp_path):
+        record = main([str(DATA / "ABW.cif"), "-s", str(tmp_path / SAVE)])
+        written = tmp_path / SAVE / STRUCTURE_DATA / "topology_data.json"
+        assert record == 0
+        assert written.exists()
+        assert json.loads(written.read_text())["ABW"]["topology"] == "ABW"
 
-def test_mof5(mof5):
-    topology = sbu_data(mof5)
-    assert topology == 'pcu'
+    def test_a_second_run_adds_to_the_file(self, tmp_path):
+        save = str(tmp_path / SAVE)
+        main([str(DATA / "ABW.cif"), "-s", save])
+        main([str(DATA / "EDI.cif"), "-s", save])
+        written = tmp_path / SAVE / STRUCTURE_DATA / "topology_data.json"
+        assert sorted(json.loads(written.read_text())) == ["ABW", "EDI"]
 
-def test_uio66(uio66):
-    topology = sbu_data(uio66)
+    def test_no_save_writes_nothing(self, tmp_path):
+        main([str(DATA / "ABW.cif"), "-s", str(tmp_path / SAVE),
+              "--no-save"])
+        assert not (tmp_path / SAVE).exists()
 
-    assert topology == 'fcu'
+    def test_a_directory_is_read_as_the_structures_it_holds(self, tmp_path):
+        '''
+        A folder is the unit a user works in, and the sibling commands both
+        take one, so naming a folder here has to read the structures inside
+        rather than hand the folder itself to ASE.
+        '''
+        folder = tmp_path / "cifs"
+        folder.mkdir()
+        for name in ("ABW.cif", "EDI.cif"):
+            (folder / name).write_bytes((DATA / name).read_bytes())
 
-def test_dut8(dut8):
-    topology = sbu_data(dut8)
-    assert topology == 'pcu' #pcu
+        main([str(folder), "-s", str(tmp_path / SAVE)])
 
+        written = tmp_path / SAVE / STRUCTURE_DATA / "topology_data.json"
+        assert sorted(json.loads(written.read_text())) == ["ABW", "EDI"]
 
-def _cif(name):
-    return read(os.path.join(TEST_DATA, name))
+    def test_a_directory_holding_no_structures_is_reported(self, tmp_path):
+        empty = tmp_path / "empty"
+        empty.mkdir()
+        assert main([str(empty), "-s", str(tmp_path / SAVE)]) == 1
 
+    def test_the_saved_record_drops_status_and_source(self, tmp_path):
+        '''
+        `status` says how the run went and `source` says where the file was,
+        neither of which is a property of the net. The record on disk stands
+        for the net, so both stay on the terminal and out of the database.
+        '''
+        main([str(DATA / "ABW.cif"), "-s", str(tmp_path / SAVE)])
+        written = tmp_path / SAVE / STRUCTURE_DATA / "topology_data.json"
+        record = json.loads(written.read_text())["ABW"]
+        assert "status" not in record
+        assert "source" not in record
+        assert record["topology"] == "ABW"
 
-def test_hkust1_tbo():
-    # tritopic BTC: the polytopic linker must be its own node, giving tbo (not reo)
-    mof = structure.MOFstructure(_cif("HKUST-1.cif"))
-    assert mof.get_topology(method="all_node")["topology"] == "tbo"
+    def test_a_csv_summary_lands_beside_the_records(self, tmp_path):
+        '''
+        Every other command leaves a JSON and a CSV in the folder, and a
+        table is what a reader opens first, so a topology run leaves one too.
+        '''
+        main([str(DATA / "ABW.cif"), "-s", str(tmp_path / SAVE)])
+        table = tmp_path / SAVE / STRUCTURE_DATA / "topology_data.csv"
+        assert table.exists()
+        header, row = table.read_text().splitlines()[:2]
+        assert header.startswith("mof_names,")
+        assert "topology" in header
+        assert row.startswith("ABW,")
 
+    def test_the_csv_covers_the_database_not_just_the_last_run(self, tmp_path):
+        '''
+        The records accumulate across runs, so a table built from one run
+        would describe less than the file it sits beside.
+        '''
+        save = str(tmp_path / SAVE)
+        main([str(DATA / "ABW.cif"), "-s", save])
+        main([str(DATA / "EDI.cif"), "-s", save])
+        table = tmp_path / SAVE / STRUCTURE_DATA / "topology_data.csv"
+        names = [
+            line.split(",")[0]
+            for line in table.read_text().splitlines()[1:]
+        ]
+        assert sorted(names) == ["ABW", "EDI"]
 
-def test_rod_all_node_vs_sbus():
-    # MIL-53 rod: all_node keeps the chain (rna), sbus collapses it (pcu).
-    # Matches CrystalNets AllNodes=rna.
-    mof = structure.MOFstructure(_cif("Cr.cif"))
-    assert mof.get_topology(method="all_node")["topology"] == "rna"
-    assert mof.get_topology(method="sbus")["topology"] == "pcu"
-
-
-def test_rod_single_node():
-    # MIL-53 rod, single_node: metals stay separate, each linker merges to one
-    # vertex. Matches CrystalNets SingleNodes=bpq.
-    mof = structure.MOFstructure(_cif("Cr.cif"))
-    assert mof.get_topology(method="single_node")["topology"] == "bpq"
-
-
-def test_single_node_discrete_unchanged():
-    # single_node must not change discrete-SBU frameworks
-    assert structure.MOFstructure(_cif("HKUST-1.cif")).get_topology(
-        method="single_node")["topology"] == "tbo"
-
-
-def test_ligand_cluster_hkust1_incidence_net():
-    atoms = _cif("HKUST-1.cif")
-    edges, ligand_nodes, node_atoms = ligand_cluster_graph(atoms)
-    metal_nodes = set(node_atoms) - ligand_nodes
-
-    assert len(metal_nodes) == 24
-    assert len(ligand_nodes) == 32
-    assert all(
-        (u in metal_nodes and v in ligand_nodes)
-        or (v in metal_nodes and u in ligand_nodes)
-        for u, v, *_ in edges
-    )
-
-    degree = {node: 0 for node in node_atoms}
-    for u, v, *_ in edges:
-        degree[u] += 1
-        degree[v] += 1
-    assert {degree[node] for node in metal_nodes} == {4}
-    assert {degree[node] for node in ligand_nodes} == {3}
-    assert all(
-        sum(atoms[i].symbol == "C" for i in node_atoms[node]) == 9
-        and sum(atoms[i].symbol == "O" for i in node_atoms[node]) == 6
-        for node in ligand_nodes
-    )
-
-
-def test_ligand_cluster_keeps_distinct_periodic_incidences():
-    edges, ligand_nodes, _ = ligand_cluster_graph(_cif("Cr.cif"))
-    incidences = [edge for edge in edges if edge[0] != edge[1]]
-    assert len(incidences) == len(set(incidences))
-    assert all((u in ligand_nodes) != (v in ligand_nodes) for u, v, *_ in incidences)
-
-
-def test_ligand_cluster_partitions_the_atoms():
-    # every atom belongs to exactly one vertex: no atom is counted both in a
-    # ligand and in the cluster it coordinates
-    atoms = _cif("HKUST-1.cif")
-    _, ligand_nodes, node_atoms = ligand_cluster_graph(atoms)
-    ligand_atoms = set().union(*(node_atoms[n] for n in ligand_nodes))
-    cluster_atoms = set().union(
-        *(node_atoms[n] for n in set(node_atoms) - ligand_nodes)
-    )
-    assert not ligand_atoms & cluster_atoms
-    assert ligand_atoms | cluster_atoms == set(range(len(atoms)))
-
-
-def test_ligand_cluster_rod_keeps_equivalent_linkers_equivalent():
-    # MIL-53's four BDC linkers are one symmetry orbit (Imma), so contracting
-    # the rod must not hand them different coordination numbers
-    edges, ligand_nodes, node_atoms = ligand_cluster_graph(_cif("Cr.cif"))
-    degree = {node: 0 for node in node_atoms}
-    for u, v, *_ in edges:
-        degree[u] += 1
-        degree[v] += 1
-    assert {degree[node] for node in ligand_nodes} == {2}
-
-
-def test_ligand_cluster_survives_a_supercell():
-    # the same crystal in a bigger box is the same framework
-    from mofstructure.generate_cgd import ligand_cluster_fingerprint
-    atoms = _cif("Cr.cif")
-    assert (
-        ligand_cluster_fingerprint(atoms)["fingerprint_hash"]
-        == ligand_cluster_fingerprint(atoms.repeat((1, 1, 2)))["fingerprint_hash"]
-    )
-
-
-def test_ligand_cluster_ignores_coordinated_solvent():
-    # a methanol on an open Cu site is not a linker: the net stays tbo and the
-    # framework part of the fingerprint is untouched, but the solvent is recorded
-    from ase import Atom
-    from mofstructure.generate_cgd import ligand_cluster_fingerprint
-
-    atoms = _cif("HKUST-1.cif")
-    cu = next(i for i, s in enumerate(atoms.get_chemical_symbols()) if s == "Cu")
-    distances = atoms.get_distances(cu, range(len(atoms)), mic=True)
-    axial = -sum(
-        (lambda v: v / np.linalg.norm(v))(
-            atoms.get_distance(cu, j, mic=True, vector=True)
+    def test_the_json_export_drops_status_and_source(self, tmp_path):
+        out = tmp_path / "nets.json"
+        main([str(DATA / "ABW.cif"), "--json", str(out)])
+        records = json.loads(out.read_text())
+        assert records
+        assert all(
+            "status" not in record and "source" not in record
+            for record in records
         )
-        for j in np.argsort(distances)[1:6] if atoms[j].symbol == "O"
-    )
-    axial /= np.linalg.norm(axial)
-
-    solvated = atoms.copy()
-    solvated.append(Atom("O", atoms.positions[cu] + 2.2 * axial))
-    solvated.append(Atom("C", atoms.positions[cu] + 3.63 * axial))
-
-    assert structure.MOFstructure(solvated).get_topology(
-        method="ligand_cluster")["topology"] == "tbo"
-
-    # counts are quoted per metal cluster, so one methanol among 24 is 1/24
-    fingerprint = ligand_cluster_fingerprint(solvated)
-    assert fingerprint["terminal"] == {
-        "CO": {"count": "1/24", "denticity": {1: "1/24"}}
-    }
-    assert (
-        fingerprint["ligands"] == ligand_cluster_fingerprint(atoms)["ligands"]
-    )
 
 
-def test_ligand_cluster_fingerprint_sees_a_missing_linker():
-    # a missing-linker defect leaves two clusters one contact short
-    from mofstructure.generate_cgd import ligand_cluster_fingerprint
-    from mofstructure import mofdeconstructor
+class TestStatusTellsTheTruth:
+    '''
+    The status has to separate three outcomes a caller treats differently:
+    a named net, a net identified but absent from the archive, and a net with
+    no canonical form at all. Reporting the third as "ok" would let a failure
+    into a dataset as a blank rather than as a failure.
+    '''
 
-    atoms = _cif("RUBTAK01.cif")
-    pristine = ligand_cluster_fingerprint(atoms)
-    assert pristine["clusters"] == {
-        "O8Zr6": {"count": "1", "contacts": {12: "1"}, "capped": {0: "1"}}
-    }
-    assert pristine["ligands"]["C8H4O4"]["contacts"] == {2: "6"}
+    def test_a_named_net_is_ok(self):
+        record = analyse(str(DATA / "HKUST-1.cif"), timeout=300)
+        assert record["status"] == "ok"
+        assert record["topology"] == "tbo"
+        assert record["key"]
 
-    components, *_ = mofdeconstructor.ligands_and_metal_clusters(atoms)
-    linker = next(
-        c for c in components
-        if not any(atoms[int(i)].symbol == "Zr" for i in c)
-    )
-    defective = atoms[[
-        i for i in range(len(atoms)) if i not in {int(x) for x in linker}
-    ]]
+    def test_an_unstable_net_is_not_ok(self):
+        # The quotient graph of ABUBOQ, whose neighbours collide in the
+        # barycentric placement. An unstable net has no canonical form, so
+        # there is nothing to identify it by and "ok" would be a lie. The
+        # edges are inlined rather than read from a cif so the test states
+        # exactly which graph it means.
+        graph = PeriodicGraph(3, 14, [
+            (0, 2, (0, 0, 0)), (0, 3, (0, 0, 0)), (0, 4, (0, 0, 0)),
+            (0, 5, (0, 0, 0)), (0, 6, (0, 0, 0)), (0, 8, (0, 0, 0)),
+            (0, 9, (0, 0, 0)), (0, 12, (0, 0, -1)), (1, 2, (0, 0, 0)),
+            (1, 3, (0, 0, 1)), (1, 4, (0, 0, 0)), (1, 7, (0, 0, 0)),
+            (1, 10, (0, 0, 0)), (1, 11, (0, 0, 0)), (1, 12, (0, 0, 0)),
+            (1, 13, (0, 0, 0)), (2, 4, (0, 0, 0)), (3, 12, (0, 0, 1)),
+            (5, 6, (0, 0, 0)), (7, 10, (0, 0, 0)), (8, 9, (0, 0, 0)),
+            (11, 13, (0, 0, 0)),
+        ])
+        record = _identify_into({"status": "ok"}, graph, timeout=None,
+                                descriptors=False, symmetry=False)
+        assert record["status"] == "unidentified"
+        assert record["key"] is None
+        assert "stable" in record["detail"]
 
-    # half the clusters are now one linker short
-    fingerprint = ligand_cluster_fingerprint(defective)
-    assert fingerprint["clusters"]["O8Zr6"]["contacts"] == {11: "1/2", 12: "1/2"}
-    assert fingerprint["fingerprint_hash"] != pristine["fingerprint_hash"]
-
-
-def test_draw_topology():
-    # the net drawn over the real structure has the expected node counts:
-    # MIL-53 all_node = 4 metal + 8 carboxyl = 12; single_node merges to 8
-    plotly = pytest.importorskip("plotly")  # noqa: F841
-    mof = structure.MOFstructure(_cif("Cr.cif"))
-    fig = mof.draw_topology(method="all_node", show_topology=True)
-    markers = sum(
-        len(t.x) for t in fig.data
-        if t.mode == "markers" and t.name in ("metal nodes", "organic nodes")
-    )
-    # The 12 nodes in the requested cell plus any neighbouring periodic nodes
-    # needed to terminate the displayed crossing edges.
-    assert markers >= 12
-    fig2 = mof.draw_topology(method="single_node", show_topology=True)
-    assert sum(
-        len(t.x) for t in fig2.data
-        if t.mode == "markers" and t.name in ("metal nodes", "organic nodes")
-    ) >= 8
-
-    # It is displayed as a clean structure/network, not an axis-based plot.
-    assert fig.layout.scene.xaxis.visible is False
-    assert fig.layout.scene.yaxis.visible is False
-    assert fig.layout.scene.zaxis.visible is False
-    assert fig.layout.scene.camera.projection.type == "orthographic"
-    assert fig.layout.scene.bgcolor == "#f4f7f5"
-    assert fig.layout.paper_bgcolor == "#f4f7f5"
-    assert fig.layout.legend.bgcolor == "rgba(255,255,255,0.82)"
-
-
-def test_draw_topology_marks_both_ends_of_every_edge():
-    plotly = pytest.importorskip("plotly")  # noqa: F841
-    mof = structure.MOFstructure(_cif("Cr.cif"))
-    fig = mof.draw_topology(
-        method="all_node", show_structure=False, show_unit_cell=False,
-        show_linker_sbu=False, show_topology=True,
-    )
-    edge_trace = next(t for t in fig.data if t.name == "topology edges")
-    node_traces = [
-        t for t in fig.data if t.name in ("metal nodes", "organic nodes")
-    ]
-    node_coords = {
-        tuple(round(float(value), 7) for value in xyz)
-        for trace in node_traces for xyz in zip(trace.x, trace.y, trace.z)
-    }
-    edge_points = [
-        tuple(round(float(value), 7) for value in xyz)
-        for xyz in zip(edge_trace.x, edge_trace.y, edge_trace.z)
-        if xyz[0] is not None
-    ]
-    assert edge_points
-    assert all(point in node_coords for point in edge_points)
-
-
-def test_draw_topology_shows_linker_sbu_mapping_for_every_method():
-    plotly = pytest.importorskip("plotly")  # noqa: F841
-    mof = structure.MOFstructure(_cif("HKUST-1.cif"))
-    for method in ("sbus", "all_node", "single_node", "ligand_cluster"):
-        fig = mof.draw_topology(
-            method=method, show_structure=False, show_unit_cell=False
-        )
-        names = {trace.name for trace in fig.data}
-        assert "topology edges" not in names
-        assert "metal nodes" not in names
-        assert "organic nodes" not in names
-        assert f"{method} connections" in names
-        assert "SBU / metal centres" in names
-        assert "organic / linker centres" in names
-        contacts = next(
-            trace for trace in fig.data
-            if trace.name == f"{method} connections"
-        )
-        assert contacts.line.color == "#008000"
-        assert contacts.line.width == 7
-        assert contacts.line.dash == "solid"
-        assert sum(
-            x is None
-            for trace in fig.data if trace.name == f"{method} connections"
-            for x in trace.x
-        ) > 0
-        centre_coords = {
-            tuple(round(float(value), 7) for value in xyz)
-            for trace in fig.data
-            if trace.name in (
-                "SBU / metal centres", "organic / linker centres"
-            )
-            for xyz in zip(trace.x, trace.y, trace.z)
-        }
-        contact_endpoints = {
-            tuple(round(float(value), 7) for value in xyz)
-            for xyz in zip(contacts.x, contacts.y, contacts.z)
-            if xyz[0] is not None
-        }
-        assert contact_endpoints <= centre_coords
-
-
-def test_draw_geometry_preserves_periodic_edges():
-    positions, _, edges, cell = net_geometry(
-        _cif("Cr.cif"), method="ligand_cluster"
-    )
-    self_edges = [edge for edge in edges if edge[0] == edge[1]]
-    assert self_edges
-    assert all(tuple(edge[2:]) != (0, 0, 0) for edge in self_edges)
-    assert all(
-        np.linalg.norm(
-            positions[v] + np.asarray((sx, sy, sz)) @ cell - positions[u]
-        ) > 1e-6
-        for u, v, sx, sy, sz in edges
-    )
-
-
-def test_single_node_drawing_has_no_zero_self_edges():
-    _, _, edges, _ = net_geometry(_cif("Cr.cif"), method="single_node")
-    assert all(not (u == v and (sx, sy, sz) == (0, 0, 0))
-               for u, v, sx, sy, sz in edges)
+    def test_a_key_without_a_name_is_still_ok(self):
+        record = analyse(str(DATA / "ABW.cif"), timeout=300)
+        assert record["status"] == "ok"
+        assert record["key"]

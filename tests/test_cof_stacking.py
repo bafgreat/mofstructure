@@ -1,5 +1,4 @@
 #!/usr/bin/python
-from __future__ import print_function
 import pytest
 from .load_test import get_test_data
 from mofstructure.cof_stacking import compute_cof_stacking

@@ -1,5 +1,4 @@
 #!/usr/bin/python
-from __future__ import print_function
 import pytest
 from .load_test import get_test_data
 import mofstructure.mofdeconstructor as MOF_deconstructor

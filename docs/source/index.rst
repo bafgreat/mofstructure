@@ -1,14 +1,13 @@
-.. mofstructure documentation master file, created by
-   sphinx-quickstart on Sat Aug 31 17:58:25 2024.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 mofstructure documentation
-========================================
-Introduction
-============
+==========================
 
-`mofstructure` is a powerful and user-friendly Python module designed for the manipulation and analysis of metal-organic frameworks (MOFs) and other porous materials, including covalent organic frameworks (COFs) and zeolites. The module offers a range of functions that streamline complex tasks related to the study and modification of these structures. Whether you are a researcher, scientist, or student working in the field of materials science, `mofstructure` provides the tools you need to efficiently analyze and manipulate these intricate frameworks.
+Introduction
+------------
+
+`mofstructure` takes a crystal structure and answers the questions that
+usually follow: what it is built from, how porous it is, and what net it
+forms. It works on metal-organic frameworks, covalent organic frameworks and
+zeolites, reading CIF or any other format ASE handles.
 
 .. raw:: html
 
@@ -23,29 +22,37 @@ Key Features of `mofstructure`
 
 The `mofstructure` module includes a variety of features that simplify common operations and enhance the workflow for users working with MOFs and similar materials. Some of the key functionalities include:
 
-1. **Determine the RCSR Topological Code of a MOF:**
-   - The module can compute the Reticular Chemistry Structure Resource (RCSR) topological code for a given MOF structure. This code is essential for classifying and understanding the connectivity and topology of the framework, which is crucial for predicting its properties and potential applications.
+1. **Identify the net of a framework:**
+
+   - The module names the underlying net from an archive of RCSR symbols, IZA
+     zeolite framework-type codes and EPINET nets, and computes a canonical key
+     that identifies the net whether or not any archive names it. The key is
+     unchanged by supercell, atom order or choice of origin, so it can be
+     stored as a database handle.
 
 2. **Computation of Geometric Properties of MOFs:**
+
    - `mofstructure` integrates seamlessly with the `zeo++` software in the background to enable quick and accurate computation of all porosity-related properties. Users can easily obtain essential metrics such as Pore Limiting Diameter (PLD), Largest Cavity Diameter (LCD), Accessible Surface Area (ASA), and other geometric characteristics critical to the analysis of MOFs.
 
 3. **Automated Removal of Unbound Guest Molecules:**
+
    - The module offers an automated process for identifying and removing unbound guest molecules from the framework. This feature is particularly useful when preparing structures for simulations or other computational analyses where the presence of unbound molecules could skew results.
 
 4. **Deconstruction of Metal-Organic Frameworks into Building Units:**
+
    - `mofstructure` allows users to deconstruct MOFs into their constituent building units, including organic ligands, metal clusters, organic secondary building units (SBUs), and metal SBUs. For each building unit, the module computes important cheminformatic identifiers such as SMILES strings, InChI, and InChIKey. Additionally, it identifies the type of metal SBU and determines the coordination number of the central metal atom, which is crucial for understanding the structural properties of the framework.
 
 5. **Determination of open metal sites (OMS) in MOFs:**
+
    - The module can identify and characterize open metal sites within MOF structures. This is particularly important for applications such as catalysis, where the presence of OMS can significantly influence the material's performance.
 
 6. **Wrapping Systems Around Unit Cells to Remove the Effect of Periodic Boundary Conditions (PBC):**
+
    - When visualizing CIF files or converting CIF files to XYZ format, systems may appear uncoordinated due to the effects of periodic boundary conditions. `mofstructure` provides a solution by wrapping systems around their unit cells, ensuring a more accurate and visually coherent representation of the structure.
 
 7. **Separation of Building Units into Regions:**
-   - This feature is essential for users who need to substitute specific ligands or building units within a framework. By separating building units into distinct regions, `mofstructure` enables targeted modifications, allowing for precise customization of the framework's properties.
 
-.. .. image:: images/Rotation.gif
-..    :alt: Generalities
+   - This feature is essential for users who need to substitute specific ligands or building units within a framework. By separating building units into distinct regions, `mofstructure` enables targeted modifications, allowing for precise customization of the framework's properties.
 
 .. toctree::
    :maxdepth: 3
@@ -60,26 +67,15 @@ The `mofstructure` module includes a variety of features that simplify common op
 Support
 =======
 
-The module contains much more functionalities. If you are struggling or wish to compute a new quantity that is not yet present, feel free to send me an email: bafgreat@gamil.com.
-
-.. Tutorial
-.. =========
-
-.. .. raw:: html
-
-..    <iframe src="./doc/how-to-doc.html" width="100%" height="600">
-..      <p>Click <a href="./doc/how-to-doc.html">here</a> for a how-to tutorial.</p>
-..    </iframe>
+The module does more than this guide covers. If you are stuck, or need a
+quantity that is not yet available, please open an issue on GitHub or email
+bafgreat@gmail.com.
 
 Roadmap
 =======
 
-In the future, the code should be able to:
-
-
-1. Substitute building units in a MOF to enable framework functionalization
-2. Automatically curate CIFs
-3. Deconstruct COFs into their building units
+1. Substitute building units in a MOF to enable framework functionalisation
+2. Topological analysis of metal-organic cages and other discrete assemblies
 
 * :ref:`genindex`
 * :ref:`modindex`

@@ -3,6 +3,211 @@
 All notable changes to `mofstructure` are recorded here. Versions follow the
 releases published on [PyPI](https://pypi.org/project/mofstructure/).
 
+## 0.1.9.1
+
+### Command line
+
+- `mofstructure_topology` accepts a directory, the way `mofstructure_database`
+  and `mofstructure_curate` do. Naming a folder previously reached ASE, which
+  reported it as a corrupt trajectory. A folder holding nothing readable is now
+  reported as that.
+- `mofstructure_topology` writes a `topology_data.csv` summary beside its
+  records, pairing the two the way `porosity_data` and `fingerprint_data` are
+  paired. The table is built from the merged database, not from one run.
+- `status` and `source` are no longer saved to `topology_data.json`. Both
+  describe the run rather than the net; both are still printed and `status`
+  still sets the exit code. `mofstructure_database` drops `status` at the same
+  point, so a row has one shape whichever command wrote it.
+  `MOFstructure.get_topology` still returns the field.
+- `mofstructure_generate_cgd` gained `--embedding`, choosing between the
+  crystal's own coordinates (`deconstruction`, the default), the canonical
+  barycentric placement (`ideal`), and that placement relaxed towards edges of
+  equal length (`refined`). The canonical embedding carries the key, so an
+  unnamed net stays identifiable from its own file.
+- `mofstructure_generate_cgd` accepts `--method zeol`, which `build_cgd` has
+  always implemented but the parser did not offer, and defaults to `auto`,
+  reading the material from the structure. A zeolite is now named by its IZA
+  framework-type code rather than by the RCSR symbol of the same net.
+- Help text rewritten for both commands: worked examples, a gloss per node
+  definition and per embedding, and documented exit codes. Both take
+  `-v/--verbose` and `--quiet`.
+
+### Database workflow
+
+- `mofstructure_database` computes topology by default; `--no-topology` opts
+  out. The reason it was optional, a JVM call per structure, went away when
+  Systre did.
+- Topology is filled in for structures already in a database rather than being
+  skipped with them, matching how the fingerprint already behaved. Passing
+  `-t` to an existing database previously produced nothing at all.
+- `--method` accepts `auto` and defaults to it, so a folder of MOFs, COFs and
+  zeolites is handled in one run instead of being forced through a MOF
+  deconstruction.
+
+### Deprecations
+
+- `MOFstructure.get_topology` warns when `decimals` or `include_edge_centers`
+  is passed. Both have been ignored since the key became exact and integral;
+  they will be removed in a future release.
+
+
+
+### Topology identification moved into Python
+
+- Replaced the Systre call with `mofstructure.graph_net`, a pure-Python
+  implementation of the Delgado-Friedrichs canonical form. **Java is no longer
+  required or shipped**: the JVM jar, the `jdk4py` dependency and the
+  `mofstructure.systre` module have been removed, and the wheel is about
+  1.7 MB smaller.
+- Validated before the switch rather than after. On the same quotient graphs,
+  the Python implementation agreed with Systre on 180 of 180 curated MOFs,
+  30 of 30 COFs and 10 of 10 zeolites, and with CrystalNets - an independent
+  implementation with its own canonical form - on all 111 structures where
+  both named a net. TD10 agrees to the digit Systre prints.
+- Added `mofstructure.topology`, one call from a structure to its net. It
+  accepts a file, an ASE atoms object or a CGD periodic graph, works out
+  whether a framework is a MOF, a COF or a zeolite, and returns the same
+  record for all three so results are comparable across chemistry.
+
+### New
+
+- `zeol` deconstruction for zeolites, whose vertices are the tetrahedral atoms
+  and whose edges are T-O-T bridges with the oxygen contracted away. This is
+  the net the zeolite literature names: ABW gives `sra`, EDI gives `edi`.
+  Previously no method applied to a framework with no metal cluster to cut at.
+- `hydrazide` and `ester` COF linkages, which between them cover frameworks
+  that previously reported no linkage at all.
+- `refine_cgd=True` on `get_topology`, and `graph_net.embedding.refined_embedding`,
+  for an embedding with near-uniform edge lengths. The barycentric placement
+  minimises *squared* edge length and leaves a spread of two to three between
+  longest and shortest edge, which is fine to store but poor to build on;
+  refinement brings `pcu` and `fcu` to 1.00. The exact embedding remains the
+  default and is the reproducible one.
+- `analyse_methods` reports every deconstruction that suits a material, since
+  a MOF has more than one defensible net.
+
+### Archive
+
+- The lookup table now holds 17,454 nets, up from 2,930: the RCSR archive
+  re-keyed, plus the IZA zeolite framework codes and the EPINET enumeration
+  that CrystalNets distributes. Names are reported with the archive they came
+  from, so an RCSR symbol is never confused with a position in a systematic
+  enumeration.
+- Shipped as msgpack rather than JSON, halving its size. The JSON stages are
+  build intermediates and are no longer committed.
+
+### Porosity
+
+- **zeo++ now runs under a timeout.** A cell large enough to keep zeo++ busy
+  for hours previously stalled a batch indefinitely, since the child process
+  was waited on without limit. `zeo_calculation`, `get_porosity`,
+  `mofstructure_porosity --timeout` and `mofstructure_database
+  --porosity_timeout` all take one, defaulting to 1800 s. The child is killed
+  and the structure recorded as a timeout, and its scratch files now live
+  inside the directory the parent cleans up, so a killed child leaves nothing
+  behind.
+- **Every call returns the same keys.** A structure zeo++ cannot handle used
+  to give `{}`, which the batch scripts turned into a `None` row; building the
+  summary from that raised `AttributeError: 'NoneType' object has no
+  attribute 'items'` *after* the whole batch had run, losing the csv. A
+  failure now returns the full record with `None` in place of each number and
+  a `porosity_status` of `timeout` or `failed:<code>`, so a directory of
+  structures yields rows of one shape.
+- **Field names are dataset ready.** `AV_Volume_fraction`, `AV_A^3`,
+  `ASA_A^2`, `ASA_m^2/cm^3`, `Number_of_channels`, `LCD_A`, `PLD_A` and
+  `lfpd_A` became `av_volume_fraction`, `av_a3`, `asa_a2`, `asa_m2_per_cm3`,
+  `number_of_channels`, `lcd_a`, `pld_a` and `lfpd_a`. The `^` and `/` made a
+  column awkward to address in pandas, SQL and parquet. **A table written by
+  an earlier version uses the old names**; `porosity.LEGACY_FIELD_NAMES` maps
+  one to the other. Values are plain python floats and ints rather than numpy
+  scalars, which `json.dumps` refused for `Number_of_channels` without a
+  custom encoder.
+- zeo++ accuracy is selectable from the command line with `-a/--accuracy`,
+  on `mofstructure_porosity` and `mofstructure_database`. It defaults to
+  `high`, which is what both commands already used; `low` picks the cheaper
+  Voronoi decomposition, worth trying before raising the timeout on a
+  structure that will not finish. `mofstructure_database` also gained `-pr`,
+  having previously offered no control over the porosity at all.
+- `mofstructure_porosity` now honours `--probe_radius`, `--number_of_steps`
+  and `--rad_file`. All three were parsed, passed to `compile_data` and then
+  dropped: the call underneath took no arguments, so every run used the
+  defaults whatever was asked for.
+- `mofstructure_porosity` reports a structure it could not read instead of
+  skipping it silently, and records it in the table with the reason.
+
+### Cheminformatics toolkit
+
+- **RDKit now stands in when OpenBabel is missing**, rather than the analysis
+  failing. OpenBabel remains the default and nothing changes when it is
+  installed. `MOFSTRUCTURE_CHEMINFO` selects a toolkit explicitly, and
+  `mofdeconstructor.cheminformatics_backend()` reports which one is in use.
+  Previously a missing OpenBabel printed an install hint at import and then
+  raised `NameError` at the first fragment.
+- Ligand names survive the switch. The IUPAC database is keyed on InChIKey,
+  which the IUPAC algorithm defines rather than the toolkit, so HKUST-1 and
+  MOF-5 resolve to the same names under either. Canonical SMILES is toolkit
+  specific and the SMILES key simply does not match under RDKit, which is why
+  it is the second key and not the first.
+- The RDKit path perceives the anionic fragments deconstruction produces. A
+  linker cut from its metal has no known charge, and RDKit accepts more than
+  one: terephthalate is the dianion at -2 and a tetraanion with double bonds
+  to the ring at -4. The least charged reading that succeeds is taken, which
+  picks the chemistry. The charge RDKit reports in its own error message is
+  -4 here, so that report is not used.
+- A fragment RDKit cannot perceive returns empty identifiers instead of
+  raising, so one awkward building unit no longer discards a deconstruction.
+  The two toolkits do not always perceive a fragment identically - OpenBabel
+  favours radicals where RDKit writes anions - so identifiers can differ and a
+  dataset should be built with one toolkit rather than a mixture. Zeolites are
+  unaffected either way, since their net comes from the T atoms and no
+  cheminformatics toolkit is involved.
+
+### Code health
+
+- Type annotations use the built-in generics and `|` unions of PEP 585 and
+  604 throughout, so `typing.Dict`, `List`, `Tuple`, `Optional` and `Union`
+  are gone. The deprecated aliases warned under newer type checkers; the
+  package requires python 3.10, where both forms are runtime supported.
+  `Sequence`, `Iterable` and `Iterator` now come from `collections.abc`.
+- Every module, and every public function and class, carries a docstring.
+- The spglib call in `graph_net.symmetry` accepts both the error handling
+  that returns None and the one that raises, rather than depending on which
+  spglib release is installed.
+- Removed dead imports, unused locals and superseded commented-out code.
+  Pyflakes reports nothing across the package, tools and tests.
+
+### Changed
+
+- `topology_hash` now digests the canonical key rather than Systre's relaxed
+  geometry. The new digest identifies the *net*: the same framework in a
+  supercell, with atoms reordered or the origin moved, hashes identically,
+  which the geometric digest did not. **Values stored under the old scheme
+  will not match**, and `key_version` travels with the hash so a stale one is
+  recognisable rather than merely wrong.
+- `get_topology` returns `cgd` written from this package's own embedding. It
+  describes the same net as before in a primitive rather than conventional
+  cell.
+- `mofstructure_topology` is now backed by the Python implementation.
+  `mofstructure_systre_cgd` has been removed.
+- `mofstructure_topology` writes where the rest of the package writes.
+  Records are appended to `<save_dir>/Structure_Data/topology_data.json`,
+  the file `mofstructure_database` already fills, so a topology run and a
+  database run build one folder instead of two. `-s/--save_dir` names the
+  directory, `--json` writes the full records elsewhere and `--no-save`
+  prints without writing.
+- **The default output directory is now `MOFstructureDB`, renamed from
+  `MOFDb`.** The package identifies COFs and zeolites as readily as MOFs, so
+  the old name described the output of only one third of it. Every command
+  that takes `-s/--save_dir` picks the new name up from one constant,
+  `filetyper.DEFAULT_SAVE_DIR`. Runs that pass `-s` explicitly are
+  unaffected; runs that relied on the default will write to a new folder,
+  and an existing `MOFDb` is not read or migrated - pass `-s MOFDb` to keep
+  adding to it.
+- `filetyper.append_json` truncates the file after rewriting it. Replacing a
+  key with a shorter record previously left the tail of the old file in
+  place, which made the JSON unparseable; every command that appends to a
+  database file was exposed to this.
+
 ## 0.1.9.0
 
 ### Topology
@@ -71,14 +276,14 @@ CGD handed to Systre was wrong.
   four-connected vertices). Ditopic frameworks are unaffected: UiO-66 stays
   `fcu`, MOF-5 and the pillared-paddlewheel structures stay `pcu`.
 
-- **Rod SBUs lost their chain connectivity.** An infinite metal–oxo rod
+- **Rod SBUs lost their chain connectivity.** An infinite metal-oxo rod
   (MIL-53 and similar) is periodic within itself, but that periodicity was
   discarded when the rod was contracted to a node, so the net collapsed to a
   two-dimensional `sql`.
 
-  `method="all_node"` now splits a rod SBU into its atoms — each metal and each
+  `method="all_node"` now splits a rod SBU into its atoms: each metal and each
   bridging carboxyl carbon becomes a node, and the oxygen atoms between them
-  contract to edges — recovering the true net. MIL-53 (`Cr.cif`) gives `rna`,
+  contract to edges, recovering the true net. MIL-53 (`Cr.cif`) gives `rna`,
   matching CrystalNets' AllNodes and mofid's AllNode. `method="sbus"` keeps the
   rod as a single node (giving `pcu`), so the two methods now genuinely differ
   for rods, as they should. Discrete SBUs are unaffected: HKUST-1 `tbo`,
@@ -225,8 +430,8 @@ calculation without the isolation.
 ### Topology in the database workflow
 
 `mofstructure_database` accepts `-t/--topology`, writing `topology_data.json`
-and a `topology_data.csv` summary. It is off by default because Systre runs on
-the JVM and costs a few seconds per structure.
+and a `topology_data.csv` summary. At the time it was off by default because
+identification then shelled out to Systre.
 
 ```bash
 mofstructure_database cif_folder -t

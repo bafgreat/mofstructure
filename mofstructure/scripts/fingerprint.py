@@ -8,13 +8,19 @@ import hashlib
 import json
 import re
 from pathlib import Path
-from typing import Dict, List, Optional, Sequence, Set
+from collections.abc import Sequence
 
 from mofstructure.filetyper import convert_numpy_types
 from mofstructure.structure import MOFstructure
 
 
 def build_parser() -> argparse.ArgumentParser:
+    '''
+    Build the argument parser for `mofstructure_fingerprint`.
+
+    **returns:**
+        argparse.ArgumentParser
+    '''
     parser = argparse.ArgumentParser(
         description="Compute ligand--cluster fingerprints for MOF files or folders."
     )
@@ -39,9 +45,9 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _collect_input_files(inputs: Sequence[str], recursive: bool = True) -> List[Path]:
-    files: List[Path] = []
-    seen: Set[str] = set()
+def _collect_input_files(inputs: Sequence[str], recursive: bool = True) -> list[Path]:
+    files: list[Path] = []
+    seen: set[str] = set()
     for item in inputs:
         path = Path(item)
         if not path.exists():
@@ -66,20 +72,20 @@ def _record_key(path: Path) -> str:
     return f"{stem or 'structure'}__{digest}"
 
 
-def _compute_fingerprint(path: Path) -> Dict[str, object]:
+def _compute_fingerprint(path: Path) -> dict[str, object]:
     return convert_numpy_types(
         MOFstructure(filename=str(path)).get_ligand_cluster_fingerprint()
     )
 
 
-def _write_json(path: Path, records: Dict[str, Dict[str, object]]) -> None:
+def _write_json(path: Path, records: dict[str, dict[str, object]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as handle:
         json.dump({key: records[key] for key in sorted(records)}, handle,
                   indent=4, sort_keys=True)
 
 
-def _write_csv(path: Path, records: Dict[str, Dict[str, object]]) -> None:
+def _write_csv(path: Path, records: dict[str, dict[str, object]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     fields = ["record_id", "MOF name", "source", "fingerprint_hash", "cluster_units"]
     with path.open("w", newline="", encoding="utf-8") as handle:
@@ -96,13 +102,24 @@ def _write_csv(path: Path, records: Dict[str, Dict[str, object]]) -> None:
             })
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
+    '''
+    Compute ligand-cluster fingerprints for every structure named.
+
+    **parameters:**
+        - argv: sequence of str, optional
+            Arguments; `sys.argv[1:]` when omitted.
+
+    **returns:**
+        int
+            0 when at least one structure was fingerprinted.
+    '''
     args = build_parser().parse_args(argv)
     files = _collect_input_files(args.inputs, recursive=args.recursive)
     if not files:
         raise SystemExit("No input files were found.")
 
-    records: Dict[str, Dict[str, object]] = {}
+    records: dict[str, dict[str, object]] = {}
     failures = 0
     for path in files:
         try:

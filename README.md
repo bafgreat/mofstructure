@@ -17,7 +17,7 @@
 
 `mofstructure` takes a crystal structure and answers the questions that usually
 follow: what is it built from, how porous is it, and what net does it form.
-It works on metal-organic frameworks, and also on covalent organic frameworks
+It works on metal-organic frameworks, covalent organic frameworks
 and zeolites, from CIF or any other format ASE can read.
 
 ```python
@@ -27,7 +27,8 @@ mof = structure.MOFstructure(filename='UiO-66.cif')
 
 mof.get_porosity()                 # PLD, LCD, surface area, void fraction
 mof.get_sbu()                      # metal and organic secondary building units
-mof.get_topology()                 # RCSR net symbol, dimensionality, TD10
+mof.get_ligands()                  # metal clusters and organic ligands
+mof.get_topology()                 # net symbol, dimensionality, TD10, canonical key
 mof.get_oms()                      # open metal sites
 ```
 
@@ -53,7 +54,7 @@ mof.get_oms()                      # open metal sites
 
 | Capability | What you get |
 | --- | --- |
-| **Topology** | RCSR net symbol via Systre, net dimensionality, TD10 density, a reproducible topology hash |
+| **Topology** | Net symbol from a 17k-entry archive (RCSR, IZA zeolite codes, EPINET), dimensionality, TD10 density, and a canonical key that identifies the net whether or not it has a name |
 | **Porosity** | Pore limiting diameter, largest cavity diameter, accessible surface area and volume, channel count |
 | **Guest removal** | Unbound solvent stripped automatically before every analysis |
 | **Deconstruction** | Metal clusters, organic ligands, metal SBUs and organic SBUs as separate structures |
@@ -85,12 +86,15 @@ pip install .
 Python 3.10 or newer. Dependencies install automatically, with two things worth
 knowing about:
 
-- **Java** is required for topology only. Systre runs on the JVM, and the jar
-  ships with the package. `mofstructure` looks for a JRE that you configure
-  explicitly, then for `jdk4py`, then for `java` on your `PATH`. Every other
-  feature works without it.
-- **RDKit** is optional. OpenBabel handles the cheminformatics by default;
-  install `rdkit` only if you want the alternative code path.
+- **OpenBabel** computes the cheminformatic identifiers by default, and returns the
+  IUPAC name from database shipped with the package.
+- **RDKit** is the fallback. If OpenBabel is missing, which happens where its
+  wheel does not build, the identifiers come from RDKit instead of the
+  analysis failing:
+
+  ```bash
+  pip install mofstructure[rdkit]
+  ```
 
 ---
 
@@ -108,15 +112,19 @@ mofstructure structure.cif path/to/results
 ### Build a database from a folder
 
 ```bash
-mofstructure_database cif_folder                 # writes to ./MOFDb
+mofstructure_database cif_folder                 # writes to ./MOFstructureDB
 mofstructure_database cif_folder -s path/to/results
-mofstructure_database cif_folder -t              # include topology
+mofstructure_database cif_folder --no-topology   # skip the net
 ```
 
-Results land in `MOFDb/Structure_Data` as JSON, one file per analysis, plus a
-CSV summary of the porosity. Structures already present are skipped, so an
-interrupted run resumes where it stopped. Delete the output folder to force a
-recomputation.
+Results land in `MOFstructureDB/Structure_Data` as JSON, one file per analysis,
+with a CSV summary beside the porosity and topology records. Structures already
+present are skipped, so an interrupted run resumes where it stopped. Delete the
+output folder to force a recomputation.
+
+Topology is computed by default and is filled in for structures already in the
+database, so a folder built by an earlier version gains its nets on the next
+run rather than being skipped.
 
 ### Individual analyses
 
@@ -129,11 +137,23 @@ mofstructure_oms cif_folder                      # open metal sites only
 ```
 
 `mofstructure_porosity` accepts a custom probe radius, cycle count and radii
-file:
+file, and a per structure timeout:
 
 ```bash
 mofstructure_porosity cif_folder -pr 1.5 -ns 20000 -rf rad.rad
+mofstructure_porosity cif_folder -t 600     # give up on a structure after 10 min
+mofstructure_porosity cif_folder -a low     # cheaper Voronoi, for one that will not finish
 ```
+
+Accuracy defaults to `high`. `-a low` uses the cheaper Voronoi decomposition
+and is worth trying before raising the timeout on a structure that will not
+finish. `mofstructure_database` takes `-pr`, `-a` and `--porosity_timeout`
+for the porosity part of its run.
+
+zeo++ can run for hours on a large cell. A structure that passes the timeout
+is killed and recorded with `porosity_status` set to `timeout`, rather than
+holding up the rest of the batch. Failed structures keep every column, so the
+output goes straight into a DataFrame.
 
 ### Topology from the command line
 
@@ -144,15 +164,17 @@ mofstructure_topology ./folder
 ```
 
 The net depends on how you define a node, and several definitions are
-available. The same framework can legitimately give a different net
-depending on the topology method. For instance, for a rod MOF like MIL-53, `all_node` gives `rna` and `single_node` gives `bpq` while `sbus` collapses the rod to `pcu`.
+available, and the same framework can legitimately give a different net under
+each. For a rod MOF such as MIL-53, `all_node` gives `rna` and `single_node`
+gives `bpq`, while `sbus` collapses the rod to `pcu`.
 
 ```bash
 mofstructure_topology structure.cif --method all_node      # every branch point a node
 mofstructure_topology ./folder --method single_node        # organic groups merged
 mofstructure_topology ./folder --method sbus               # each SBU one node
 mofstructure_topology ./folder --method ligand_cluster     # complete ligands and metal clusters
-mofstructure_topology ./folder --method all                # all methods, one record each
+mofstructure_topology ./folder --all-methods                # every method that suits the material
+mofstructure_topology zeolite.cif --method zeol            # tetrahedral atoms, T-O-T bridges contracted
 ```
 
 `ligand_cluster` constructs a bipartite incidence net from the same
@@ -163,7 +185,7 @@ image of a cluster. Multiple donor bonds to the same cluster image count as one
 incidence, so chelation does not artificially increase the topological degree.
 
 A ditopic ligand stays a vertex, which subdivides the edge it makes, and RCSR
-lists no subdivided nets — UiO-66 comes back as `UNKNOWN` even though the net is
+lists no subdivided nets, so UiO-66 comes back as `UNKNOWN` even though the net is
 right. That is deliberate: the point of this method is how the ligands links to the metal
 clusters, not the RCSR symbol, and the topology hash still identifies the net.
 Pass `collapse_ditopic=True` to `ligand_cluster_graph` or `cgd_ligand_cluster`
@@ -171,7 +193,8 @@ to splice ditopic ligands into edges instead, which recovers the nameable net
 (`fcu` for UiO-66, `pcu` for MIL-53, `tbo` either way for HKUST-1).
 
 To ask what the ligands do rather than what the net is called, use the
-fingerprint, which is read straight from the deconstruction and needs no Systre:
+fingerprint, which is read straight from the deconstruction and needs no
+archive lookup at all:
 
 ```python
 from mofstructure import structure
@@ -198,20 +221,61 @@ listed under `terminal` with its own formula (which is what tells it apart from
 a coordinated solvent), and a carboxylate that has dropped from bridging to
 monodentate shows in the denticity histogram even though the net is unchanged.
 
-Use `--method all` to compute every method at once. Each structure gets a single
-record holding every net — nested under a `topologies` key in the JSON, and one
-column group per method in the CSV — so the output drops straight into a
-database:
+Use `--all-methods` to compute every method a MOF admits at once. Each net is
+recorded separately, keyed `<structure>:<method>`.
+
+Results are appended to `<save_dir>/Structure_Data/topology_data.json`, the
+same file `mofstructure_database` writes, so a topology run and a database run
+build one folder rather than two:
 
 ```bash
-mofstructure_topology ./folder --method all
+mofstructure_topology ./folder -s MOFstructureDB
 ```
 
-For large datasets, write results to disk in batches:
+A `topology_data.csv` summary is written beside the records, one row per
+structure, the way `porosity_data` and `fingerprint_data` are paired.
+
+The default save directory is `MOFstructureDB`. `--json results.json` writes the full
+records to a file of your choosing instead, and `--no-save` prints without
+writing anything. A line per structure is printed as it finishes, followed by a
+tally; `--quiet` keeps the tally only and `-v` reports each deconstruction as it
+is built.
+
+### Writing the net as a CGD file
+
+`mofstructure_generate_cgd` writes the net itself, as a CGD `PERIODIC_GRAPH`,
+for opening in a viewer or handing to a downstream tool. `--method` takes the
+same node definitions as above, and `auto` reads the material from the
+structure:
 
 ```bash
-mofstructure_topology ./folder --flush-every 100
+mofstructure_generate_cgd HKUST-1.cif                  # auto: mof, so all_node
+mofstructure_generate_cgd MIL-53.cif --method sbus -o mil53.cgd
+mofstructure_generate_cgd zeolite.cif --method zeol
 ```
+
+`--embedding` chooses the geometry written for the net, and the three answer
+different questions:
+
+| Embedding | Geometry | Use it for |
+| --- | --- | --- |
+| `deconstruction` | the crystal's own coordinates | the default; the only one needing no identification |
+| `ideal` | canonical barycentric placement, cell fixed by the symmetry of the net alone | recording a net beside its key: reproducible to the digit, and written with the canonical key so an unnamed net stays identifiable from its own file |
+| `refined` | the ideal embedding relaxed towards edges of equal length | building on the net, where a linker must span every edge of one kind |
+
+```bash
+mofstructure_generate_cgd HKUST-1.cif --embedding ideal
+mofstructure_generate_cgd UiO-66.cif --embedding refined
+```
+
+The barycentric placement minimises the sum of *squared* edge lengths, so a few
+long edges can pay for many short ones and real nets emerge with the longest
+edge two or three times the shortest. `refined` applies the edge-length and
+volume penalty of Delgado-Friedrichs and O'Keeffe, typically bringing a spread
+of 2.2 down to 1.0. Its result depends on the optimiser, so it is not
+reproducible to the last digit, and every file records which embedding it
+holds. Where refining cannot beat the exact placement the exact one is written
+and the command says so.
 
 ---
 
@@ -296,21 +360,26 @@ topology = mof.get_topology()
 print(topology['topology'], topology['dimension'])
 ```
 
-For finer control, drive Systre directly:
+For finer control, call the topology API directly. It takes a structure file,
+an ASE atoms object or a CGD periodic graph, and works out for itself whether
+a framework is a MOF, a COF or a zeolite:
 
 ```python
 from ase.io import read
-from mofstructure.systre import identify_topology
+from mofstructure.topology import analyse, analyse_methods, classify
 
-identify_topology('net.cgd', input_is_cgd=True)      # from a CGD file
-identify_topology('UiO-66.cif', method='all_node')   # from a structure file
-identify_topology(read('UiO-66.cif'))                # from ASE atoms
+analyse('UiO-66.cif')                       # deconstruction chosen for you
+analyse('UiO-66.cif', method='all_node')    # or name one
+analyse(read('UiO-66.cif'))                 # from ASE atoms
+analyse('net.cgd')                          # from a CGD periodic graph
+analyse_methods('UiO-66.cif')               # every method that suits it
+classify('ABW.cif')                         # 'zeolite'
 ```
 
 ### Drawing the net
 
 `draw_topology` traces the net over the real framework and returns an
-interactive plotly figure — nodes at the real building-unit positions, edges
+interactive plotly figure: nodes at the real building-unit positions, edges
 following the connectivity. Needs the optional `plotly` extra
 (`pip install mofstructure[draw]`).
 
@@ -326,10 +395,10 @@ green centre-to-centre network is generated by the selected topology method,
 so its nodes and contractions visibly change between `sbus`, `all_node`,
 `single_node` and `ligand_cluster`. Framework atoms, framework bonds and each
 centre class can be toggled independently in the legend. The view shows this
-method-specific network by default;
-set `show_topology=True` to add the abstract blue topology edges and topology
-node markers. Set `show_linker_sbu=False`,
-`show_structure=False` or `show_unit_cell=False` to hide individual layers.
+method-specific network by default; set `show_topology=True` to add the
+abstract blue topology edges and topology node markers. Set
+`show_linker_sbu=False`, `show_structure=False` or `show_unit_cell=False` to
+hide individual layers.
 
 ### Open metal sites
 
@@ -345,22 +414,34 @@ print(mof.get_oms())
 
 | Key | Meaning |
 | --- | --- |
-| `topology` | RCSR net symbol, or `UNKNOWN` when Systre finds no match |
+| `topology` | Net symbol, or `None` when no archive names this net |
+| `topology_source` | Which archive named it: `rcsr`, `iza` or `epinet` |
+| `names` | Every name known for the net; a zeolite carries both `rcsr` and `iza` |
 | `dimension` | Periodicity of the net (0, 1, 2 or 3) |
-| `td10` | Topological density from Systre |
-| `topology_hash` | Stable hash of the relaxed net, for indexing and duplicate detection |
-| `cgd` | CRYSTAL2 text of the relaxed net |
+| `td10` | Topological density, the coordination sequence summed over ten shells |
+| `key` | Canonical key. Unique to the net and unchanged by supercell, atom order or origin, so two structures with the same key have the same topology whether or not it is named |
+| `key_hash` | Digest of the key, for indexing and duplicate detection |
+| `key_version` | Which canonical form produced the key |
+| `cgd` | CGD text of the net. Pass `refine_cgd=True` for an embedding with near-uniform edge lengths, which is what a builder such as AuToGraFS wants |
+| `status` | `ok`, or why no net was produced |
+
+A net with no name is an ordinary outcome, not a failure: the key still
+identifies it, which is what makes two structures comparable.
+
+`status` is returned but not written to `topology_data.json`. It describes the
+run rather than the net, so the stored record carries only the net itself.
 
 `get_porosity()` returns:
 
 | Key | Meaning |
 | --- | --- |
-| `PLD_A` | Pore limiting diameter, the largest sphere that can diffuse through |
-| `LCD_A` | Largest cavity diameter, the largest sphere that fits anywhere inside |
-| `lfpd_A` | Largest free sphere along the percolation path |
-| `AV_A^3`, `AV_Volume_fraction` | Accessible volume and void fraction |
-| `ASA_A^2`, `ASA_m^2/cm^3` | Accessible surface area |
-| `Number_of_channels` | Number of distinct channels |
+| `pld_a` | Pore limiting diameter, the largest sphere that can diffuse through |
+| `lcd_a` | Largest cavity diameter, the largest sphere that fits anywhere inside |
+| `lfpd_a` | Largest free sphere along the percolation path |
+| `av_a3`, `av_volume_fraction` | Accessible volume and void fraction |
+| `asa_a2`, `asa_m2_per_cm3` | Accessible surface area |
+| `number_of_channels` | Number of distinct channels |
+| `porosity_status` | `ok`, `timeout`, or `failed:<code>` |
 
 Custom atomic radii can be supplied through a `.rad` file, one element per line.
 The extension must be `.rad` or the defaults are used silently:
@@ -389,7 +470,7 @@ problem is worth more than any description of it.
 
 ## Roadmap
 
-- SBU deconstruction and topological analysis of covalent organic frameworks.
+- Topological analysis of metal-organic cages and other discrete assemblies.
 
 ## Citation
 

@@ -1,4 +1,11 @@
 #!/usr/bin/python
+'''
+Command line entry point for `mofstructure`.
+
+Runs the analysis over a single structure rather than a folder: guest removal,
+porosity, building units and open metal sites, each written next to the others
+under one directory named after the structure.
+'''
 from __future__ import print_function
 __author__ = "Dr. Dinga Wonanke"
 __status__ = "production"
@@ -10,7 +17,22 @@ from mofstructure import structure
 
 
 def collect_sbus(metal_sbus, organic_sbus, base_name, xyz_path):
+    '''
+    Write every secondary building unit of one structure to its own xyz file.
 
+    **parameters:**
+        - metal_sbus: list of ase.Atoms
+            Metal building units, numbered from one in the file name.
+
+        - organic_sbus: list of ase.Atoms
+            Organic building units, numbered separately.
+
+        - base_name: str
+            Name of the structure, used as the file name stem.
+
+        - xyz_path: str
+            Directory the files are written to. It must already exist.
+    '''
     for i, sbu_metal in enumerate(metal_sbus):
         sbu_metal.write(f'{xyz_path}/{base_name}_metal_sbu_{i+1}.xyz')
     for j, sbu_linker in enumerate(organic_sbus):
@@ -18,7 +40,22 @@ def collect_sbus(metal_sbus, organic_sbus, base_name, xyz_path):
 
 
 def collect_ligand(organic_ligands, base_name, xyz_path):
+    '''
+    Write every complete organic ligand of one structure to its own xyz file.
 
+    A ligand differs from an organic sbu in that it is not cut at the point of
+    extension, so the molecule written here is the whole linker.
+
+    **parameters:**
+        - organic_ligands: list of ase.Atoms
+            Ligands, numbered from one in the file name.
+
+        - base_name: str
+            Name of the structure, used as the file name stem.
+
+        - xyz_path: str
+            Directory the files are written to. It must already exist.
+    '''
     for j, sbu_linker in enumerate(organic_ligands):
         sbu_linker.write(f'{xyz_path}/{base_name}_organic_ligand_{j+1}.xyz')
 
@@ -38,8 +75,6 @@ def work_flow(cif_file, save_dir, verbose=False):
     '''
     # try:
     mof_object = structure.MOFstructure(filename=cif_file)
-
-        # base_name = cif_file[:cif_file.rindex('.')].split('/')[-1]
 
     base_name = os.path.basename(cif_file).split('.')[0]
     if not os.path.exists(save_dir):

@@ -114,8 +114,8 @@ Saving building units:
 Topology Analysis
 =================
 
-Topology is determined using a graph representation of the framework and analysed using Systre.
-This is possible becuase of the deconstruction into building units, which allows for different levels of abstraction.
+Topology is determined from a graph representation of the framework, identified in Python against an archive of RCSR, IZA and EPINET nets.
+This is possible because of the deconstruction into building units, which allows for different levels of abstraction.
 
 .. code-block:: python
 
@@ -141,7 +141,7 @@ the topology hash still identifying the net. Pass ``collapse_ditopic=True`` to
 ``ligand_cluster_graph`` or ``cgd_ligand_cluster`` to splice those ligands into
 edges and recover the nameable net.
 
-To describe how ligands meet clusters without going through Systre:
+To describe how ligands meet clusters without an archive lookup at all:
 
 .. code-block:: python
 
@@ -158,12 +158,12 @@ cluster's connectivity, a linker bound at only one end appears under
 monodentate appears in the denticity histogram.
 
 The output includes:
-- RCSR topology name
+- Net name, and which archive named it
 - Dimensionality
 - Topological descriptors
 - TD10 value
-- Topology hash for uniqueness
-- systre optimised cgd string representation
+- The canonical key, and a hash of it for indexing
+- A CGD string of the net, optionally refined for uniform edge lengths
 
 Drawing the net
 ---------------
@@ -175,6 +175,7 @@ interactive plotly figure. It needs the optional ``plotly`` extra
 .. code-block:: python
 
    fig = mof.draw_topology(method="all_node", filename="net.html")
+   fig.show()
 
 The drawing preserves the lattice translation of every periodic edge, including
 self-edges of rod and sheet nodes. Framework atoms and bonds and the unit-cell
@@ -183,7 +184,6 @@ boundary are displayed behind the net and can be hidden from the legend. Pass
 An independent mapping layer displays complete linker centres, SBU centres and
 their coordination incidences for every topology method, including ``sbus``.
 Pass ``show_linker_sbu=False`` to hide this chemical mapping.
-   fig.show()
 
 Porosity Analysis
 =================
@@ -196,7 +196,7 @@ Porosity properties are computed using our python wrapper around Zeo++ called py
    number_of_steps=10000,
    high_accuracy=True
    )
-   print(pores["AV_Volume_fraction"])
+   print(pores["av_volume_fraction"])
    print(pores["ASA_m2_cm3"])
 
 Typical outputs include:
@@ -273,7 +273,7 @@ To create the database, run the following command:
 
    mofstructure_database ciffolder
 
-Here, `ciffolder` should be replaced with the path to the folder containing all your CIF files. The output will be automatically saved in a folder named `MOFDb` within your current working directory.
+Here, `ciffolder` should be replaced with the path to the folder containing all your CIF files. The output will be automatically saved in a folder named `MOFstructureDB` within your current working directory.
 
 Custom Database Output Directory
 ---------------------------------

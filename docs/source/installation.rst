@@ -41,7 +41,7 @@ Follow the steps below to clone the repository and install `mofstructure` locall
 
       cd mofstructure
 
-   This step ensures that you are in the correct directory where the `setup.py` file is located, which is necessary for the installation process.
+   This is the directory holding `pyproject.toml`, which `pip` reads to build the package.
 
 3. **Install the Module:**
 

@@ -1,11 +1,16 @@
 #!/usr/bin/python
+'''
+Command line entry point for `mofstructure_oms`.
+
+Reports the open metal sites of every structure in a folder, along with the
+general information about each framework, and collects them into one table.
+'''
 from __future__ import print_function
 __author__ = "Dr. Dinga Wonanke"
 __status__ = "production"
 import os
 import argparse
 import pandas as pd
-from mofstructure import filetyper
 from mofstructure import structure
 import mofstructure.filetyper as read_write
 
@@ -40,7 +45,6 @@ def compile_data(cif_files, result_folder, verbose=False):
         except Exception:
             pass
 
-
     for cif_file in cif_files:
         try:
             base_name = os.path.basename(cif_file).split('.')[0]
@@ -50,7 +54,7 @@ def compile_data(cif_files, result_folder, verbose=False):
             if base_name not in seen:
                 print(f'processing: {base_name}')
                 mof_object = structure.MOFstructure(filename=cif_file)
-                if len(mof_object.ase_atoms)> 5000:
+                if len(mof_object.ase_atoms) > 5000:
                     print('system size too large, will run out of application memory')
                     print('so will skip')
                     continue
@@ -83,16 +87,16 @@ def main():
     parser.add_argument('cif_folder', type=str,
                         help='list of cif files. like glob')
 
-
     parser.add_argument('-s', '--save_dir', type=str,
-                        default='MOFDb', help='directory to save output files')
+                        default=read_write.DEFAULT_SAVE_DIR,
+                        help='directory to save output files')
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='print verbose output')
     args = parser.parse_args()
     if os.path.isdir(args.cif_folder):
         cif_files = [os.path.join(args.cif_folder, f)
-                 for f in os.listdir(args.cif_folder)
-                 if f.endswith('.cif')]
+                     for f in os.listdir(args.cif_folder)
+                     if f.endswith('.cif')]
     else:
         cif_files = [args.cif_folder]
     compile_data(cif_files, args.save_dir, args.verbose)

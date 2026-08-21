@@ -1,3 +1,72 @@
+Updates Version 0.1.9.1
+=======================
+
+Topology identification no longer needs Java
+--------------------------------------------
+
+The Systre call has been replaced by ``mofstructure.graph_net``, a pure-Python
+implementation of the Delgado-Friedrichs canonical form. The JVM jar, the
+``jdk4py`` dependency and the ``mofstructure.systre`` module are gone, and the
+wheel is about 1.7 MB smaller.
+
+The replacement was validated before the switch, not after. Given the same
+quotient graphs it agreed with Systre on 180 of 180 curated MOFs, 30 of 30
+COFs and 10 of 10 zeolites, and with CrystalNets - an independent
+implementation with its own canonical form and archive - on all 111 structures
+where both named a net. TD10 agrees to the digit Systre prints.
+
+One call from a structure to its net
+------------------------------------
+
+``mofstructure.topology`` joins deconstruction to identification. It accepts a
+structure file, an ASE atoms object or a CGD periodic graph, decides whether a
+framework is a MOF, a COF or a zeolite, and returns the same record for all
+three, so results are comparable across chemistry.
+
+.. code-block:: python
+
+   from mofstructure.topology import analyse
+
+   analyse("UiO-66.cif")["topology"]      # 'fcu'
+   analyse("ABW.cif")["topology"]         # 'sra', a zeolite
+   analyse("COF-1.cif")["topology"]       # 'hcb'
+
+Zeolites, and two more COF linkages
+-----------------------------------
+
+``method="zeol"`` takes the tetrahedral atoms as vertices and contracts each
+T-O-T bridge into an edge, which is the net the zeolite literature names: ABW
+gives ``sra`` and EDI gives ``edi``. Until now no method applied to a framework
+with no metal cluster to cut at. The ``hydrazide`` and ``ester`` COF linkages
+cover frameworks that previously reported no linkage at all.
+
+A larger archive, and names that say where they came from
+---------------------------------------------------------
+
+The lookup table holds 17,454 nets, up from 2,930: the RCSR archive re-keyed,
+plus the IZA zeolite framework codes and the EPINET enumeration. Each name is
+reported with the archive it came from, so an RCSR symbol is never mistaken for
+a position in a systematic enumeration. A zeolite carries both, ``sra`` to the
+RCSR and ``ABW`` to the IZA.
+
+What changed for existing callers
+---------------------------------
+
+``topology_hash`` now digests the canonical key rather than Systre's relaxed
+geometry. The new digest identifies the *net*: the same framework in a
+supercell, with atoms reordered or the origin moved, hashes identically, which
+the geometric one did not. Values stored under the old scheme will not match,
+and ``key_version`` travels with the hash so a stale one is recognisable.
+
+``cgd`` is written from this package's own embedding, describing the same net
+in a primitive rather than conventional cell. Pass ``refine_cgd=True`` for an
+embedding with near-uniform edge lengths, which is what a builder such as
+AuToGraFS wants.
+
+``mofstructure_topology`` is now backed by the Python implementation, and
+``mofstructure_systre_cgd`` has been removed.
+
+
 Updates Version 0.1.9.0
 =======================
 
@@ -178,8 +247,8 @@ Topology in the database workflow
 ----------------------------------
 
 ``mofstructure_database`` accepts ``-t/--topology``, writing
-``topology_data.json`` and a CSV summary. It is off by default because Systre
-runs on the JVM and costs a few seconds per structure.
+``topology_data.json`` and a CSV summary. At the time it was off by default
+because identification then shelled out to Systre.
 
 .. code-block:: bash
 
@@ -277,7 +346,7 @@ rdkit, you should install it separately.
 Updates Version 0.1.8
 ======================
 1. The main update here is to enable mofstructure to run on Python versions
-3.9 to 3.13. We have done the neccessary tests but let us know if you have
+3.9 to 3.13. We have done the necessary tests but let us know if you have
 any conflicts or bugs and we will fix it.
 
 .. _updates-0.1.7:

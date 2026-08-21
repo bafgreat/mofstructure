@@ -2,14 +2,15 @@
 '''
 Construction of CGD nets from crystal structures.
 
-Systre works on nets rather than atoms, so a framework has to be reduced to
-vertices and edges first. The node definition decides what the net describes,
+Topology identification works on nets rather than atoms, so a framework has
+to be reduced to vertices and edges first. The node definition decides what the net describes,
 and four are available: sbus places a vertex at each secondary building unit,
 all_node keeps every branch point (splitting rod SBUs into their atoms), and
 single_node coarsens all_node by merging each organic group to one vertex.
 ligand_cluster represents complete organic ligands and metal clusters as the
 two vertex classes of an incidence net. The same framework can give different
-nets under each, which is expected rather than an error.
+nets under each, which is expected rather than an error. cof covers covalent
+organic frameworks, which have no metal to cut at; see mofstructure.cofstructure.
 '''
 from __future__ import annotations
 __author__ = "Dr. Dinga Wonanke"
@@ -22,7 +23,7 @@ import logging
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from fractions import Fraction
-from typing import Dict, List, Optional, Sequence, Tuple, Union
+from collections.abc import Sequence
 
 import numpy as np
 from ase.atoms import Atoms
@@ -40,15 +41,15 @@ if not logger.handlers:
     )
 
 
-AtomIndex = Union[int, np.integer]
-BreakingPair = Sequence[Union[int, np.integer]]
+AtomIndex = int | np.integer
+BreakingPair = Sequence[int | np.integer]
 Component = Sequence[int]
-Edge = Tuple[int, int, int, int, int]  # (u, v, sx, sy, sz)
+Edge = tuple[int, int, int, int, int]  # (u, v, sx, sy, sz)
 
 
 def remove_broken_bonds_from_breaking_pairs(
-    atom_graph: Dict[int, List[int]],
-    bond_offsets: Dict[Tuple[int, int], List[Tuple[int, int, int]]],
+    atom_graph: dict[int, list[int]],
+    bond_offsets: dict[tuple[int, int], list[tuple[int, int, int]]],
     breaking_pairs: Sequence[BreakingPair],
 ):
     '''
@@ -60,15 +61,15 @@ def remove_broken_bonds_from_breaking_pairs(
     associated lattice offsets of the kept bonds.
 
     **parameters:**
-        atom_graph: python dictionary
+        - atom_graph: python dictionary
             Atom-level connectivity graph where each key is an atom index and the
             value is a list of neighbouring atom indices.
 
-        bond_offsets: python dictionary
+        - bond_offsets: python dictionary
             Dictionary mapping (i, j) atom-index tuples to one or more periodic
             neighbour offsets, e.g. {(i, j): [(sx, sy, sz), ...]}.
 
-        breaking_pairs: list
+        - breaking_pairs: list
             List of broken bonds. Each entry is expected to be of the form
             [i, j] or [i, j, sx, sy, sz].
 
@@ -106,8 +107,8 @@ def remove_broken_bonds_from_breaking_pairs(
 
 def component_atom_images(
     components: Sequence[Component],
-    kept_graph: Dict[int, List[int]],
-    kept_offsets: Dict[Tuple[int, int], List[Tuple[int, int, int]]],
+    kept_graph: dict[int, list[int]],
+    kept_offsets: dict[tuple[int, int], list[tuple[int, int, int]]],
 ):
     '''
     Assign integer lattice image vectors to atoms inside each connected component.
@@ -121,13 +122,13 @@ def component_atom_images(
     components connected by a broken bond.
 
     **parameters:**
-        components: list
+        - components: list
             List of connected components, where each component is a list of atom indices.
 
-        kept_graph: python dictionary
+        - kept_graph: python dictionary
             Atom-level connectivity graph after removing broken bonds.
 
-        kept_offsets: python dictionary
+        - kept_offsets: python dictionary
             Dictionary mapping kept bonds to their periodic offsets.
 
     **returns:**
@@ -138,7 +139,7 @@ def component_atom_images(
     comp_images = {}
 
     for cid, comp in enumerate(components):
-        comp_set = set(int(a) for a in comp)
+        comp_set = {int(a) for a in comp}
         if not comp_set:
             comp_images[cid] = {}
             continue
@@ -192,7 +193,7 @@ def _lattice_basis(vectors: Sequence[Sequence[int]]):
     calling that (0, 0, 1) invents a connection the structure does not have.
 
     **parameters:**
-        vectors: list
+        - vectors: list
             Integer translations (sx, sy, sz), duplicates allowed.
 
     **returns:**
@@ -238,7 +239,7 @@ def _lattice_basis(vectors: Sequence[Sequence[int]]):
     return [tuple(row) for row in basis]
 
 
-def _reduce_modulo_lattice(vec: Sequence[int], basis: Sequence[Tuple[int, int, int]]):
+def _reduce_modulo_lattice(vec: Sequence[int], basis: Sequence[tuple[int, int, int]]):
     '''
     Canonical representative of a translation modulo a lattice.
 
@@ -249,8 +250,8 @@ def _reduce_modulo_lattice(vec: Sequence[int], basis: Sequence[Tuple[int, int, i
     chain was unwrapped.
 
     **parameters:**
-        vec: translation to reduce
-        basis: lattice basis from ``_lattice_basis``
+        - vec: translation to reduce
+        - basis: lattice basis from ``_lattice_basis``
 
     **returns:**
         tuple
@@ -269,8 +270,8 @@ def _reduce_modulo_lattice(vec: Sequence[int], basis: Sequence[Tuple[int, int, i
 
 def component_self_translations(
     components: Sequence[Component],
-    kept_graph: Dict[int, List[int]],
-    kept_offsets: Dict[Tuple[int, int], List[Tuple[int, int, int]]],
+    kept_graph: dict[int, list[int]],
+    kept_offsets: dict[tuple[int, int], list[tuple[int, int, int]]],
 ):
     '''
     Find the lattice translations along which each component is periodic within
@@ -288,13 +289,13 @@ def component_self_translations(
     rod yields one vector, a sheet two, and a discrete cluster none.
 
     **parameters:**
-        components: list
+        - components: list
             Connected components as lists of atom indices.
 
-        kept_graph: python dictionary
+        - kept_graph: python dictionary
             Atom-level graph after the broken bonds were removed.
 
-        kept_offsets: python dictionary
+        - kept_offsets: python dictionary
             Periodic offsets of the kept bonds.
 
     **returns:**
@@ -302,10 +303,10 @@ def component_self_translations(
             Mapping of component id -> basis of the component's own translation
             lattice. Empty list for finite components.
     '''
-    self_translations: Dict[int, List[Tuple[int, int, int]]] = {}
+    self_translations: dict[int, list[tuple[int, int, int]]] = {}
 
     for cid, comp in enumerate(components):
-        comp_set = set(int(a) for a in comp)
+        comp_set = {int(a) for a in comp}
         if not comp_set:
             self_translations[cid] = []
             continue
@@ -350,8 +351,8 @@ def kept_bond_graph(atoms, breaking_pairs):
     component's own periodicity, say) can compute it once and pass it around.
 
     **parameters:**
-        atoms: ASE atoms object
-        breaking_pairs: broken bonds from the deconstructor
+        - atoms: ASE atoms object
+        - breaking_pairs: broken bonds from the deconstructor
 
     **returns:**
         (kept_graph, kept_offsets)
@@ -367,8 +368,8 @@ def base_edges_with_shifts(
     atoms: Atoms,
     components: Sequence[Component],
     breaking_pairs: Sequence[BreakingPair],
-    kept_graph: Optional[Dict[int, List[int]]] = None,
-    kept_offsets: Optional[Dict[Tuple[int, int], List[Tuple[int, int, int]]]] = None,
+    kept_graph: dict[int, list[int]] | None = None,
+    kept_offsets: dict[tuple[int, int], list[tuple[int, int, int]]] | None = None,
 ):
     '''
     Build the base component graph with periodic shifts.
@@ -393,12 +394,12 @@ def base_edges_with_shifts(
         - s_ij is the bond offset stored in breaking_pairs
 
     **parameters:**
-        atoms: ASE atoms object
+        - atoms: ASE atoms object
 
-        components: list
+        - components: list
             List of final connected components after bond breaking.
 
-        breaking_pairs: list
+        - breaking_pairs: list
             List of broken bonds returned by the deconstructor.
             Each entry is typically [i, j, sx, sy, sz].
 
@@ -490,7 +491,7 @@ def base_edges_with_shifts(
 def component_has_transition_metal_not_in_porphyrin(
     atoms: Atoms,
     comp: Sequence[int],
-    porphyrin_atoms: Optional[Sequence[int]],
+    porphyrin_atoms: Sequence[int] | None,
     tm_symbols: Sequence[str],
 ):
     '''
@@ -498,22 +499,22 @@ def component_has_transition_metal_not_in_porphyrin(
     part of a porphyrin-like motif.
 
     **parameters:**
-        atoms: ASE atoms object
+        - atoms: ASE atoms object
 
-        comp: list
+        - comp: list
             List of atom indices defining a connected component.
 
-        porphyrin_atoms: list or None
+        - porphyrin_atoms: list or None
             List of atom indices identified as belonging to a porphyrin motif.
 
-        tm_symbols: list
+        - tm_symbols: list
             List of transition-metal symbols.
 
     **returns:**
         bool
     '''
-    porph_set = set(int(i) for i in (porphyrin_atoms or []))
-    tm_set = set(str(s) for s in tm_symbols)
+    porph_set = {int(i) for i in (porphyrin_atoms or [])}
+    tm_set = {str(s) for s in tm_symbols}
 
     for ai in comp:
         a = int(ai)
@@ -525,8 +526,8 @@ def component_has_transition_metal_not_in_porphyrin(
 def regions_with_metal(
     atoms: Atoms,
     components: Sequence[Component],
-    regions: Dict[int, List[int]],
-    porphyrin_atoms: Optional[Sequence[int]],
+    regions: dict[int, list[int]],
+    porphyrin_atoms: Sequence[int] | None,
 ):
     '''
     Identify regions that contain at least one metal-bearing component.
@@ -537,15 +538,15 @@ def regions_with_metal(
     to a porphyrin motif.
 
     **parameters:**
-        atoms: ASE atoms object
+        - atoms: ASE atoms object
 
-        components: list
+        - components: list
             List of connected components.
 
-        regions: python dictionary
+        - regions: python dictionary
             Mapping of region_id -> list of component indices.
 
-        porphyrin_atoms: list or None
+        - porphyrin_atoms: list or None
             Atom indices associated with porphyrin-like motifs.
 
     **returns:**
@@ -571,11 +572,11 @@ def cgd_from_region_targets(
     atoms: Atoms,
     components: Sequence[Component],
     breaking_pairs: Sequence[BreakingPair],
-    regions: Dict[int, List[int]],
+    regions: dict[int, list[int]],
     *,
     target_regions: Sequence[int],
     name: str = "net",
-    dedup_edges_for_systre: bool = True,
+    dedup_edges: bool = True,
 ):
     '''
     Build a CGD PERIODIC_GRAPH by contracting non-target components into edges.
@@ -592,24 +593,24 @@ def cgd_from_region_targets(
     frameworks.
 
     **parameters:**
-        atoms: ASE atoms object
+        - atoms: ASE atoms object
 
-        components: list
+        - components: list
             List of connected components from the deconstructor.
 
-        breaking_pairs: list
+        - breaking_pairs: list
             List of broken atom pairs from the deconstructor.
 
-        regions: python dictionary
+        - regions: python dictionary
             Mapping of region_id -> list of component indices.
 
-        target_regions: list
+        - target_regions: list
             Region IDs that should be treated as node regions.
 
-        name: str
+        - name: str
             CGD graph ID.
 
-        dedup_edges_for_systre: bool
+        - dedup_edges: bool
             If True, remove exact duplicate periodic edges.
 
     **returns:**
@@ -624,7 +625,7 @@ def cgd_from_region_targets(
         raise ValueError("components is empty.")
 
     n_components = len(components)
-    target_regions = set(int(r) for r in target_regions)
+    target_regions = {int(r) for r in target_regions}
 
     # The kept-bond graph is needed both for the edges between components and,
     # below, for each component's own periodicity, so compute it once and share.
@@ -731,7 +732,7 @@ def cgd_from_region_targets(
         for (sx, sy, sz) in self_translations.get(comp_id, []):
             edges_out.append((node_id, node_id, sx, sy, sz))
 
-    if dedup_edges_for_systre:
+    if dedup_edges:
         seen = set()
         deduped = []
 
@@ -768,7 +769,7 @@ def cgd_from_region_targets(
     lines.append(f"# Nodes (target components): {len(target_components)}")
     lines.append(f"# Contracted edges written: {len(edges_out)}")
     lines.append(f"# Non-zero shifts: {nonzero}/{max(1, len(edges_out))}")
-    lines.append(f"# Dedup for Systre: {dedup_edges_for_systre}")
+    lines.append(f"# Dedup edges: {dedup_edges}")
     lines.append("PERIODIC_GRAPH")
     lines.append(f"ID {name}")
     lines.append("EDGES")
@@ -822,7 +823,7 @@ def coordination_contacts(
     atoms: Atoms,
     components: Sequence[Component],
     breaking_pairs: Sequence[BreakingPair],
-    atom_graph: Dict[int, List[int]],
+    atom_graph: dict[int, list[int]],
     is_cluster: Sequence[bool],
 ):
     '''
@@ -838,15 +839,15 @@ def coordination_contacts(
     a cluster component, describe a contact.
 
     **parameters:**
-        atoms: ASE atoms object
+        - atoms: ASE atoms object
 
-        components: connected components from the deconstructor
+        - components: connected components from the deconstructor
 
-        breaking_pairs: broken bonds from the deconstructor
+        - breaking_pairs: broken bonds from the deconstructor
 
-        atom_graph: atom-level connectivity of the intact structure
+        - atom_graph: atom-level connectivity of the intact structure
 
-        is_cluster: per component, True when the component is a metal cluster
+        - is_cluster: per component, True when the component is a metal cluster
 
     **returns:**
         contacts: list of (metal_atom, donor_atom, cluster_id, ligand_id)
@@ -908,7 +909,7 @@ def ligand_cluster_incidences(atoms: Atoms):
     in a supercell.
 
     **parameters:**
-        atoms: ASE atoms object, guest-free
+        - atoms: ASE atoms object, guest-free
 
     **returns:**
         python dictionary with keys:
@@ -997,16 +998,16 @@ def ligand_cluster_graph(atoms: Atoms, *, collapse_ditopic: bool = False):
 
     A ligand held by a single contact -- coordinated solvent, a capping
     modulator, or a linker left dangling by a missing-linker defect -- is a
-    vertex of degree one. No periodic net can carry one: Systre reports a
-    collision and returns neither a name nor a relaxed net, so those ligands
-    are left out of the graph. The defect is not lost, it shows in the reduced
+    vertex of degree one. No periodic net can carry one: it collides in the
+    barycentric placement, so no canonical key exists and those ligands are
+    left out of the graph. The defect is not lost, it shows in the reduced
     connectivity of the cluster that lost the linker, and
     ``ligand_cluster_fingerprint`` records the dangling ligand itself.
 
     **parameters:**
-        atoms: ASE atoms object, guest-free
+        - atoms: ASE atoms object, guest-free
 
-        collapse_ditopic: bool
+        - collapse_ditopic: bool
             If True, a ligand bridging exactly two cluster contacts is spliced
             into a direct cluster--cluster edge instead of staying a vertex.
             The framework is unchanged, but the net is no longer subdivided, so
@@ -1069,7 +1070,7 @@ def ligand_cluster_graph(atoms: Atoms, *, collapse_ditopic: bool = False):
 
     ligand_nodes = {ligand_map[ligand] for ligand in participating_ligands}
     node_atoms = {
-        node: set(int(a) for a in components[component])
+        node: {int(a) for a in components[component]}
         for component, node in node_of_component.items()
     }
 
@@ -1092,9 +1093,9 @@ def splice_two_connected_nodes(edges, candidates):
     subdivision -- so splicing restores the net that can be identified.
 
     **parameters:**
-        edges: list of (u, v, sx, sy, sz)
+        - edges: list of (u, v, sx, sy, sz)
 
-        candidates: node ids allowed to be spliced out
+        - candidates: node ids allowed to be spliced out
 
     **returns:**
         edges: list of edges with the spliced vertices removed
@@ -1126,6 +1127,170 @@ def splice_two_connected_nodes(edges, candidates):
         kept.append((a, b, sa[0] - sb[0], sa[1] - sb[1], sa[2] - sb[2]))
 
     return dedup_periodic_edges(kept), removed
+
+
+#: Elements that sit at the tetrahedral sites of a zeolite framework. The
+#: list follows the IZA framework-type compositions and is deliberately
+#: permissive at the transition-metal end, since Zn, Co and Fe zeolite
+#: analogues are all known.
+ZEOLITE_T_ELEMENTS = frozenset(
+    {
+        "Si", "Al", "P", "Ge", "B", "Ga", "Be", "Zn", "Co", "Fe",
+        "Mg", "Ti", "As", "Li", "V",
+    }
+)
+
+
+def zeolite_t_edges(
+    atoms: Atoms,
+    *,
+    bridge: Sequence[str] = ("O",),
+    t_elements: Sequence[str] | None = None,
+):
+    '''
+    Contract a zeolite framework onto its tetrahedral atoms.
+
+    A zeolite has no metal cluster to cut at, so none of the deconstruction
+    methods apply to it. Its net is instead the classical one of the
+    crystallographic literature: vertices are the tetrahedral (T) atoms and an
+    edge is a T-O-T bridge, the oxygen contracted away. Delgado-Friedrichs &
+    O'Keeffe use exactly this net in their worked example, where "the edges of
+    the net correspond to -O- links between Si atoms at the vertices of the
+    net".
+
+    The contraction is not cosmetic. Keeping the bridging oxygen as a vertex
+    describes the *subdivision* of the net, in which every edge is split in
+    two, and that is a different graph: it keys perfectly well and matches
+    nothing, because the archive names the contracted net. The same is true of
+    any pendant atom left attached, which quietly decorates the net rather
+    than raising, so hydrogen and other terminal species are dropped here
+    rather than being left to produce a silent miss.
+
+    Shifts compose the way the path does. If a bridge sees its two T
+    neighbours in cells `s_i` and `s_j`, the contracted edge carries
+    `s_j - s_i`, which is the translation from the first T atom to the second.
+
+    **parameters:**
+        - atoms: ASE atoms object
+            Framework, guests already removed.
+
+        - bridge: sequence of str
+            Elements that are contracted away, two-coordinate by assumption.
+
+        - t_elements: sequence of str, optional
+            Elements accepted at a tetrahedral site. Defaults to
+            `ZEOLITE_T_ELEMENTS`. Anything neither bridge nor T - an
+            extra-framework cation, say - takes no part in the net.
+
+    **returns:**
+        tuple
+            (n_vertices, edges, report) with edges as (u, v, sx, sy, sz) over
+            0-based T indices, and `report` recording the T atoms kept and any
+            bridge that did not join exactly two of them.
+    '''
+    allowed = frozenset(t_elements) if t_elements else ZEOLITE_T_ELEMENTS
+    bridges = frozenset(bridge)
+    symbols = atoms.get_chemical_symbols()
+    neighbours, _matrix, offsets = mofdeconstructor.compute_ase_neighbour_with_offsets(
+        atoms
+    )
+
+    t_atoms = [i for i, s in enumerate(symbols) if s in allowed]
+    index_of = {atom: k for k, atom in enumerate(t_atoms)}
+
+    edges = []
+    dangling = []
+    for site, symbol in enumerate(symbols):
+        if symbol not in bridges:
+            continue
+        linked = [j for j in neighbours[site] if j in index_of]
+        if len(linked) != 2:
+            # A terminal or over-coordinated oxygen is a defect, not a
+            # bridge; it is reported rather than guessed at.
+            dangling.append((site, len(linked)))
+            continue
+        first, second = linked
+        shift_first = offsets[(site, first)][0]
+        shift_second = offsets[(site, second)][0]
+        edges.append(
+            (
+                index_of[first],
+                index_of[second],
+                int(shift_second[0]) - int(shift_first[0]),
+                int(shift_second[1]) - int(shift_first[1]),
+                int(shift_second[2]) - int(shift_first[2]),
+            )
+        )
+
+    report = {
+        "n_t_atoms": len(t_atoms),
+        "t_elements_seen": sorted({symbols[i] for i in t_atoms}),
+        "n_bridges_used": len(edges),
+        "irregular_bridges": dangling,
+        "ignored_elements": sorted(
+            {s for s in symbols if s not in allowed and s not in bridges}
+        ),
+    }
+    return len(t_atoms), dedup_periodic_edges(edges), report
+
+
+def cgd_zeolite(
+    atoms: Atoms,
+    *,
+    name: str = "net",
+    bridge: Sequence[str] = ("O",),
+    t_elements: Sequence[str] | None = None,
+):
+    '''
+    Build the CGD periodic graph of a zeolite framework from its T atoms.
+
+    **parameters:**
+        - atoms: ASE atoms object
+            Framework, guests already removed.
+
+        - name: str
+            CGD graph ID.
+
+        - bridge: sequence of str
+            Elements contracted away.
+
+        - t_elements: sequence of str, optional
+            Elements accepted at a tetrahedral site.
+
+    **returns:**
+        str
+            CGD PERIODIC_GRAPH content.
+
+    **raises:**
+        RuntimeError
+            If no tetrahedral atoms are present, or none of them are bridged,
+            which means the input is not a framework of this kind.
+    '''
+    n_vertices, edges, report = zeolite_t_edges(
+        atoms, bridge=bridge, t_elements=t_elements
+    )
+    if not n_vertices:
+        raise RuntimeError(
+            "Method 'zeol' found no tetrahedral atoms; expected one of "
+            f"{sorted(ZEOLITE_T_ELEMENTS)}."
+        )
+    if not edges:
+        raise RuntimeError(
+            f"Method 'zeol' found {n_vertices} tetrahedral atoms but no "
+            f"{'/'.join(bridge)} bridge joining two of them."
+        )
+    if report["irregular_bridges"]:
+        logger.warning(
+            "zeol: %d bridging atoms did not join exactly two T atoms and "
+            "were skipped (terminal or over-coordinated oxygen)",
+            len(report["irregular_bridges"]),
+        )
+    if report["ignored_elements"]:
+        logger.info(
+            "zeol: ignored non-framework elements %s",
+            report["ignored_elements"],
+        )
+    return periodic_graph_cgd(edges, name)
 
 
 def cgd_ligand_cluster(atoms: Atoms, *, name: str = "net", collapse_ditopic: bool = False):
@@ -1184,18 +1349,18 @@ def sbu_drawing_graph(atoms: Atoms):
     edges = []
     organic = {node: False for node in node_of_component.values()}
     node_atoms = {
-        node_of_component[component]: set(int(a) for a in components[component])
+        node_of_component[component]: {int(a) for a in components[component]}
         for component in targets
     }
     next_node = len(node_of_component)
     for linker in range(len(components)):
         if linker in node_of_component:
             continue
-        incidences = sorted(set(
+        incidences = sorted({
             (node_of_component[neighbour], tuple(int(x) for x in shift))
             for neighbour, shift in adjacency.get(linker, [])
             if neighbour in node_of_component
-        ))
+        })
         if len(incidences) < 2:
             continue
         if len(incidences) == 2:
@@ -1205,7 +1370,7 @@ def sbu_drawing_graph(atoms: Atoms):
             ))
             continue
         organic[next_node] = True
-        node_atoms[next_node] = set(int(a) for a in components[linker])
+        node_atoms[next_node] = {int(a) for a in components[linker]}
         for u, shift in incidences:
             edges.append((u, next_node, *shift))
         next_node += 1
@@ -1295,17 +1460,15 @@ def _refine_colours(vertices, neighbours, initial, units, rounds: int = 3):
 
 def ligand_cluster_fingerprint(atoms: Atoms, *, algorithm: str = "sha256"):
     '''
-    Describe how ligands meet metal clusters, without going through Systre.
+    Describe how ligands meet metal clusters.
 
-    Systre answers a narrower question than this one. It names the net when the
-    net has a name, but a ligand--cluster net keeps ditopic ligands as vertices
-    and so is a subdivided net that RCSR does not list, and a framework with a
-    dangling ligand is a net Systre refuses outright -- in both cases its
-    topology hash is unavailable or, for an unnamed net, tied to the node
-    numbering Systre happened to use. This fingerprint is computed from the
-    deconstruction itself, so it exists for every framework, and it is
-    invariant to atom order, to the choice of cell origin, and to being given a
-    supercell of the same crystal.
+    Net identification answers a narrower question than this one. It names the
+    net when the net has a name, but a ligand--cluster net keeps ditopic
+    ligands as vertices and so is a subdivided net that RCSR does not list,
+    and a framework with a dangling ligand has no stable net at all. This
+    fingerprint is computed from the deconstruction itself, so it exists for
+    every framework, and it is invariant to atom order, to the choice of cell
+    origin, and to being given a supercell of the same crystal.
 
     What it records is chemistry that a net alone cannot carry. Each ligand and
     cluster species is counted by formula, with a histogram of how many
@@ -1316,27 +1479,32 @@ def ligand_cluster_fingerprint(atoms: Atoms, *, algorithm: str = "sha256"):
     carboxylate reduced from bridging to monodentate shows in the denticity
     histogram while the net itself is unchanged.
 
-    **parameters:**
-        atoms: ASE atoms object, guest-free
-
-        algorithm: str
-            Hash algorithm supported by hashlib.
-
     Every count is quoted per metal-cluster repeat unit, as an exact fraction:
     pristine HKUST-1 reads 4/3 of a C9H3O6 ligand per Cu2 paddlewheel, and one
     coordinated methanol in that cell reads 1/24.
 
+    **parameters:**
+        - atoms: ASE atoms object
+            Guest-free framework.
+
+        - algorithm: str
+            Hash algorithm supported by hashlib.
+
     **returns:**
-        python dictionary with keys:
-            clusters: species -> {count, contacts histogram, capped histogram}
-            ligands: species -> {count, contacts histogram, denticity histogram}
-            terminal: species -> {count, denticity histogram} for ligands held
-                by a single contact
-            refinement: histogram of refined colours, as a sorted list of
-                (colour digest, count)
-            cluster_units: metal-cluster repeat units in the cell, the
-                denominator the counts are quoted against
-            fingerprint_hash: hex digest of everything above
+        python dictionary
+            With keys:
+
+            - clusters: species -> {count, contacts histogram, capped
+              histogram}
+            - ligands: species -> {count, contacts histogram, denticity
+              histogram}
+            - terminal: species -> {count, denticity histogram}, for ligands
+              held by a single contact
+            - refinement: histogram of refined colours, as a sorted list of
+              (colour digest, count)
+            - cluster_units: metal-cluster repeat units in the cell, the
+              denominator the counts are quoted against
+            - fingerprint_hash: hex digest of everything above
     '''
     deconstruction = ligand_cluster_incidences(atoms)
     components = deconstruction["components"]
@@ -1495,7 +1663,7 @@ def cgd_all_nodes(
     atoms: Atoms,
     components: Sequence[Component],
     breaking_pairs: Sequence[BreakingPair],
-    regions: Dict[int, List[int]],
+    regions: dict[int, list[int]],
     *,
     target_regions: Sequence[int],
     name: str = "net",
@@ -1512,17 +1680,17 @@ def cgd_all_nodes(
     the true net -- MIL-53 gives rna rather than the collapsed pcu.
 
     **parameters:**
-        atoms: ASE atoms object
+        - atoms: ASE atoms object
 
-        components: connected components from the deconstructor
+        - components: connected components from the deconstructor
 
-        breaking_pairs: broken bonds from the deconstructor
+        - breaking_pairs: broken bonds from the deconstructor
 
-        regions: mapping region_id -> component ids
+        - regions: mapping region_id -> component ids
 
-        target_regions: region ids treated as node (metal) regions
+        - target_regions: region ids treated as node (metal) regions
 
-        name: CGD graph ID
+        - name: CGD graph ID
 
     **returns:**
         cgd_text: str
@@ -1537,7 +1705,7 @@ def cgd_single_nodes(
     atoms: Atoms,
     components: Sequence[Component],
     breaking_pairs: Sequence[BreakingPair],
-    regions: Dict[int, List[int]],
+    regions: dict[int, list[int]],
     *,
     target_regions: Sequence[int],
     name: str = "net",
@@ -1575,7 +1743,7 @@ def _all_node_graph(atoms, components, breaking_pairs, regions, target_regions):
     '''
     tm = set(transition_metals())
     symbols = atoms.get_chemical_symbols()
-    target_regions = set(int(r) for r in target_regions)
+    target_regions = {int(r) for r in target_regions}
 
     kept_graph, kept_offsets = kept_bond_graph(atoms, breaking_pairs)
     self_translations = component_self_translations(
@@ -1614,7 +1782,7 @@ def _all_node_graph(atoms, components, breaking_pairs, regions, target_regions):
     atom_node = {}
     node_atoms = defaultdict(set)
     for comp in target_comps:
-        comp_atoms = set(int(a) for a in components[comp])
+        comp_atoms = {int(a) for a in components[comp]}
         if comp in rod_comps:
             for atom in comp_atoms:
                 if symbols[atom] in tm:
@@ -1635,7 +1803,7 @@ def _all_node_graph(atoms, components, breaking_pairs, regions, target_regions):
     # the node atoms it bonds, using the real bond offsets so the periodic chain
     # bond survives
     for comp in rod_comps:
-        comp_atoms = set(int(a) for a in components[comp])
+        comp_atoms = {int(a) for a in components[comp]}
         for oxygen in comp_atoms:
             if oxygen in atom_node:
                 continue
@@ -1692,7 +1860,7 @@ def _all_node_graph(atoms, components, breaking_pairs, regions, target_regions):
             lnode = next_linker_node
             next_linker_node += 1
             organic[lnode] = True
-            node_atoms[lnode] = set(int(a) for a in components[link_comp])
+            node_atoms[lnode] = {int(a) for a in components[link_comp]}
             for u, su in items:
                 edges.append((u, lnode, su[0], su[1], su[2]))
 
@@ -1780,9 +1948,9 @@ def net_geometry(atoms, *, method="all_node"):
     idealised RCSR cell. Intended for drawing, not for topology identification.
 
     **parameters:**
-        atoms: guest-free ASE atoms object
+        - atoms: guest-free ASE atoms object
 
-        method: "sbus", "all_node", "single_node" or "ligand_cluster"
+        - method: "sbus", "all_node", "single_node" or "ligand_cluster"
 
     **returns:**
         positions: dict node_id -> (x, y, z) Cartesian centroid
@@ -1914,9 +2082,9 @@ class TopologyExtractor:
     writes the resulting CGD PERIODIC_GRAPH.
 
     **parameters:**
-        ase_atoms: ASE atoms object, optional
+        - ase_atoms: ASE atoms object, optional
 
-        filename: str, optional
+        - filename: str, optional
             Path to an input structure file readable by ASE.
 
     **methods:**
@@ -1929,8 +2097,8 @@ class TopologyExtractor:
         write_cgd():
             Write CGD content to file.
     '''
-    ase_atoms: Optional[Atoms] = None
-    filename: Optional[str] = None
+    ase_atoms: Atoms | None = None
+    filename: str | None = None
 
     def __post_init__(self):
         if self.ase_atoms is None:
@@ -1940,6 +2108,12 @@ class TopologyExtractor:
 
     @property
     def atoms(self):
+        '''
+        The structure being analysed, read from `filename` when needed.
+
+        **returns:**
+            ase.Atoms
+        '''
         return self.ase_atoms
 
     def remove_guest(self):
@@ -1963,7 +2137,7 @@ class TopologyExtractor:
         Build a CGD PERIODIC_GRAPH using one of the supported methods.
 
         **parameters:**
-            method: str
+            - method: str
                 One of:
                     - "sbus": each SBU is one node (rods collapse with a
                       self-edge).
@@ -1974,8 +2148,17 @@ class TopologyExtractor:
                       gives bpq).
                     - "ligand_cluster": complete organic ligands and metal
                       clusters form the two vertex classes of an incidence net.
+                    - "cof": for a covalent organic framework, which has no
+                      metal to cut at. The cut is made at the linkage bond
+                      instead, and a building unit is a vertex when it is
+                      joined at three or more points.
+                    - "zeol": for a zeolite, which likewise has nothing to cut
+                      at. Vertices are the tetrahedral atoms and each T-O-T
+                      bridge becomes an edge, the oxygen contracted away,
+                      which is the net the zeolite literature names (ABW
+                      gives sra, EDI gives edi).
 
-            name: str
+            - name: str
                 CGD graph ID.
 
         **returns:**
@@ -2008,11 +2191,21 @@ class TopologyExtractor:
                 regions=regions,
                 target_regions=target_regions,
                 name=name,
-                dedup_edges_for_systre=True,
+                dedup_edges=True,
             )
 
         elif method == "ligand_cluster":
             return cgd_ligand_cluster(guest_free, name=name)
+
+        elif method == "cof":
+            # Imported here because cofstructure imports this module for the
+            # periodic-graph helpers it shares with the MOF path.
+            from mofstructure import cofstructure
+
+            return cofstructure.cgd_cof(guest_free, name=name)
+
+        elif method == "zeol":
+            return cgd_zeolite(guest_free, name=name)
 
         elif method == "all_node":
             components, _, porphyrin, regions, breaking_pairs = mofdeconstructor.secondary_building_units(guest_free)
@@ -2059,7 +2252,7 @@ class TopologyExtractor:
         else:
             raise ValueError(
                 "Unknown method. Choose from: 'sbus', 'ligand_cluster', "
-                "'all_node', 'single_node'."
+                "'all_node', 'single_node', 'cof', 'zeol'."
             )
 
     @staticmethod
@@ -2068,10 +2261,10 @@ class TopologyExtractor:
         Write CGD content to file.
 
         **parameters:**
-            cgd_text: str
+            - cgd_text: str
                 CGD content.
 
-            path: str
+            - path: str
                 Output file path.
 
         **returns:**
@@ -2083,6 +2276,52 @@ class TopologyExtractor:
         return path
 
 
+CGD_DESCRIPTION = """\
+Reduce a framework to its net and write it as a CGD PERIODIC_GRAPH.
+
+The node definition decides what the net describes, so the same crystal gives
+different nets under different methods, which is expected rather than an
+error. "auto" picks the one that suits the material.
+"""
+
+CGD_EPILOG = """\
+methods:
+  auto           choose from the structure: zeol for a zeolite, cof for a
+                 COF, all_node for a MOF
+  sbus           each secondary building unit is one vertex; a rod SBU
+                 collapses to a self-edge
+  all_node       every branch point kept, splitting rod SBUs into atoms, so
+                 MIL-53 gives rna rather than pcu
+  single_node    all_node with each organic group merged to one vertex
+                 (MIL-53 gives bpq)
+  ligand_cluster whole ligands and metal clusters as the two vertex classes
+                 of an incidence net; sensitive to defects
+  cof            cut at the linkage bond, for a framework with no metal
+  zeol           tetrahedral atoms as vertices, each T-O-T bridge an edge
+
+embeddings (--embedding):
+  deconstruction the geometry of the crystal itself. Default, and the only
+                 one that needs no identification
+  ideal          the canonical barycentric placement, with the cell fixed by
+                 the symmetry of the net alone. Reproducible to the digit and
+                 written with the canonical key, so an unnamed net stays
+                 identifiable from its own file
+  refined        the ideal embedding relaxed for edges of equal length,
+                 typically from a spread of 2.2 down to 1.0. What a builder
+                 wants; depends on the optimiser, so it is not reproducible
+
+examples:
+  mofstructure_generate_cgd HKUST-1.cif
+  mofstructure_generate_cgd HKUST-1.cif --embedding ideal
+  mofstructure_generate_cgd MIL-53.cif --method all_node -o mil53.cgd
+  mofstructure_generate_cgd zeolite.cif --method zeol --embedding refined
+
+exit status:
+  0  a net was written
+  2  the framework could not be reduced to one
+"""
+
+
 def build_argparser():
     '''
     Build the command-line argument parser.
@@ -2091,55 +2330,160 @@ def build_argparser():
         argparse.ArgumentParser
     '''
     parser = argparse.ArgumentParser(
-        description="Extract periodic topology from a structure file and write CGD (PERIODIC_GRAPH)."
+        description=CGD_DESCRIPTION,
+        epilog=CGD_EPILOG,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("input_file", help="Path to input structure file (e.g. CIF).")
+    parser.add_argument("input_file",
+                        help="structure file; CIF or anything ASE reads")
     parser.add_argument(
         "-o", "--output",
         default="output.cgd",
-        help="Path to output CGD file (default: output.cgd)."
+        help="path to the output CGD file (default: output.cgd)"
     )
     parser.add_argument(
         "--method",
-        choices=["sbus", "ligand_cluster", "all_node", "single_node"],
-        default="sbus",
-        help="Topology extraction method."
+        choices=["auto", "sbus", "ligand_cluster", "all_node",
+                 "single_node", "cof", "zeol"],
+        default="auto",
+        help="node definition; see the list below (default: auto)"
+    )
+    parser.add_argument(
+        "--embedding",
+        choices=["deconstruction", "ideal", "refined"],
+        default="deconstruction",
+        help="geometry written for the net; see the list below "
+             "(default: deconstruction)"
     )
     parser.add_argument(
         "--name",
         default="net",
-        help="CGD graph ID (default: net)."
+        help="CGD graph ID, used when the net has no archive name "
+             "(default: net)"
+    )
+    parser.add_argument(
+        "-v", "--verbose", action="store_true",
+        help="report each step as it runs"
+    )
+    parser.add_argument(
+        "--quiet", action="store_true",
+        help="write the file and print nothing"
     )
     return parser
 
 
-def main(argv: Optional[Sequence[str]] = None):
+def main(argv: Sequence[str] | None = None):
     '''
     Command-line entry point.
 
     **parameters:**
-        argv: list, optional
+        - argv: list, optional
+            Arguments; `sys.argv[1:]` when omitted.
 
     **returns:**
         int
-            Exit code.
+            0 when a net was written, 2 when the framework could not be
+            reduced to one.
     '''
+    from mofstructure.topology import (
+        DEFAULT_METHOD,
+        NAME_PREFERENCE_BY_MATERIAL,
+        classify,
+    )
+
     parser = build_argparser()
     args = parser.parse_args(argv)
 
+    logging.basicConfig(
+        level=logging.INFO if args.verbose else logging.WARNING,
+        format="%(levelname)s - %(message)s",
+        force=True,
+    )
+
+    def say(message):
+        if not args.quiet:
+            print(message)
+
     topo = TopologyExtractor(filename=args.input_file)
 
+    # The material is what the structure is, so it is read from the atoms
+    # rather than asked of the caller.
+    material = classify(topo.ase_atoms)
+    method = args.method
+    if method == "auto":
+        method = DEFAULT_METHOD[material]
+        say(f"{material}, so method={method}")
+
     try:
-        cgd_text = topo.build_cgd(
-            method=args.method,
-            name=args.name,
-        )
+        cgd_text = topo.build_cgd(method=method, name=args.name)
     except Exception as exc:
-        logger.error("Failed to build CGD: %s", exc, exc_info=True)
+        logger.error("Failed to build CGD: %s", exc, exc_info=args.verbose)
+        say(f"could not reduce this framework to a net: {exc}")
         return 2
 
+    if args.embedding != "deconstruction":
+        # The canonical embeddings are placements of an identified net, so the
+        # net has to be identified first; the deconstruction geometry needs
+        # none of this and is why it stays the default.
+        from mofstructure.graph_net import identify
+        from mofstructure.graph_net.embedding import to_cgd
+        from mofstructure.topology import quotient_graph
+
+        try:
+            graph = quotient_graph(cgd_text, name=args.name)
+            components = graph.components()
+            if not components:
+                say("the deconstruction left no periodic net to embed")
+                return 2
+            largest = max(components, key=lambda c: c.n_edges)
+            found = identify(
+                largest,
+                descriptors=False,
+                symmetry=False,
+                prefer=NAME_PREFERENCE_BY_MATERIAL.get(material),
+            )
+            record = found[0] if found else {}
+            if not record.get("key"):
+                reason = record.get("error", "no canonical key exists")
+                say(f"no canonical embedding for this net: {reason}")
+                return 2
+            cgd_text = to_cgd(
+                largest,
+                name=record.get("topology") or args.name,
+                key=record.get("key"),
+                rcsr=record.get("topology"),
+                refine=args.embedding == "refined",
+            )
+            # Refinement is dropped when it does not beat the exact placement,
+            # so the file says which it holds and so should the terminal:
+            # reporting a refined net that is not one would be a plain
+            # misstatement of what was written.
+            written = next(
+                (line for line in cgd_text.splitlines()
+                 if line.startswith("# embedding:")),
+                "",
+            )
+            applied = "refined" in written
+            spread = next(
+                (line.rsplit(" ", 1)[-1] for line in cgd_text.splitlines()
+                 if line.startswith("# edge length spread")),
+                "?",
+            )
+            net = record.get("topology") or "unnamed net"
+            if args.embedding == "refined" and not applied:
+                say(f"{net}: refining did not improve on the exact placement, "
+                    f"so that is what was written (edge spread {spread})")
+            else:
+                say(f"{net}, {args.embedding} embedding "
+                    f"(edge spread {spread})")
+        except Exception as exc:
+            logger.error("Failed to embed the net: %s", exc,
+                         exc_info=args.verbose)
+            say(f"could not embed this net: {exc}")
+            return 2
+
     TopologyExtractor.write_cgd(cgd_text, args.output)
-    logger.info("CGD written to %s", args.output)
+    say(f"wrote {args.output}")
     return 0
 
 

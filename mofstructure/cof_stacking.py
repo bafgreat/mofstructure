@@ -7,7 +7,6 @@ another, which is measured here as the lateral offset between adjacent layers
 and the interlayer spacing along the stacking direction. That separates
 eclipsed AA stacking from the various staggered arrangements.
 '''
-from __future__ import print_function
 __author__ = "Dr. Dinga Wonanke"
 __status__ = "production"
 import argparse
@@ -26,7 +25,7 @@ def compute_cof_stacking(ase_atom):
 
     **parameter:**
         ase_atom : ASE Atoms object
-    **returns**
+    **returns:**
         layers : list of list wherei each list correspond to a layar
         lateral_offsets : list of list where each list contains the lateral offsets between two layers
         interlayer_height : list of list where each list contains the interlayer heights between two layers
@@ -111,6 +110,6 @@ def Main():
     else:
         print("Invalid input. Please provide a valid file or directory path.")
 
+
 if __name__ == "__main__":
     Main()
-

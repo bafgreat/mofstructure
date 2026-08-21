@@ -1,7 +1,7 @@
 #!/usr/bin/python
-from __future__ import print_function
 from mofstructure import structure
 from .load_test import get_test_data
+
 
 def test_structure():
     '''
@@ -30,6 +30,18 @@ def test_structure():
     assert topology.get('topology') == 'pcu'
     assert topology.get('dimension') == 3
     assert topology.get('td10') == 1561
-    assert topology.get('topology_hash') == 'f67362dace7cfecdb0ac2a67aeadf06494eaf5b24dc339bb15b6b083f868bac5'
-
-
+    # The hash changed when identification moved off Systre, and deliberately.
+    # It used to digest Systre's relaxed geometry, rounded coordinates and
+    # cell; it now digests the canonical key. The new one identifies the net
+    # rather than one drawing of it, so the same framework in a supercell or
+    # with its atoms reordered hashes the same, which the old one did not.
+    # The version prefix is there so a value stored under the old scheme is
+    # recognisable rather than merely wrong.
+    assert topology.get('key_version') == 'graph_net/1'
+    assert topology.get('topology_hash') == (
+        'graph_net/1:sha256:'
+        'c09a19983feb32ef9c5337506781ebaab4c89debba4d1971e53489440bd1351c'
+    )
+    assert topology.get('topology_hash') == topology.get('key_hash')
+    assert topology.get('key')
+    assert topology.get('cgd')
