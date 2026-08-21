@@ -449,6 +449,17 @@ mofstructure_database cif_folder -t --topology_method all_node
   `MOFstructure` class.
 - The Sphinx documentation builds without warnings, and the documented
   `get_topology()` key is now `cgd`, matching what the method returns.
+- The documented return of `get_topology()` matches what it returns. The output
+  reference gained `detail`, `td10` is described as the invariant actually
+  computed, and the note that `td10` and `cgd` are `None` when a keyed net has
+  no ideal embedding. Where an unnamed net is concerned the README and the
+  examples claimed `UNKNOWN`, which no surface returns: `get_topology()` gives
+  `None` and `analyse` gives `unknown`, and both are now documented as such.
+  `topology_hash` is described as the compatibility alias for `key_hash` that
+  it is, below the table rather than in it, and the stored `topology_data.json`
+  record is documented by the fields it actually holds.
+- The Sphinx examples called `structure.MOFStructure`. The class is
+  `MOFstructure`, so the snippets raised `AttributeError` when copied.
 
 ## 0.1.8.6
 

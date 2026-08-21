@@ -291,14 +291,20 @@ class MOFstructure:
         **returns:**
             python dictionary
                 Mapping containing:
-                    - topology
+                    - topology, or None when no archive names the net.
+                      `mofstructure.topology.analyse` reports that case as
+                      `UNNAMED_TOPOLOGY` instead, so that a stored column is
+                      never empty; here a caller tests for None.
                     - dimension
-                    - td10
-                    - topology_hash
-                    - cgd
+                    - td10, the coordination sequence over ten shells summed
+                      with the vertex itself, averaged over vertex orbits and
+                      rounded. None when no ideal embedding could be built.
+                    - topology_hash, the same value as key_hash under the name
+                      earlier releases used
+                    - cgd, None on the same terms as td10
                     - key, key_hash, key_version
                     - topology_source, names
-                    - status
+                    - status, and detail when status is not "ok"
         """
         from mofstructure.graph_net.embedding import to_cgd
         from mofstructure.graph_net.invariants import topological_density

@@ -314,7 +314,7 @@ It can also be called from structure as follows:
    from ase.io import read
 
    atoms = read("UiO-66.cif")
-   mofdata = structure.MOFStructure(ase_atoms=atoms)
+   mofdata = structure.MOFstructure(ase_atoms=atoms)
    topology = mofdata.get_topology(method="sbus")
    print(topology)
 

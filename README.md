@@ -177,49 +177,16 @@ mofstructure_topology ./folder --all-methods                # every method that 
 mofstructure_topology zeolite.cif --method zeol            # tetrahedral atoms, T-O-T bridges contracted
 ```
 
-`ligand_cluster` constructs a bipartite incidence net from the same
-deconstruction as `get_ligands`, so its vertices are exactly the complete
-ligands and metal clusters that deconstruction returns and every atom belongs to
-one of them. An edge records coordination of a ligand to a particular periodic
-image of a cluster. Multiple donor bonds to the same cluster image count as one
-incidence, so chelation does not artificially increase the topological degree.
-
-A ditopic ligand stays a vertex, which subdivides the edge it makes, and RCSR
-lists no subdivided nets, so UiO-66 comes back as `UNKNOWN` even though the net is
-right. That is deliberate: the point of this method is how the ligands links to the metal
-clusters, not the RCSR symbol, and the topology hash still identifies the net.
-Pass `collapse_ditopic=True` to `ligand_cluster_graph` or `cgd_ligand_cluster`
-to splice ditopic ligands into edges instead, which recovers the nameable net
-(`fcu` for UiO-66, `pcu` for MIL-53, `tbo` either way for HKUST-1).
-
-To ask what the ligands do rather than what the net is called, use the
-fingerprint, which is read straight from the deconstruction and needs no
-archive lookup at all:
-
-```python
-from mofstructure import structure
-
-mof = structure.MOFstructure(filename='UiO-66.cif')
-print(mof.get_ligand_cluster_fingerprint())
-```
-
-The same fingerprint is available from the command line for one file or a
-folder. It writes the complete records to JSON and an index-friendly summary
-to CSV:
-
-```bash
-mofstructure_fingerprint UiO-66.cif
-mofstructure_fingerprint ./cif_files --json fingerprints.json --csv fingerprints.csv
-```
-
-It counts each ligand and cluster species per metal-cluster unit, with how many
-clusters each ligand bridges and at what denticity, and it does not change when
-the atoms are listed in another order, when the cell origin moves, or when the
-same crystal is given as a supercell. That makes it sensitive to defects: a
-missing linker lowers a cluster's connectivity, a linker hanging by one end is
-listed under `terminal` with its own formula (which is what tells it apart from
-a coordinated solvent), and a carboxylate that has dropped from bridging to
-monodentate shows in the denticity histogram even though the net is unchanged.
+`ligand_cluster` builds a bipartite incidence net from the same deconstruction
+as `get_ligands`: complete ligands and metal clusters are the vertices, and an
+edge records coordination to one periodic image of a cluster, so chelation does
+not inflate the degree. A ditopic ligand stays a vertex, which subdivides the
+edge, and RCSR lists no subdivided nets, so UiO-66 comes back unnamed even
+though the net is right. That is the point of the method: how the ligands link
+the clusters, not what the net is called, and the key still identifies it. Pass
+`collapse_ditopic=True` to `ligand_cluster_graph` or `cgd_ligand_cluster` to
+splice ditopic ligands into edges and recover the nameable net (`fcu` for
+UiO-66, `pcu` for MIL-53, `tbo` either way for HKUST-1).
 
 Use `--all-methods` to compute every method a MOF admits at once. Each net is
 recorded separately, keyed `<structure>:<method>`.
@@ -240,6 +207,35 @@ records to a file of your choosing instead, and `--no-save` prints without
 writing anything. A line per structure is printed as it finishes, followed by a
 tally; `--quiet` keeps the tally only and `-v` reports each deconstruction as it
 is built.
+
+### Ligand-cluster fingerprint
+
+To ask what the ligands do rather than what the net is called, use the
+fingerprint. It reads straight from the deconstruction and needs no archive
+lookup, so it answers for every framework, named or not:
+
+```python
+from mofstructure import structure
+
+mof = structure.MOFstructure(filename='UiO-66.cif')
+print(mof.get_ligand_cluster_fingerprint())
+```
+
+The same is available for one file or a folder, writing the full records to
+JSON and an index-friendly summary to CSV:
+
+```bash
+mofstructure_fingerprint UiO-66.cif
+mofstructure_fingerprint ./cif_files --json fingerprints.json --csv fingerprints.csv
+```
+
+It counts each ligand and cluster species per metal-cluster unit, with how many
+clusters each ligand bridges and at what denticity, and does not change with
+atom order, cell origin or a supercell. That makes it sensitive to defects: a
+missing linker lowers a cluster's connectivity, a linker hanging by one end is
+listed under `terminal` with its own formula, which is what tells it from a
+coordinated solvent, and a carboxylate that has dropped from bridging to
+monodentate shows in the denticity histogram even though the net is unchanged.
 
 ### Writing the net as a CGD file
 
@@ -414,22 +410,36 @@ print(mof.get_oms())
 
 | Key | Meaning |
 | --- | --- |
-| `topology` | Net symbol, or `None` when no archive names this net |
-| `topology_source` | Which archive named it: `rcsr`, `iza` or `epinet` |
-| `names` | Every name known for the net; a zeolite carries both `rcsr` and `iza` |
+| `topology` | Net symbol, or `None` when no archive names it |
+| `topology_source` | Archive that named it: `rcsr`, `iza` or `epinet` |
+| `names` | Every known name; a zeolite carries both `rcsr` and `iza` |
 | `dimension` | Periodicity of the net (0, 1, 2 or 3) |
-| `td10` | Topological density, the coordination sequence summed over ten shells |
-| `key` | Canonical key. Unique to the net and unchanged by supercell, atom order or origin, so two structures with the same key have the same topology whether or not it is named |
+| `td10` | Topological density: ten shells of the coordination sequence, plus the vertex, averaged over orbits. `pcu` gives 1561 |
+| `key` | Canonical key. Unchanged by supercell, atom order or origin, so equal keys mean the same net, named or not |
 | `key_hash` | Digest of the key, for indexing and duplicate detection |
 | `key_version` | Which canonical form produced the key |
-| `cgd` | CGD text of the net. Pass `refine_cgd=True` for an embedding with near-uniform edge lengths, which is what a builder such as AuToGraFS wants |
+| `cgd` | CGD text of the net. `refine_cgd=True` gives the near-uniform edge lengths a builder such as AuToGraFS wants |
 | `status` | `ok`, or why no net was produced |
+| `detail` | Why identification stopped. Only when `status` is not `ok` |
 
-A net with no name is an ordinary outcome, not a failure: the key still
-identifies it, which is what makes two structures comparable.
+Three things to know:
 
-`status` is returned but not written to `topology_data.json`. It describes the
-run rather than the net, so the stored record carries only the net itself.
+- **An unnamed net is not a failure.** The key still identifies it, which is what
+  makes two structures comparable. `get_topology()` reports it as `None`;
+  `analyse` and `topology_data.json` say `unknown`, and `error` for no net at
+  all, so that a stored column is never empty. Group on `key_hash` either way.
+- **`td10` and `cgd` can be `None` while `status` is `ok`**, since they come from
+  an ideal embedding built after identification and a net that is not 3-periodic
+  has none. Test them rather than assuming a number.
+- **`topology_hash` is a legacy alias for `key_hash`**, returned by
+  `get_topology()` alone. Its value changed in 0.1.9.1, from a digest of Systre's
+  relaxed geometry to one of the canonical key, so hashes stored by an earlier
+  release will not match. `key_version` marks which is which; rebuild the old.
+
+`status` is not stored. A `topology_data.json` record carries `topology`, `key`,
+`key_hash`, `key_version`, `material`, `method`, `n_components` and `components`,
+and is written from `analyse`, not from `get_topology()`.
+
 
 `get_porosity()` returns:
 

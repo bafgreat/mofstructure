@@ -20,9 +20,9 @@ and unified interface to most functionalities
 
    # Read a CIF file
    cif_file = 'path_to_your_cif_file.cif'
-   mofdata = structure.MOFStructure(filename=cif_file)
+   mofdata = structure.MOFstructure(filename=cif_file)
    # can also directly parse an ase_atoms object
-   # mofdata = structure.MOFStructure(ase_atoms=ase_atoms)
+   # mofdata = structure.MOFstructure(ase_atoms=ase_atoms)
 
    # remove unbound guest molecules
    guest_free_mof = mofdata.remove_guest()
@@ -32,7 +32,8 @@ and unified interface to most functionalities
 
    print(topology['topology']) # prints the topology name, e.g. pcu, dia, etc.
    print(topology['dimension']) # prints the dimension of the topology, e.g. 3 for 3D, 2 for 2D, etc.
-   print(topology['td10']) # prints the td10 value of the topology, which is a measure of the
+   print(topology['td10']) # topological density: the coordination sequence over ten
+   # shells, summed with the vertex itself and averaged over vertex orbits. pcu gives 1561
    # get metal and organic SBUs
    # This will return a list of ase_atoms objects
    metal_sbus, organic_sbus = mofdata.get_sbu()
@@ -136,8 +137,9 @@ In ``ligand_cluster``, a ligand remains a vertex even when it is ditopic.
 Several donor bonds from one ligand to the same periodic image of a metal
 cluster form one incidence, while connections to different cluster images
 remain distinct. Keeping ditopic ligands means the net is a subdivided one,
-which RCSR does not list, so frameworks such as UiO-66 report ``UNKNOWN`` with
-the topology hash still identifying the net. Pass ``collapse_ditopic=True`` to
+which RCSR does not list, so frameworks such as UiO-66 come back unnamed, with
+``topology`` reported as ``None`` and the key still identifying the net.
+Pass ``collapse_ditopic=True`` to
 ``ligand_cluster_graph`` or ``cgd_ligand_cluster`` to splice those ligands into
 edges and recover the nameable net.
 
