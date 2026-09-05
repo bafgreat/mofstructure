@@ -175,6 +175,7 @@ mofstructure_topology ./folder --method sbus               # each SBU one node
 mofstructure_topology ./folder --method ligand_cluster     # complete ligands and metal clusters
 mofstructure_topology ./folder --all-methods                # every method that suits the material
 mofstructure_topology zeolite.cif --method zeol            # tetrahedral atoms, T-O-T bridges contracted
+mofstructure_topology COF.cif --method cof        
 ```
 
 `ligand_cluster` builds a bipartite incidence net from the same deconstruction
@@ -371,6 +372,33 @@ analyse('net.cgd')                          # from a CGD periodic graph
 analyse_methods('UiO-66.cif')               # every method that suits it
 classify('ABW.cif')                         # 'zeolite'
 ```
+
+COF deconstruction searches named linkages first, including imine, ketoenamine,
+amide, ester, azo (also azoxy and azodioxy), boron and triazine linkages. A
+fallback searches short acyclic bridges between ring cores and cuts bonds
+between different elements. For example, `Ar-N=C-Ar` is cut at N-C, including
+when the CIF omits the methine hydrogen. This is a connectivity heuristic:
+the fallback excludes C-C bonds and sites carrying more than one hydrogen,
+so reduced imines such as `Ar-NH-CH2-Ar` are not covered by it.
+The hydrogen-count guard cannot establish hybridisation when hydrogens are
+missing from the input.
+
+You can inspect or restrict the cuts before constructing the net:
+
+```python
+from mofstructure import cofstructure
+
+atoms = read('framework.cif')
+cofstructure.cof_linkage_bonds(atoms)  # linkage names mapped to atom-index pairs
+cofstructure.cof_linkage_bonds(atoms, linkages=['imine', 'amide'])
+```
+
+Unactivated olefin cuts require explicit `olefin_requires_nitrile=False` in
+the COF deconstruction functions because a vinylene inside a monomer can look
+like a linkage. Ring-forming linkages such as imide, dioxin, phenazine and
+benzoxazole still require a different cutting scheme and are unsupported.
+Finding cuts does not guarantee that the resulting net has a canonical key
+or a recognised topology name.
 
 ### Drawing the net
 

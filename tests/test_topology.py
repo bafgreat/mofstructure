@@ -28,6 +28,8 @@ import warnings
 from pathlib import Path
 
 import pytest
+from ase.atoms import Atoms
+from ase.io import read
 
 from mofstructure.filetyper import DEFAULT_SAVE_DIR as SAVE
 from mofstructure.filetyper import STRUCTURE_DATA
@@ -74,6 +76,30 @@ class TestClassification:
         path, where there is no cluster to cut at.
         '''
         assert classify(str(DATA / "ABW.cif")) != "mof"
+
+    def test_exchanged_zeolite_is_not_mistaken_for_a_mof(self):
+        '''Classify potassium-exchanged phillipsite as a zeolite.'''
+        assert classify(str(DATA / "PHI_combined.cif")) == "zeolite"
+
+    def test_a_guest_bearing_carbon_does_not_make_a_zeolite_a_mof(self):
+        '''Retain zeolite classification after adding CO2 and potassium.'''
+        loaded = read(str(DATA / "ABW.cif"))
+        cell = loaded.cell.cellpar()
+        guest = Atoms("OCO", positions=[(0.0, 0.0, 0.0), (1.16, 0.0, 0.0),
+                                        (2.32, 0.0, 0.0)])
+        # Offset the guest from the framework centre.
+        guest.translate(loaded.get_center_of_mass() + [0.0, 0.0, cell[2] / 4])
+        loaded += guest
+        loaded += Atoms("K", positions=[loaded.get_center_of_mass()])
+        assert classify(loaded) == "zeolite"
+
+    def test_a_metallated_porphyrin_cof_is_not_a_mof(self):
+        '''Classify CuP-TFPh by its organic framework despite porphyrin copper.'''
+        assert classify(str(DATA / "CuP-TFPh.cif")) == "cof"
+
+    def test_a_metal_that_coordinates_is_still_a_mof(self):
+        '''Retain MOF classification for SARSUC with Ni-N and Ni-O coordination.'''
+        assert classify(str(DATA / "SARSUC.cif")) == "mof"
 
 
 class TestRecordShape:

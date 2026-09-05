@@ -3,6 +3,22 @@
 All notable changes to `mofstructure` are recorded here. Versions follow the
 releases published on [PyPI](https://pypi.org/project/mofstructure/).
 
+## Unreleased
+
+- COF bond perception removes excess hydrogen contacts and long heavy-atom
+  contacts before finding linkages, retaining each atom's last attachment.
+  Topology contraction reuses this connectivity after the cuts.
+- A fallback finder cuts unlike-element bonds in short acyclic bridges between
+  ring cores when no named linkage finder has claimed the bridge. It covers
+  urea, thiourea, enaminone and sulfonamide examples; C-C bridges and cut sites
+  carrying multiple hydrogens remain excluded.
+- Imine detection accepts missing methine hydrogens. Boron linkage detection
+  includes aryl attachments at borazine nitrogen. Azo detection accepts terminal
+  oxygens, enabling azoxy and azodioxy linkages, including NPN-1, NPN-2 and NPN-3.
+- Framework classification recognises zeolites with exchange cations or
+  carbon-bearing guests and COFs with metals held inside organic building units.
+  Zeolite contraction infers tetrahedral elements from oxygen coordination.
+
 ## 0.1.9.1
 
 ### Command line

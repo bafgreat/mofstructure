@@ -46,7 +46,13 @@ from collections.abc import Sequence
 from ase.atoms import Atoms
 from ase.io import read
 
-from mofstructure.generate_cgd import ZEOLITE_T_ELEMENTS, TopologyExtractor
+from mofstructure import mofdeconstructor
+from mofstructure.generate_cgd import (
+    ZEOLITE_T_ELEMENTS,
+    TopologyExtractor,
+    tetrahedral_t_elements,
+    zeolite_t_edges,
+)
 from mofstructure.graph_net import identify
 from mofstructure.graph_net.archive import KEY_VERSION
 from mofstructure.graph_net.periodic_graph import PeriodicGraph
@@ -143,16 +149,75 @@ def as_atoms(structure: InputLike) -> Atoms:
     return read(structure)
 
 
+def _has_zeolite_framework(atoms: Atoms) -> bool:
+    '''
+    Check whether T-O-T contraction contains a three-periodic component.
+
+    This detects frameworks with exchange cations or carbon-bearing guests that
+    fail the element-only zeolite check.
+
+    **parameters:**
+        - atoms: ASE atoms object
+
+    **returns:**
+        bool
+    '''
+    t_elements = tetrahedral_t_elements(atoms)
+    if not t_elements:
+        return False
+    try:
+        n_vertices, edges, _ = zeolite_t_edges(atoms, t_elements=t_elements)
+    except Exception:  # noqa: BLE001 - contraction failure leaves the type unresolved
+        return False
+    if not edges:
+        return False
+    net = PeriodicGraph.build(
+        3, n_vertices, [(u, v, (sx, sy, sz)) for u, v, sx, sy, sz in edges]
+    )
+    return any(component.periodicity() == 3 for component in net.components())
+
+
+def _metals_are_organic_bound(atoms: Atoms, graph: dict) -> bool:
+    '''
+    Check whether all metals match an organic building-unit environment.
+
+    A metal qualifies if the porphyrin detector identifies it or all its
+    neighbours are carbon. Every metal must qualify, so a porphyrin linker alone
+    does not cause a MOF with separate metal nodes to be classified as a COF.
+    Return False when no metals are present.
+
+    **parameters:**
+        - atoms: ASE atoms object
+
+        - graph: atom index -> list of bonded atom indices
+
+    **returns:**
+        bool
+    '''
+    symbols = atoms.get_chemical_symbols()
+    metals = [i for i, symbol in enumerate(symbols) if symbol in _METALS]
+    if not metals:
+        return False
+    in_porphyrin = set(mofdeconstructor.metal_in_porphyrin2(atoms, graph))
+    for index in metals:
+        if index in in_porphyrin:
+            continue
+        # Treat carbon-only metal environments as part of an organic unit.
+        neighbours = [symbols[j] for j in graph[index]]
+        if neighbours and set(neighbours) == {"C"}:
+            continue
+        return False
+    return True
+
+
 def classify(structure: InputLike) -> str:
     '''
-    Decide which kind of framework a structure is.
+    Classify a structure as a zeolite, MOF or COF.
 
-    The order of the tests matters. A zeolite is looked for first and is
-    identified by what it lacks: no carbon, and nothing outside the
-    tetrahedral elements and their bridging oxygen. Several of those
-    tetrahedral elements are metals, so asking "does it contain a metal"
-    first would call every zeolite a MOF. Once a zeolite is ruled out, a
-    metal means a MOF and its absence means a COF.
+    Check zeolites first, using composition followed by T-O-T periodicity when
+    needed. This allows exchange cations and carbon-bearing guests. Remaining
+    structures with metals are MOFs unless all metals match the organic-bound
+    criterion. Structures without metals are COFs.
 
     **parameters:**
         - structure: str or ASE atoms object
@@ -167,7 +232,16 @@ def classify(structure: InputLike) -> str:
     framework = symbols - {"H", "O"}
     if "C" not in symbols and framework and framework <= set(ZEOLITE_T_ELEMENTS):
         return "zeolite"
+
+    # Perceive connectivity only when composition is insufficient.
+    if "O" in symbols and symbols & set(ZEOLITE_T_ELEMENTS):
+        if _has_zeolite_framework(atoms):
+            return "zeolite"
+
     if symbols & _METALS:
+        graph, _ = mofdeconstructor.compute_ase_neighbour(atoms)
+        if _metals_are_organic_bound(atoms, graph):
+            return "cof"
         return "mof"
     return "cof"
 

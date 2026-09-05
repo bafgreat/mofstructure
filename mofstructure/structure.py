@@ -705,8 +705,8 @@ class MOFstructure:
                 font=dict(size=21, color="#17231b"),
             ),
             showlegend=True,
-            paper_bgcolor="#f4f7f5",
-            plot_bgcolor="#f4f7f5",
+            paper_bgcolor="#efe9e1",
+            plot_bgcolor="#d9d9d9",
             font=dict(
                 family="Inter, Avenir, Helvetica, Arial, sans-serif",
                 color="#33413a",
@@ -735,7 +735,7 @@ class MOFstructure:
                 xaxis=dict(visible=False),
                 yaxis=dict(visible=False),
                 zaxis=dict(visible=False),
-                bgcolor="#f4f7f5",
+                bgcolor="#ffffff",
                 aspectmode="data",
                 camera=dict(
                     eye=dict(x=1.45, y=1.45, z=1.15),
@@ -746,6 +746,7 @@ class MOFstructure:
 
         if filename:
             if str(filename).lower().endswith(".html"):
+
                 fig.write_html(filename)
             else:
                 fig.write_image(filename)

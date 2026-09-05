@@ -1,23 +1,19 @@
 #!/usr/bin/python
 '''
-Curation of covalent organic framework structures.
+COF linkage detection, building-unit extraction and topology construction.
 
-A MOF deconstructs at the metal, which tells you without ambiguity which
-fragment is a node and which is a linker. A COF has organic building units on
-both sides of the bond, so the cut has to be made at the linkage itself, which is
-the bond in which the condensation reaction forms. Every linkage handled here is
-acyclic, meaning one cut per linkage separates the two monomers and returns
-them as they were before condensation. Linkages that close a new ring across
-both monomers (imide, dioxin, phenazine, benzoxazole, benzimidazole,
-benzothiazole, thiazole, quinoline) are not handled: a single cut leaves the
-monomers joined through the rest of the fused ring, so they need a different
-treatment and are reported as unrecognised rather than silently mis-cut.
+Named finders identify supported linkage patterns. The bridge fallback cuts
+unlike-element bonds in short acyclic chains between ring cores. Bond
+perception removes excess contacts before ring detection and retains lattice
+offsets for topology construction.
 
-The node and edge assignment that follows is connectivity based. A building
-unit joined at three or more points is a branch point and stays a vertex, one
-joined at exactly two points is a connection and is spliced into an edge. This
-is what turns an imine COF of a tritopic amine and a ditopic aldehyde into hcb
-rather than its subdivision.
+Cuts lie outside chemical rings, including attachments to boron and triazine
+rings. Ring-forming linkages such as imide, dioxin, phenazine, benzoxazole,
+benzimidazole, benzothiazole, thiazole and quinoline are unsupported. The
+resulting fragments retain open valences.
+
+Units with at least three connections become vertices; ditopic units are
+contracted into edges.
 '''
 __author__ = "Dr. Dinga Wonanke"
 __status__ = "production"
@@ -29,6 +25,7 @@ from collections.abc import Sequence
 
 import numpy as np
 from ase.atoms import Atoms
+from ase.data import covalent_radii
 
 from mofstructure import generate_cgd, mofdeconstructor
 
@@ -46,6 +43,11 @@ OLEFIN_MAX_BOND_LENGTH = 1.42
 # mean chemical rings only, so larger ones are not looked for at all. Real COF
 # monomers close rings of at most 6; the smallest pore ring is far above 8.
 MAX_CHEMICAL_RING_SIZE = 8
+
+# ASE's default skin adds 0.6 A to pair cutoffs, admitting contacts that can
+# create false rings. This empirical heavy-atom cutoff allows C-C to 1.75 A;
+# hydrogen contacts and isolated atoms are handled separately below.
+MAX_BOND_RADII_FACTOR = 1.15
 
 
 @dataclass
@@ -201,6 +203,113 @@ def small_rings(graph, max_size: int = MAX_CHEMICAL_RING_SIZE) -> list[list[int]
     return list(rings.values())
 
 
+def prune_perceived_bonds(
+    ase_atom: Atoms,
+    graph,
+    bond_matrix,
+    bond_offsets,
+    max_radii_factor: float = MAX_BOND_RADII_FACTOR,
+):
+    '''
+    Remove excess contacts from ASE neighbour-list connectivity.
+
+    Hydrogen retains its nearest heavy neighbour, or its nearest contact if no
+    heavy neighbour exists. Heavy-heavy bonds are retained up to
+    ``max_radii_factor * (r_i + r_j)``. The shortest attachment is restored for
+    atoms left isolated, including heavy atoms left without a heavy neighbour.
+
+    The attachment rule preserves long substituent bonds, such as the 1.67 A
+    methoxy C-O bond in TpOMe-PaNO2.
+
+    **parameters:**
+        - ase_atom: ASE atoms object
+
+        - graph: atom index -> list of bonded atom indices
+
+        - bond_matrix: adjacency matrix matching ``graph``
+
+        - bond_offsets: (i, j) -> list of lattice offsets of that bond
+
+        - max_radii_factor: longest bond kept, as a multiple of r_i + r_j
+
+    **returns:**
+        the same three structures with the spurious bonds removed
+    '''
+    positions = ase_atom.get_positions()
+    cell = np.asarray(ase_atom.get_cell())
+    numbers = ase_atom.get_atomic_numbers()
+    radii = covalent_radii[numbers]
+
+    # (i, j, offset) -> length, for i <= j so each bond is measured once
+    lengths = {}
+    for (first, second), offsets in bond_offsets.items():
+        if second < first:
+            continue
+        for offset in offsets:
+            shift = np.asarray(offset, dtype=float) @ cell
+            lengths[(first, second, tuple(int(x) for x in offset))] = float(
+                np.linalg.norm(positions[second] + shift - positions[first])
+            )
+
+    shortest = {}
+    nearest_heavy = {}
+    for key, distance in lengths.items():
+        first, second, _ = key
+        for index, partner in ((first, second), (second, first)):
+            if index not in shortest or distance < shortest[index][1]:
+                shortest[index] = (key, distance)
+            if numbers[partner] == 1:
+                continue
+            if index not in nearest_heavy or distance < nearest_heavy[index][1]:
+                nearest_heavy[index] = (key, distance)
+
+    def is_bond(key):
+        first, second, _ = key
+        if numbers[first] == 1 or numbers[second] == 1:
+            # Prefer a heavy neighbour to avoid pairing nearby C-H hydrogens.
+            return all(
+                numbers[index] != 1
+                or nearest_heavy.get(index, shortest[index])[0] == key
+                for index in (first, second)
+            )
+        return (
+            lengths[key]
+            <= max_radii_factor * (radii[first] + radii[second])
+        )
+
+    kept = {key for key in lengths if is_bond(key)}
+    # Restore attachments lost to the distance cutoff.
+    attached = {index for key in kept for index in key[:2]}
+    heavy_attached = {
+        index for key in kept for index in key[:2]
+        if numbers[key[0]] != 1 and numbers[key[1]] != 1
+    }
+    for index, (key, _) in shortest.items():
+        if index not in attached:
+            kept.add(key)
+    for index, (key, _) in nearest_heavy.items():
+        if numbers[index] != 1 and index not in heavy_attached:
+            kept.add(key)
+
+    new_offsets = {}
+    new_graph = {index: [] for index in graph}
+    new_matrix = np.zeros_like(bond_matrix)
+    for first, second, offset in sorted(kept):
+        back = tuple(-x for x in offset)
+        new_offsets.setdefault((first, second), []).append(offset)
+        new_graph[first].append(second)
+        new_matrix[first, second] = 1
+        new_matrix[second, first] = 1
+        if (second, first, back) in kept and second != first:
+            # already counted from the other end of the same bond
+            continue
+        new_offsets.setdefault((second, first), []).append(back)
+        if second != first:
+            new_graph[second].append(first)
+
+    return new_graph, new_matrix, new_offsets
+
+
 def perceive(ase_atom: Atoms) -> COFPerception:
     '''
     Build the shared perception of one structure.
@@ -213,6 +322,9 @@ def perceive(ase_atom: Atoms) -> COFPerception:
     '''
     graph, bond_matrix, bond_offsets = \
         mofdeconstructor.compute_ase_neighbour_with_offsets(ase_atom)
+    graph, bond_matrix, bond_offsets = prune_perceived_bonds(
+        ase_atom, graph, bond_matrix, bond_offsets
+    )
     graph = {int(k): [int(v) for v in vals] for k, vals in graph.items()}
     rings = small_rings(graph, MAX_CHEMICAL_RING_SIZE)
 
@@ -246,22 +358,16 @@ def perceive(ase_atom: Atoms) -> COFPerception:
 
 def find_imine_bonds(perception: COFPerception, **_options) -> list[Bond]:
     '''
-    Find the C=N of an imine, ketimine, hydrazone or azine linkage.
+    Find C=N bonds in imine, ketimine, hydrazone and azine linkages.
 
-    All four are made by condensing a carbonyl with an amine, a hydrazide or
-    hydrazine, and all four leave the same fragment to cut: a nitrogen carrying
-    no hydrogen and exactly two heavy neighbours, one of which is the sp2 carbon
-    that used to be the carbonyl. Cutting there returns the nitrogen to the
-    amine-derived monomer and the carbon to the aldehyde-derived one::
+    Candidate nitrogen must be acyclic, hydrogen-free and bonded to two heavy
+    atoms. Candidate carbon must be acyclic, have two or three heavy neighbours
+    and at most one hydrogen. This permits CIFs with missing methine hydrogens;
+    the nitrogen coordination requirement excludes terminal nitriles.
 
-        Ar-CH=N-Ar'      imine       cut CH=N
-        Ar-CH=N-NH-CO-   hydrazone   cut CH=N, the N-N stays with the hydrazide
-        Ar-CH=N-N=CH-Ar' azine       cut both CH=N, N=N becomes a ditopic edge
-
-    Ring nitrogens are never candidates. Without that guard a pyridine, a
-    bipyridine or a porphyrin in the monomer looks exactly like an imine -- an
-    aromatic carbon next to a ring nitrogen has three neighbours, one nitrogen
-    and one hydrogen -- and the ring would be torn open.
+    Cuts retain nitrogen on the amine-derived fragment. In a hydrazone the N-N
+    bond remains intact; in an azine both C=N bonds are cut. Ring atoms are
+    excluded to preserve pyridine, bipyridine and porphyrin cores.
 
     **parameters:**
         - perception: COFPerception
@@ -283,7 +389,8 @@ def find_imine_bonds(perception: COFPerception, **_options) -> list[Bond]:
             j for j in neighbours
             if perception.symbols[j] == 'C'
             and not perception.in_ring(j)
-            and perception.degree(j) == 3
+            and len(perception.heavy[j]) in (2, 3)
+            and perception.n_hydrogen[j] <= 1
         ]
         if not candidates:
             continue
@@ -386,13 +493,13 @@ def _has_neighbouring_ring_carbonyl(perception: COFPerception, carbon: int) -> b
 
 def find_azo_bonds(perception: COFPerception, **_options) -> list[Bond]:
     '''
-    Find the N=N of an azo linkage.
+    Find the N-N bond in aryl azo, azoxy and azodioxy linkages.
 
-    Both nitrogens carry no hydrogen and are each bonded to one aryl carbon, so
-    cutting the N=N leaves one nitrogen on each monomer. The requirement that
-    the carbon partners are ring atoms is what separates an azo from an azine,
-    whose nitrogens are bonded to the exocyclic methine carbons instead and
-    which ``find_imine_bonds`` already handles.
+    Each nitrogen must be acyclic, hydrogen-free and bonded to one nitrogen and
+    one ring carbon. Terminal oxygen substituents are allowed and remain on the
+    nitrogen-containing fragments. This includes the azodioxy linkage in NPN
+    frameworks. Azines have exocyclic carbon neighbours and are handled by
+    ``find_imine_bonds``.
 
     **parameters:**
         - perception: COFPerception
@@ -418,10 +525,18 @@ def find_azo_bonds(perception: COFPerception, **_options) -> list[Bond]:
 
 
 def _is_aryl_azo_nitrogen(perception: COFPerception, index: int) -> bool:
-    '''True for a hydrogen-free nitrogen bonded to one nitrogen and one ring carbon.'''
+    '''
+    Check for hydrogen-free nitrogen bonded to one N and one ring C.
+
+    Terminal oxygens are ignored when counting neighbours. Nitro groups fail
+    the nitrogen-neighbour requirement.
+    '''
     if perception.n_hydrogen[index] != 0:
         return False
-    neighbours = perception.heavy[index]
+    neighbours = [
+        j for j in perception.heavy[index]
+        if not perception.is_terminal_oxygen(j)
+    ]
     if len(neighbours) != 2:
         return False
     carbons = [
@@ -476,31 +591,37 @@ def find_amide_bonds(perception: COFPerception, **_options) -> list[Bond]:
 
 def find_boron_linkage_bonds(perception: COFPerception, **_options) -> list[Bond]:
     '''
-    Find the B-C(aryl) of a boroxine or boronate ester linkage.
+    Find aryl attachments to boroxine, boronate ester and borazine rings.
 
-    Both linkages put the boron inside a ring -- the B3O3 of a boroxine, the
-    BO2C2 of a boronate ester -- and hang the monomer off it through a single
-    exocyclic B-C bond. Cutting there keeps the boron ring whole, so a boroxine
-    stays a three-connected node in its own right and a boronate ester ring
-    stays with the catechol that formed it. A free boronic acid has no ring and
-    is left alone.
+    Check all atoms in each boron-containing ring so that N-aryl attachments in
+    borazines are included. Only bonds leaving the ring system are cut; fused
+    catechol rings remain intact. Free boronic acids are excluded.
 
     **parameters:**
         - perception: COFPerception
 
     **returns:**
-        list of (boron, carbon) bonds to cut
+        list of (ring atom, carbon) bonds to cut
     '''
     bonds = []
-    for index, symbol in enumerate(perception.symbols):
-        if symbol != 'B' or not perception.in_ring(index):
+    seen = set()
+    for ring in perception.rings:
+        if not any(perception.symbols[i] == 'B' for i in ring):
             continue
-        for neighbour in perception.heavy[index]:
-            if perception.symbols[neighbour] != 'C':
-                continue
-            if perception.share_ring(index, neighbour):
-                continue
-            bonds.append((index, neighbour))
+        ring_set = set(ring)
+        for index in ring:
+            for neighbour in perception.heavy[index]:
+                if neighbour in ring_set:
+                    continue
+                if perception.symbols[neighbour] != 'C':
+                    continue
+                if perception.share_ring(index, neighbour):
+                    continue
+                key = (min(index, neighbour), max(index, neighbour))
+                if key in seen:
+                    continue
+                seen.add(key)
+                bonds.append((index, neighbour))
     return bonds
 
 
@@ -741,6 +862,165 @@ def find_ester_bonds(perception: COFPerception, **_options) -> list[Bond]:
     return bonds
 
 
+def ring_systems(perception: COFPerception) -> dict[int, int]:
+    '''
+    Group fused and directly bonded rings into cores.
+
+    Directly bonded rings, such as biphenyl, share one core. Acyclic groups
+    between distinct cores are considered separately by ``acyclic_bridges``.
+
+    **parameters:**
+        - perception: COFPerception
+
+    **returns:**
+        ring atom index -> id of the core it belongs to
+    '''
+    parent = {}
+
+    def find(index):
+        parent.setdefault(index, index)
+        while parent[index] != index:
+            parent[index] = parent[parent[index]]
+            index = parent[index]
+        return index
+
+    def union(first, second):
+        first, second = find(first), find(second)
+        if first != second:
+            parent[first] = second
+
+    for index in perception.graph:
+        if perception.in_ring(index):
+            find(index)
+    for index in list(parent):
+        for neighbour in perception.heavy[index]:
+            if perception.in_ring(neighbour):
+                union(index, neighbour)
+
+    return {index: find(index) for index in parent}
+
+
+def acyclic_bridges(perception: COFPerception) -> list[dict]:
+    '''
+    Find acyclic heavy-atom groups connecting at least two ring cores.
+
+    Prune terminal substituents from each group to obtain its backbone.
+    Hydrogens are excluded. Return only backbones with at least two atoms.
+
+    **parameters:**
+        - perception: COFPerception
+
+    **returns:**
+        list of dicts with keys ``atoms``, ``backbone`` and ``cores``
+    '''
+    core_of = ring_systems(perception)
+    acyclic = [
+        index for index, symbol in enumerate(perception.symbols)
+        if symbol != 'H' and not perception.in_ring(index)
+    ]
+    remaining = set(acyclic)
+
+    bridges = []
+    while remaining:
+        stack = [remaining.pop()]
+        group = set(stack)
+        while stack:
+            current = stack.pop()
+            for neighbour in perception.heavy[current]:
+                if neighbour in remaining:
+                    remaining.discard(neighbour)
+                    group.add(neighbour)
+                    stack.append(neighbour)
+
+        cores = {
+            core_of[neighbour]
+            for index in group
+            for neighbour in perception.heavy[index]
+            if neighbour in core_of
+        }
+        if len(cores) < 2:
+            continue
+
+        # Remove terminal branches without removing connections to ring cores.
+        backbone = set(group)
+        while True:
+            leaves = {
+                index for index in backbone
+                if sum(
+                    1 for neighbour in perception.heavy[index]
+                    if neighbour in backbone or neighbour in core_of
+                ) < 2
+            }
+            if not leaves:
+                break
+            backbone -= leaves
+
+        if len(backbone) < 2:
+            continue
+        bridges.append(
+            {'atoms': sorted(group), 'backbone': sorted(backbone),
+             'cores': sorted(cores)}
+        )
+    return bridges
+
+
+def find_bridge_bonds(
+    perception: COFPerception,
+    *,
+    claimed: frozenset = frozenset(),
+    max_bridge_length: int = 4,
+    **_options,
+) -> list[Bond]:
+    '''
+    Find candidate cuts in bridges not claimed by a named linkage finder.
+
+    Cut backbone bonds between different elements, up to ``max_bridge_length``
+    atoms per backbone. Skip a bridge if a named finder has already claimed a
+    bond incident to its backbone, to avoid additional fragments.
+
+    C-C bonds are excluded because monomer spacers can resemble linkages.
+    Neither cut site may have more than one hydrogen, which excludes glycol
+    spacers and reduced imines with explicit hydrogens. This guard does not infer
+    bond order or hybridisation when hydrogens are missing.
+
+    These rules describe local connectivity, not a unique condensation reaction
+    or assignment of starting monomers.
+
+    **parameters:**
+        - perception: COFPerception
+
+        - claimed: bonds already found, as a frozenset of ordered (i, j) pairs
+
+        - max_bridge_length: longest backbone, in atoms, still called a linkage
+
+    **returns:**
+        list of (i, j) bonds to cut
+    '''
+    bonds = []
+    for bridge in acyclic_bridges(perception):
+        backbone = bridge['backbone']
+        if len(backbone) > max_bridge_length:
+            continue
+        backbone_set = set(backbone)
+        if any(
+            (min(i, j), max(i, j)) in claimed
+            for i in backbone_set for j in perception.heavy[i]
+        ):
+            continue
+
+        for first in backbone:
+            for second in perception.heavy[first]:
+                if second <= first or second not in backbone_set:
+                    continue
+                if perception.symbols[first] == perception.symbols[second]:
+                    continue
+                if max(perception.n_hydrogen[first],
+                       perception.n_hydrogen[second]) > 1:
+                    continue
+                bonds.append((first, second))
+    return bonds
+
+
 LINKAGE_FINDERS = {
     'imine': find_imine_bonds,
     'ketoenamine': find_ketoenamine_bonds,
@@ -751,7 +1031,11 @@ LINKAGE_FINDERS = {
     'boron': find_boron_linkage_bonds,
     'triazine': find_triazine_bonds,
     'olefin': find_olefin_bonds,
+    'bridge': find_bridge_bonds,
 }
+
+# Run fallback finders after named linkage finders.
+FALLBACK_LINKAGES = ('bridge',)
 
 DEFAULT_LINKAGES = tuple(LINKAGE_FINDERS)
 
@@ -811,17 +1095,29 @@ def cof_linkage_bonds(
             f"Available: {sorted(LINKAGE_FINDERS)}."
         )
 
+    # Named finders claim bonds before the fallback runs.
+    ordered = [name for name in names if name not in FALLBACK_LINKAGES]
+    ordered += [name for name in names if name in FALLBACK_LINKAGES]
+
     found = {}
-    for name in names:
-        bonds = LINKAGE_FINDERS[name](perception, **options)
+    claimed = set()
+    for name in ordered:
+        if name in FALLBACK_LINKAGES:
+            bonds = LINKAGE_FINDERS[name](
+                perception, claimed=frozenset(claimed), **options
+            )
+        else:
+            bonds = LINKAGE_FINDERS[name](perception, **options)
         if bonds:
             found[name] = bonds
+            claimed |= {(min(i, j), max(i, j)) for i, j in bonds}
     return found
 
 
 def secondary_building_units(
     ase_atom: Atoms,
     linkages: Sequence[str] | None = None,
+    perception: COFPerception | None = None,
     **options,
 ):
     '''
@@ -835,6 +1131,8 @@ def secondary_building_units(
         - ase_atom: ASE atoms object
 
         - linkages: names of the linkages to search for, default all
+
+        - perception: a COFPerception to reuse, computed here when not given
 
         - options: passed to the finders, e.g. ``olefin_requires_nitrile``
 
@@ -850,7 +1148,8 @@ def secondary_building_units(
         breaking_pairs: the cut bonds as [i, j, sx, sy, sz], carrying the
             lattice offset each bond crosses
     '''
-    perception = perceive(ase_atom)
+    if perception is None:
+        perception = perceive(ase_atom)
     porphyrin_checker = mofdeconstructor.metal_in_porphyrin2(
         ase_atom, perception.graph
     )
@@ -1057,8 +1356,9 @@ def cof_topology_graph(
 
         node_atoms: node id -> the atom indices that node represents
     '''
+    perception = perceive(ase_atom)
     components, _, _, _, breaking_pairs = secondary_building_units(
-        ase_atom, linkages=linkages, **options
+        ase_atom, linkages=linkages, perception=perception, **options
     )
     if not breaking_pairs:
         raise ValueError(
@@ -1072,7 +1372,7 @@ def cof_topology_graph(
         )
 
     kept_graph, kept_offsets = generate_cgd.kept_bond_graph(
-        ase_atom, breaking_pairs
+        ase_atom, breaking_pairs, perception.graph, perception.bond_offsets
     )
     base_edges = generate_cgd.base_edges_with_shifts(
         ase_atom, components, breaking_pairs, kept_graph, kept_offsets

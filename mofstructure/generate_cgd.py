@@ -342,23 +342,27 @@ def component_self_translations(
     return self_translations
 
 
-def kept_bond_graph(atoms, breaking_pairs):
+def kept_bond_graph(atoms, breaking_pairs, atom_graph=None, bond_offsets=None):
     '''
-    Build the atom-level graph that remains after the deconstruction cuts.
+    Build the atom graph remaining after deconstruction cuts.
 
-    Wraps the neighbour search and bond removal so a caller that needs the kept
-    graph for more than one purpose (edges between components and each
-    component's own periodicity, say) can compute it once and pass it around.
+    Pass both ``atom_graph`` and ``bond_offsets`` to reuse the connectivity used
+    to choose the cuts. COF deconstruction supplies its pruned graph to avoid
+    reintroducing discarded contacts. If either argument is missing, both are
+    recomputed from the neighbour list.
 
     **parameters:**
         - atoms: ASE atoms object
         - breaking_pairs: broken bonds from the deconstructor
+        - atom_graph: connectivity to use, perceived here when not given
+        - bond_offsets: lattice offsets matching ``atom_graph``
 
     **returns:**
         (kept_graph, kept_offsets)
     '''
-    atom_graph, _, bond_offsets = \
-        mofdeconstructor.compute_ase_neighbour_with_offsets(atoms)
+    if atom_graph is None or bond_offsets is None:
+        atom_graph, _, bond_offsets = \
+            mofdeconstructor.compute_ase_neighbour_with_offsets(atoms)
     return remove_broken_bonds_from_breaking_pairs(
         atom_graph, bond_offsets, breaking_pairs
     )
@@ -1141,6 +1145,42 @@ ZEOLITE_T_ELEMENTS = frozenset(
 )
 
 
+def tetrahedral_t_elements(atoms: Atoms) -> list[str]:
+    '''
+    Select candidate framework elements by oxygen coordination.
+
+    An element qualifies when at least half its atoms have exactly four oxygen
+    neighbours. Non-oxygen neighbours do not affect the count. The per-element
+    threshold tolerates occasional extra oxygen contacts from guests and can
+    exclude exchange cations, such as lithium in Li-RHO.
+
+    This is a coordination heuristic; it does not classify individual sites of
+    the same element separately.
+
+    **parameters:**
+        - atoms: ASE atoms object
+
+    **returns:**
+        list of element symbols, sorted. Empty when no element qualifies,
+        which is the caller's signal that this is not a tetrahedral
+        framework.
+    '''
+    symbols = atoms.get_chemical_symbols()
+    neighbours, _ = mofdeconstructor.compute_ase_neighbour(atoms)
+    seen: dict[str, int] = {}
+    tetrahedral: dict[str, int] = {}
+    for index, symbol in enumerate(symbols):
+        if symbol not in ZEOLITE_T_ELEMENTS:
+            continue
+        seen[symbol] = seen.get(symbol, 0) + 1
+        oxygens = sum(1 for j in neighbours[index] if symbols[j] == "O")
+        tetrahedral[symbol] = tetrahedral.get(symbol, 0) + (oxygens == 4)
+    return sorted(
+        symbol for symbol, count in seen.items()
+        if 2 * tetrahedral[symbol] >= count
+    )
+
+
 def zeolite_t_edges(
     atoms: Atoms,
     *,
@@ -1178,9 +1218,9 @@ def zeolite_t_edges(
             Elements that are contracted away, two-coordinate by assumption.
 
         - t_elements: sequence of str, optional
-            Elements accepted at a tetrahedral site. Defaults to
-            `ZEOLITE_T_ELEMENTS`. Anything neither bridge nor T - an
-            extra-framework cation, say - takes no part in the net.
+            Elements accepted at tetrahedral sites. Defaults to the result of
+            ``tetrahedral_t_elements``, or ``ZEOLITE_T_ELEMENTS`` if none qualify.
+            Elements outside the bridge and T sets are excluded from the net.
 
     **returns:**
         tuple
@@ -1188,7 +1228,10 @@ def zeolite_t_edges(
             0-based T indices, and `report` recording the T atoms kept and any
             bridge that did not join exactly two of them.
     '''
-    allowed = frozenset(t_elements) if t_elements else ZEOLITE_T_ELEMENTS
+    allowed = (
+        frozenset(t_elements) if t_elements
+        else frozenset(tetrahedral_t_elements(atoms)) or ZEOLITE_T_ELEMENTS
+    )
     bridges = frozenset(bridge)
     symbols = atoms.get_chemical_symbols()
     neighbours, _matrix, offsets = mofdeconstructor.compute_ase_neighbour_with_offsets(
