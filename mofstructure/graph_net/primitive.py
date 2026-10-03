@@ -146,7 +146,10 @@ def additional_translations(
     return found
 
 
-def primitive(graph: PeriodicGraph) -> PeriodicGraph:
+def primitive(
+    graph: PeriodicGraph,
+    placement: Sequence[RatVec] | None = None,
+) -> PeriodicGraph:
     '''
     Rewrite a net on its primitive cell.
 
@@ -159,6 +162,11 @@ def primitive(graph: PeriodicGraph) -> PeriodicGraph:
         - graph: PeriodicGraph
             Net whose quotient graph is connected.
 
+        - placement: sequence or None
+            Barycentric placement of `graph`; computed when omitted. Passing
+            it avoids solving the placement twice when the caller has
+            already needed it.
+
     **returns:**
         PeriodicGraph
             Equivalent net with the smallest number of vertex orbits and the
@@ -168,7 +176,7 @@ def primitive(graph: PeriodicGraph) -> PeriodicGraph:
     if dim == 0 or graph.n_vertices == 1:
         return graph
 
-    placement = barycentric_placement(graph)
+    placement = placement if placement is not None else barycentric_placement(graph)
     extra = additional_translations(graph, placement)
     if not extra:
         return graph

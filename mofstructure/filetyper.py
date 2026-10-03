@@ -10,6 +10,7 @@ command line tools use to grow a database file structure by structure.
 __author__ = "Dr. Dinga Wonanke"
 __status__ = "production"
 import os
+import tempfile
 import pickle
 import csv
 import json
@@ -96,26 +97,81 @@ def json_to_ase_atom(data,  encoder, filename):
     return
 
 
-def append_json_atom(data,  encoder, filename):
+def write_json_atomic(data, filename, encoder=None, indent=4, sort_keys=True):
     '''
-    append a data containing an ase atom object
-    '''
-    if not os.path.exists(filename):
-        with open(filename, 'w', encoding='utf-8') as f_obj:
-            f_obj.write('{}')
-    elif os.path.getsize(filename) == 0:
-        with open(filename, 'w', encoding='utf-8') as f_obj:
-            f_obj.write('{}')
-    with open(filename, 'r+', encoding='utf-8') as f_obj:
-        # First we load existing data into a dict.
-        file_data = json.load(f_obj)
-        # Join new_data with file_data inside emp_details
-        file_data.update(data)
-        # Sets file's current position at offset.
-        f_obj.seek(0)
-        # convert back to json.
+    Write a json file so that it is never left half written.
 
-        json.dump(data, f_obj, indent=4, sort_keys=False, cls=encoder)
+    The data go to a temporary file in the same directory, which is flushed
+    to disk and then renamed over the target. A rename within one file system
+    is atomic, so a job killed at any moment leaves either the old file or the
+    new one, never a truncated file that cannot be loaded.
+
+    **parameters:**
+        - data: json-serialisable object
+
+        - filename: str
+            Destination.
+
+        - encoder: json.JSONEncoder subclass, optional
+
+        - indent: int or None
+
+        - sort_keys: bool
+    '''
+    directory = os.path.dirname(os.path.abspath(filename)) or "."
+    os.makedirs(directory, exist_ok=True)
+    handle, temporary = tempfile.mkstemp(
+        prefix=".tmp_", suffix=".json", dir=directory)
+    try:
+        with os.fdopen(handle, "w", encoding="utf-8") as file:
+            json.dump(data, file, indent=indent, sort_keys=sort_keys,
+                      cls=encoder)
+            file.flush()
+            os.fsync(file.fileno())
+        os.replace(temporary, filename)
+    except BaseException:
+        if os.path.exists(temporary):
+            os.remove(temporary)
+        raise
+
+
+def _load_json_or_empty(filename):
+    '''
+    Load a json mapping for updating, treating a missing or empty file as {}.
+
+    A file that exists but cannot be parsed is not silently replaced, since
+    that would discard every record it holds. The error names the file so it
+    can be repaired or moved aside.
+    '''
+    if not os.path.exists(filename) or os.path.getsize(filename) == 0:
+        return {}
+    try:
+        with open(filename, encoding="utf-8") as file:
+            return json.load(file)
+    except json.JSONDecodeError as error:
+        raise ValueError(
+            f"{filename} is not valid json ({error}). It was probably "
+            "truncated by an interrupted run with an older version of "
+            "mofstructure. Move it aside and rebuild it with "
+            "mofstructure_merge, or repair it by hand."
+        ) from error
+
+
+def append_json_atom(data, encoder, filename):
+    '''
+    Add records containing ASE atoms objects to a json file.
+
+    **parameters:**
+        - data: python dictionary
+            New records; existing keys are overwritten.
+
+        - encoder: json.JSONEncoder subclass able to serialise the atoms.
+
+        - filename: str
+    '''
+    file_data = _load_json_or_empty(filename)
+    file_data.update(data)
+    write_json_atomic(file_data, filename, encoder=encoder, sort_keys=False)
 
 
 def summary_frame(records, drop=()):
@@ -147,25 +203,21 @@ def summary_frame(records, drop=()):
 
 def append_json(new_data, filename):
     '''
-    append a new data in an existing json file
+    Add records to a json file, overwriting existing keys.
+
+    The file is rewritten atomically, so an interrupted job cannot leave it
+    truncated. Rewriting a large file after every structure is slow, which is
+    why the batch commands record progress in json-lines files and only call
+    this when they consolidate.
+
+    **parameters:**
+        - new_data: python dictionary
+
+        - filename: str
     '''
-    if not os.path.exists(filename):
-        with open(filename, 'w', encoding='utf-8') as file:
-            file.write('{}')
-    elif os.path.getsize(filename) == 0:
-        with open(filename, 'w', encoding='utf-8') as file:
-            file.write('{}')
-    with open(filename, 'r+', encoding='utf-8') as file:
-        # First we load existing data into a dict.
-        file_data = json.load(file)
-        # Overwrite existing keys with new_data
-        file_data.update(new_data)
-        # Sets file's current position at offset.
-        file.seek(0)
-        # convert back to json.
-        json.dump(file_data, file, indent=4, sort_keys=True)
-        # drop any tail left by a longer previous version of the file.
-        file.truncate()
+    file_data = _load_json_or_empty(filename)
+    file_data.update(new_data)
+    write_json_atomic(file_data, filename)
 
 
 def read_json(file_name):

@@ -141,29 +141,46 @@ def collect_ligand(organic_ligands, base_name, xyz_path):
     return read_write.convert_numpy_types(data_to_json)
 
 
+def _legacy_state(structure_db, topology):
+    '''
+    What a database written before the batch runner already holds.
+
+    **returns:**
+        (complete, backfill)
+            Names with every requested analysis, which are skipped, and
+            names with building units but no fingerprint or net, for which
+            only the missing analyses are run, as the command has always done.
+    '''
+    def keys(name):
+        path = os.path.join(structure_db, name)
+        if not os.path.exists(path) or not os.path.getsize(path):
+            return set()
+        return {k for k, v in read_write.load_data(path).items() if v}
+
+    sbu = keys('sbus_and_linkers.json')
+    complete = sbu & keys('fingerprint_data.json')
+    if topology:
+        complete &= keys('topology_data.json')
+    return complete, sbu - complete
+
+
 def compile_data(cif_files, result_folder, verbose=False, oms=False,
                  topology=True, topology_method='auto',
                  porosity_timeout=default_porosity_timeout,
-                 probe_radius=1.86, high_accuracy=True):
+                 probe_radius=1.86, high_accuracy=True, workers=1,
+                 max_time=7200, memory_limit=None, shard=None,
+                 retry_failed=False, recycle=50, topology_timeout=300,
+                 merge_every=60):
     '''
-    A workflow to remove guest, compute porosity and deconstructure
-    mofs and creates a MOF database. The function starts with checking and
-    removing any unbound guest molecule present in the MOF. After that it
-    computed the porosity of all the MOFs and load them in a single csv.
-    Finally the deconstructs the MOFs into the various building units and
-    creates a three json files
+    Build or extend a structure database from a list of structure files.
 
-    1. ase_atoms_building_units.json
-    Json file containing ase atom object of all the building uints and for
-    each ase atom object there are additional information in the info[] key.
-
-    2. sbus_and_linkers.json
-    A json file containing all the information about the linkers and metal
-    sbu.
-
-    3. cluster_and_ligands.json
-    A json file containing all the information about the ligands and metal
-    cluster.
+    For each structure the guests are removed and the building units, ligand
+    cluster fingerprint, porosity, optionally the open metal sites and the
+    underlying net are recorded. Every structure runs in a separate worker
+    process with a hard time limit (see `mofstructure.batch`), results are
+    checkpointed as they finish, and the json and csv files under
+    `Structure_Data` are rebuilt at the end. Repeating the call continues an
+    interrupted run.
 
     **parameters:**
         - cif_files: list of str
@@ -179,180 +196,106 @@ def compile_data(cif_files, result_folder, verbose=False, oms=False,
             Record open metal sites.
 
         - topology: bool
-            Compute the underlying net. Identification runs in process and
-            costs about a sixth of the run, so it is on by default.
+            Compute the underlying net.
 
         - topology_method: str
-            Node definition passed to `MOFstructure.get_topology`, or "auto"
-            to choose it from the structure.
+            Node definition passed to `MOFstructure.get_topology`, or "auto".
 
         - porosity_timeout: float
-            Seconds allowed per structure before zeo++ is killed.
+            Seconds allowed for zeo++ per structure.
 
         - probe_radius: float
             Probe radius used for the porosity.
 
         - high_accuracy: bool
             Run zeo++ at high accuracy.
+
+        - workers: int
+            Worker processes.
+
+        - max_time: float
+            Hard wall-clock limit per structure in seconds.
+
+        - memory_limit: float or None
+            Memory limit per worker in GB (Linux).
+
+        - shard: str or None
+            "i/N" to process one part of the list.
+
+        - retry_failed: bool
+            Run again structures recorded as failed.
+
+        - recycle: int
+            Structures per worker before it is replaced.
+
+        - topology_timeout: int
+            Seconds allowed for net identification.
+
+        - merge_every: float
+            Minutes between refreshes of the json and csv files during the
+            run; 0 refreshes only at the end.
     '''
-    if not os.path.exists(result_folder):
-        os.makedirs(result_folder)
+    from types import SimpleNamespace
+    from mofstructure.batch import progress_printer
+    from mofstructure.batch_tasks import database_name, run_command
+
     structure_db = os.path.join(result_folder, read_write.STRUCTURE_DATA)
-    if not os.path.exists(structure_db):
-        os.makedirs(structure_db)
     xyz_path = os.path.join(result_folder, read_write.XYZ_DB)
-    if not os.path.exists(xyz_path):
-        os.makedirs(xyz_path)
+    os.makedirs(structure_db, exist_ok=True)
+    os.makedirs(xyz_path, exist_ok=True)
 
-    path2sbu = os.path.join(structure_db, 'sbus_and_linkers.json')
-    path2ligand = os.path.join(structure_db, 'ligands_data.json')
-    porosity_path = os.path.join(structure_db, 'porosity_data.json')
-    oms_path = os.path.join(structure_db, 'structure_oms_and_general_info.json')
-    topology_path = os.path.join(structure_db, 'topology_data.json')
-    fingerprint_path = os.path.join(structure_db, 'fingerprint_data.json')
+    items = [(database_name(f), f) for f in cif_files]
+    options = SimpleNamespace(workers=workers, max_time=max_time,
+                              memory_limit=memory_limit, shard=shard,
+                              retry_failed=retry_failed, recycle=recycle,
+                              merge_every=merge_every)
+    kwargs = dict(xyz_path=xyz_path, oms=oms, topology=topology,
+                  topology_method=topology_method,
+                  topology_timeout=topology_timeout,
+                  porosity_timeout=porosity_timeout,
+                  probe_radius=probe_radius, high_accuracy=high_accuracy)
 
-    if os.path.exists(path2sbu):
-        all_sbu_data = read_write.load_data(path2sbu)
-    else:
-        all_sbu_data = {}
+    printer = progress_printer()
 
-    if os.path.exists(path2ligand):
-        all_ligand_data = read_write.load_data(path2ligand)
-    else:
-        all_ligand_data = {}
+    def quiet(record, done, total):
+        # Failures always, otherwise every hundredth structure, so a long
+        # run leaves a readable log.
+        if record['status'] != 'ok' or done == total or done % 100 == 0:
+            printer(record, done, total)
 
-    if os.path.exists(porosity_path):
-        all_porosity_data = read_write.load_data(porosity_path)
-    else:
-        all_porosity_data = {}
-
-    if os.path.exists(oms_path):
-        all_oms_data = read_write.load_data(oms_path)
-    else:
-        all_oms_data = {}
-
-    if os.path.exists(topology_path):
-        all_topology_data = read_write.load_data(topology_path)
-    else:
-        all_topology_data = {}
-
-    if os.path.exists(fingerprint_path):
-        all_fingerprint_data = read_write.load_data(fingerprint_path)
-    else:
-        all_fingerprint_data = {}
-
-    seen = list(all_sbu_data.keys())
-
-    for cif_file in cif_files:
-        try:
-            mof_object = structure.MOFstructure(filename=cif_file)
-
-            base_name = os.path.basename(cif_file).split('.')[0]
-            # Computed outside the "already done" branch below so that a
-            # database built before this ran, or built without the flag, is
-            # filled in rather than skipped.
-            if topology and not all_topology_data.get(base_name):
-                try:
-                    record = mof_object.get_topology(method=topology_method)
-                    # `status` describes the run rather than the net, and
-                    # mofstructure_topology already leaves it out of this
-                    # file. Dropping it here too keeps one shape whichever
-                    # command wrote the row. `get_topology` still returns it.
-                    all_topology_data[base_name] = {
-                        field: value for field, value in record.items()
-                        if field != "status"
-                    }
-                except Exception:
-                    # A failed net must not discard the rest of the record.
-                    all_topology_data[base_name] = None
-                read_write.append_json(all_topology_data, topology_path)
-
-            if not all_fingerprint_data.get(base_name):
-                try:
-                    all_fingerprint_data[base_name] = (
-                        mof_object.get_ligand_cluster_fingerprint())
-                except Exception:
-                    # A fingerprint failure must not discard porosity, SBU,
-                    # ligand or OMS results for an otherwise readable MOF.
-                    all_fingerprint_data[base_name] = None
-                read_write.append_json(all_fingerprint_data, fingerprint_path)
-
-            if base_name not in seen:
-                print("======================================\n")
-                print(f'     processing : {base_name}     \n')
-                print("======================================")
-                sbu_data = mof_object.get_sbu()
-                ligand_data = mof_object.get_ligands()
-
-                if sbu_data is not None:
-                    metal_sbus, organic_sbus = sbu_data
-                    data_to_json = collect_sbus(metal_sbus,
-                                                organic_sbus,
-                                                base_name,
-                                                xyz_path)
-                    all_sbu_data[base_name] = data_to_json
-                    read_write.append_json(all_sbu_data, path2sbu)
-
-                if ligand_data is not None:
-                    metal_clusters, organic_ligands = ligand_data
-
-                    data_to_json = collect_ligand(organic_ligands, base_name, xyz_path)
-                    all_ligand_data[base_name] = data_to_json
-                    read_write.append_json(all_ligand_data, path2ligand)
-                porosity = mof_object.get_porosity(
-                    probe_radius=probe_radius,
-                    timeout=porosity_timeout,
-                    high_accuracy=high_accuracy)
-                # The record has the same keys whether or not zeo++ managed
-                # the structure, so a failure is a row of missing values
-                # carrying its reason rather than a gap in the table.
-                all_porosity_data[base_name] = porosity
-                read_write.append_json(all_porosity_data, porosity_path)
-
-                if len(mof_object.ase_atoms) > 5000:
-                    print('system size too large, will run out of application memory')
-                    print('so will skip')
-                    all_oms_data[base_name] = None
-                    continue
-                all_oms_data[base_name] = mof_object.get_oms()
-                read_write.append_json(all_oms_data, oms_path)
-            else:
-                print("======================================\n")
-                print(f" !!! {base_name} is already done !!! \n")
-                print("======================================")
-        except Exception:
-            pass
-
-    read_write.summary_frame(all_porosity_data).to_csv(structure_db+'/porosity_data.csv')
-
-    if all_topology_data:
-        # the cgd net is a multi line block, so keep it out of the summary
-        read_write.summary_frame(all_topology_data, drop=['cgd']).to_csv(
-            structure_db+'/topology_data.csv')
-
-    if all_fingerprint_data:
-        # The full nested chemical/connectivity description remains in JSON;
-        # the compact columns used for database indexing go into the CSV.
-        fingerprint_summary = read_write.summary_frame(all_fingerprint_data)
-        if not fingerprint_summary.empty:
-            fingerprint_summary[
-                ['fingerprint_hash', 'cluster_units']
-            ].to_csv(structure_db+'/fingerprint_data.csv')
-
+    complete, backfill = _legacy_state(structure_db, topology)
+    if backfill:
+        # Building units recorded by an earlier version: add only the
+        # fingerprint and the net, keeping the stored porosity and units.
+        only = ['fingerprint'] + (['topology'] if topology else [])
+        run_command('database', [i for i in items if i[0] in backfill],
+                    'mofstructure.batch_tasks:database_task',
+                    {**kwargs, 'only': only}, result_folder, options,
+                    on_record=None if verbose else quiet,
+                    extra_skip=complete)
+    run_command('database', [i for i in items if i[0] not in backfill],
+                'mofstructure.batch_tasks:database_task',
+                kwargs, result_folder, options,
+                on_record=None if verbose else quiet,
+                extra_skip=complete)
     if verbose:
         print(f"Saved results to {result_folder}")
-    return
 
 
 def main():
     '''
     Command line interface to deconstruct MOFs to building units,
-    compute porosity and open metal sites
+    compute porosity, topology, fingerprints and open metal sites.
     '''
+    from mofstructure.batch_tasks import BATCH_EPILOG, add_batch_arguments
+
     parser = argparse.ArgumentParser(
-        description='Run work_flow function with optional verbose output')
+        description='Build a structure database from a folder of '
+                    'structures.',
+        epilog=BATCH_EPILOG,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('cif_folder', type=str,
-                        help='list of cif files. like glob')
+                        help='folder of cif files')
 
     parser.add_argument('--oms', action='store_true',
                         help='run oms')
@@ -371,6 +314,9 @@ def main():
                              'chooses it from the structure, so a folder of '
                              'MOFs, COFs and zeolites is handled in one go '
                              '(--topology_method is a deprecated alias)')
+    parser.add_argument('--topology_timeout', type=int, default=300,
+                        help='seconds allowed for net identification '
+                             '(default: 300)')
     parser.add_argument('-pr', '--probe_radius', default=1.86, type=float,
                         help='probe radius used for the porosity '
                              '(default: 1.86)')
@@ -386,10 +332,20 @@ def main():
                         default=read_write.DEFAULT_SAVE_DIR,
                         help='directory to save output files')
     parser.add_argument('-v', '--verbose', action='store_true',
-                        help='print verbose output')
+                        help='print a line for every structure')
+    add_batch_arguments(parser, max_time=7200)
     args = parser.parse_args()
     cif_files = [os.path.join(args.cif_folder, f) for f in os.listdir(
-        args.cif_folder) if f.endswith('.cif')]
+        args.cif_folder) if f.endswith('.cif') and not f.startswith('.')]
     compile_data(cif_files, args.save_dir, args.verbose, args.oms,
                  args.topology, args.topology_method, args.porosity_timeout,
-                 args.probe_radius, args.accuracy == 'high')
+                 args.probe_radius, args.accuracy == 'high',
+                 workers=args.workers, max_time=args.max_time,
+                 memory_limit=args.memory_limit, shard=args.shard,
+                 retry_failed=args.retry_failed, recycle=args.recycle,
+                 merge_every=args.merge_every,
+                 topology_timeout=args.topology_timeout)
+
+
+if __name__ == '__main__':
+    main()

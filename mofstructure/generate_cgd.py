@@ -451,9 +451,6 @@ def base_edges_with_shifts(
         u = atom_to_comp[i]
         v = atom_to_comp[j]
 
-        if u == v:
-            continue
-
         sij = np.array([
             int(pair[2]) if len(pair) > 2 else 0,
             int(pair[3]) if len(pair) > 3 else 0,
@@ -465,6 +462,14 @@ def base_edges_with_shifts(
 
         tuv = iu - iv + sij
         sx, sy, sz = int(tuv[0]), int(tuv[1]), int(tuv[2])
+
+        # A cut between two atoms of one component joins that unit to one of
+        # its own periodic images. In a small cell this is how a building unit
+        # meets its neighbour, so it is an edge of the net and must be kept;
+        # in the supercell the same bond joins two different components. Only
+        # a cut that returns to the same image carries no connectivity.
+        if u == v and not (sx or sy or sz):
+            continue
 
         edges_raw.append((u, v, sx, sy, sz))
 
@@ -1127,8 +1132,10 @@ def splice_two_connected_nodes(edges, candidates):
         if u not in removed and v not in removed
     ]
     for node in removed:
+        # incident[node] holds each neighbour with its translation relative
+        # to the spliced vertex, so b sits at sb - sa as seen from a
         (a, sa), (b, sb) = incident[node]
-        kept.append((a, b, sa[0] - sb[0], sa[1] - sb[1], sa[2] - sb[2]))
+        kept.append((a, b, sb[0] - sa[0], sb[1] - sa[1], sb[2] - sa[2]))
 
     return dedup_periodic_edges(kept), removed
 
@@ -1859,10 +1866,12 @@ def _all_node_graph(atoms, components, breaking_pairs, regions, target_regions):
                     incidences.append((neigh, tuple(int(x) for x in shift)))
             for a in range(len(incidences)):
                 for b in range(a + 1, len(incidences)):
+                    # kept_offsets[(o, x)] is the image of x relative to
+                    # the contracted atom, so v sits at sv - su from u
                     (u_atom, su), (v_atom, sv) = incidences[a], incidences[b]
                     edges.append((
                         atom_node[u_atom], atom_node[v_atom],
-                        su[0] - sv[0], su[1] - sv[1], su[2] - sv[2],
+                        sv[0] - su[0], sv[1] - su[1], sv[2] - su[2],
                     ))
 
     # linkers contract to an edge (ditopic) or a node (polytopic) between the

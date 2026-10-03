@@ -71,6 +71,14 @@ examples:
 exit status:
   0  every structure was identified
   1  at least one was not; the reason is in the status column
+
+long runs and clusters:
+  Each structure runs in a worker process with a hard limit (--max-time), so
+  a crash or a stall costs only that structure; it is reported as crashed or
+  timeout. Results are checkpointed under
+  <save_dir>/Structure_Data/_progress/ as they finish, and repeating the
+  command continues a killed run. Use -j for several workers and
+  --shard slurm/N on a cluster array, then mofstructure_merge <save_dir>.
 """
 
 
@@ -321,6 +329,9 @@ def main(argv: list[str] = None) -> int:
         action="store_true",
         help="print the closing summary only, without a line per structure",
     )
+    from mofstructure.batch_tasks import add_batch_arguments
+
+    add_batch_arguments(parser, max_time=1800)
     args = parser.parse_args(argv)
 
     logging.basicConfig(
@@ -356,33 +367,78 @@ def main(argv: list[str] = None) -> int:
             print(f"{str(path):<28} missing")
             failures += 1
 
-    total = len(targets)
+    # Every structure runs in a worker process with a hard time limit, so a
+    # crash or a stall in one structure cannot end the run, and results are
+    # checkpointed as they finish so a killed job resumes where it stopped.
+    import tempfile
+    from types import SimpleNamespace
+
+    from mofstructure.batch import (parse_shard, run_batch, select_shard,
+                                    shard_suffix)
+    from mofstructure.batch_tasks import consolidate, done_names
+
+    label = "all-methods" if args.all_methods else args.method
+    command = f"topology.{label}"
+    if args.no_save or args.json:
+        scratch = tempfile.mkdtemp(prefix="mofstructure_topology_")
+        structure_db = Path(scratch) / read_write.STRUCTURE_DATA
+    else:
+        scratch = None
+        structure_db = _database_path(args.save_dir).parent
+    shard = parse_shard(args.shard)
+    items = select_shard([(path.stem, str(path)) for path in targets], shard)
+    skip = done_names(structure_db, command, retry_failed=args.retry_failed)
+    total = len(items)
     counter = len(str(total)) * 2 + 2 if total > 1 else 0
-    if targets and not args.quiet:
+    if skip and not args.quiet:
+        print(f"{len(skip & {n for n, _ in items})} structures already "
+              f"recorded by an earlier run are skipped")
+    if items and not args.quiet:
         print(
             f"{'':<{counter}}{'structure':<28} {'status':<22} "
-            f"{'kind':<8} {'method':<14} net"
+            f"{'kind':<8} {'method':<14} net", flush=True
         )
 
-    for number, path in enumerate(targets, start=1):
-        # A long run is mostly waiting, so each finished line says how far
-        # along it is. The width is fixed for the run, so it stays a column.
-        stamp = f"{number:>{len(str(total))}}/{total} " if counter else ""
+    def unpack(batch_record):
+        '''The analyse record(s) a checkpoint line stands for.'''
+        name = batch_record["name"]
+        if batch_record["status"] != "ok":
+            failed = {"status": batch_record["status"],
+                      "detail": batch_record.get("detail"),
+                      "method": label, "components": []}
+            return [(name, failed)]
+        data = batch_record["data"]
         if args.all_methods:
-            results = analyse_methods(str(path), **options)
-            for method, record in results.items():
-                records.append(record)
-                collected[f"{path.stem}:{method}"] = record
-                if not args.quiet:
-                    print(stamp + _row(record, f"{path.name}:{method}"))
-                failures += record["status"] != "ok"
-        else:
-            record = analyse(str(path), method=args.method, **options)
+            return [(f"{name}:{method}", sub) for method, sub in data.items()]
+        return [(name, data)]
+
+    def show(batch_record, done, _total):
+        nonlocal failures
+        stamp = f"{done:>{len(str(total))}}/{total} " if counter else ""
+        for key, record in unpack(batch_record):
             records.append(record)
-            collected[path.stem] = record
-            if not args.quiet:
-                print(stamp + _row(record, path.name))
+            collected[key] = record
             failures += record["status"] != "ok"
+            if not args.quiet:
+                shown = f"{Path(batch_record['file']).name}" + (
+                    f":{key.split(':', 1)[1]}" if ":" in key else "")
+                print(stamp + _row(record, shown), flush=True)
+
+    run_batch(
+        items,
+        "mofstructure.batch_tasks:topology_task",
+        structure_db / "_progress" / f"{command}{shard_suffix(shard)}.jsonl",
+        kwargs={"method": args.method, "all_methods": args.all_methods,
+                "timeout": options["timeout"],
+                "descriptors": options["descriptors"],
+                "symmetry": options["symmetry"]},
+        workers=args.workers,
+        timeout=args.max_time or None,
+        memory_gb=args.memory_limit,
+        recycle=args.recycle,
+        skip=skip,
+        on_record=show,
+    )
 
     if not args.no_save and records:
         if args.json:
@@ -402,25 +458,26 @@ def main(argv: list[str] = None) -> int:
                 },
                 destination,
             )
+        elif shard:
+            destination = structure_db / "_progress"
+            table = None
+            print(f"\nshard written to {destination}; join all shards with "
+                  f"mofstructure_merge {args.save_dir}")
         else:
+            consolidate(args.save_dir)
             destination = _database_path(args.save_dir)
-            read_write.append_json(
-                json.loads(json.dumps(
-                    {
-                        name: _for_disk(record)
-                        for name, record in collected.items()
-                    },
-                    default=str,
-                )),
-                str(destination),
-            )
             # Built from the merged file rather than from this run, so the
             # table covers the database and not just the last command.
             table = _write_csv(
                 read_write.load_data(str(destination)), destination
             )
         print(f"\nwrote {len(records)} records to {destination}")
-        print(f"summary table {table}")
+        if table:
+            print(f"summary table {table}")
+    if scratch:
+        import shutil
+
+        shutil.rmtree(scratch, ignore_errors=True)
 
     if records:
         tally = Counter(record["status"] for record in records)

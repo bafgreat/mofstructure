@@ -3,100 +3,94 @@
 Command line entry point for `mofstructure_oms`.
 
 Reports the open metal sites of every structure in a folder, along with the
-general information about each framework, and collects them into one table.
+general information about each framework, and collects them into
+`<save_dir>/Structure_Data/structure_oms_and_general_info.json` and its csv,
+the file `mofstructure_database --oms` fills. Every structure runs in a worker
+process with a hard time limit, results are checkpointed as they finish and
+repeating the command continues an interrupted run (see
+`mofstructure.batch`).
 '''
 from __future__ import print_function
 __author__ = "Dr. Dinga Wonanke"
 __status__ = "production"
 import os
+import sys
 import argparse
-import pandas as pd
-from mofstructure import structure
 import mofstructure.filetyper as read_write
 
 
-def compile_data(cif_files, result_folder, verbose=False):
+def compile_data(cif_files, result_folder, verbose=False, max_atoms=5000,
+                 workers=1, max_time=3600, memory_limit=None, shard=None,
+                 retry_failed=False, recycle=50, merge_every=60):
     '''
-    A workflow to remove guest and compute open metal sites from a folder containing
-    cif files and create a database of open metal sites. This code can work for all
-    periodic systems containing metals.
+    Remove guests and record the open metal sites of a list of structures.
 
-    The function starts with checking and removing any unbound
-    guest molecule present in the periodic system.
+    **parameters:**
+        - cif_files: list of str
 
-    1. metal_info.json
-    A json file containing all information about the metals in the system.
-    This file can easily be converted to csv format.
+        - result_folder: str
+            Directory the database is written to.
 
-    ::
-        Parameters
-        ----------
-        cif_file : a cif file or any ase readable file containing a MOF.
-        result_folder : path to output folder
+        - verbose: bool
+
+        - max_atoms: int
+            Structures with more atoms are skipped, since the analysis can
+            exhaust memory on very large cells; the skip is recorded.
+
+        - workers, max_time, memory_limit, shard, retry_failed, recycle,
+          merge_every:
+            batch settings, see `mofstructure.batch_tasks.add_batch_arguments`.
     '''
-    metal_info = {}
-    seen = []
-    if not os.path.exists(result_folder):
-        os.makedirs(result_folder)
-    else:
-        try:
-            metal_info = read_write.load_data(result_folder+'/structure_oms_and_general_info.json')
-            seen = list(metal_info.keys())
-        except Exception:
-            pass
+    from types import SimpleNamespace
+    from mofstructure.batch_tasks import database_name, run_command
 
-    for cif_file in cif_files:
-        try:
-            base_name = os.path.basename(cif_file).split('.')[0]
-            print("======================================\n")
-            print(f'     processing : {base_name}     \n')
-            print("======================================")
-            if base_name not in seen:
-                print(f'processing: {base_name}')
-                mof_object = structure.MOFstructure(filename=cif_file)
-                if len(mof_object.ase_atoms) > 5000:
-                    print('system size too large, will run out of application memory')
-                    print('so will skip')
-                    continue
-                oms_data = mof_object.get_oms()
-
-                metal_info[base_name] = oms_data
-                read_write.append_json(metal_info, result_folder+'/structure_oms_and_general_info.json')
-            else:
-                print("======================================\n")
-                print(f" Already Done {base_name}\n")
-                print("======================================")
-        except Exception:
-            print(f'failed processing {base_name}')
-            pass
-
-    data_f = pd.DataFrame.from_dict(metal_info, orient='index')
-    data_f.to_csv(result_folder+'/structure_oms_and_general_info.csv')
-
+    os.makedirs(os.path.join(result_folder, read_write.STRUCTURE_DATA),
+                exist_ok=True)
+    items = [(database_name(f), f) for f in cif_files]
+    options = SimpleNamespace(workers=workers, max_time=max_time,
+                              memory_limit=memory_limit, shard=shard,
+                              retry_failed=retry_failed, recycle=recycle,
+                              merge_every=merge_every)
+    run_command('oms', items, 'mofstructure.batch_tasks:oms_task',
+                {'max_atoms': max_atoms}, result_folder, options)
     if verbose:
         print(f"Saved results to {result_folder}")
-    return
 
 
 def main():
     '''
-    mofstructure command line interface for computiong open metal sites
+    mofstructure command line interface for computing open metal sites
     '''
-    parser = argparse.ArgumentParser(
-        description='Run work_flow function with optional verbose output')
-    parser.add_argument('cif_folder', type=str,
-                        help='list of cif files. like glob')
+    from mofstructure.batch_tasks import BATCH_EPILOG, add_batch_arguments
 
+    parser = argparse.ArgumentParser(
+        description='Record the open metal sites of a folder of structures.',
+        epilog=BATCH_EPILOG,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('cif_folder', type=str,
+                        help='folder of cif files, or one cif file')
     parser.add_argument('-s', '--save_dir', type=str,
                         default=read_write.DEFAULT_SAVE_DIR,
                         help='directory to save output files')
+    parser.add_argument('--max-atoms', type=int, default=5000,
+                        help='skip structures with more atoms '
+                             '(default 5000, 0 for no limit)')
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='print verbose output')
+    add_batch_arguments(parser, max_time=3600)
     args = parser.parse_args()
     if os.path.isdir(args.cif_folder):
         cif_files = [os.path.join(args.cif_folder, f)
                      for f in os.listdir(args.cif_folder)
-                     if f.endswith('.cif')]
+                     if f.endswith('.cif') and not f.startswith('.')]
     else:
         cif_files = [args.cif_folder]
-    compile_data(cif_files, args.save_dir, args.verbose)
+    compile_data(cif_files, args.save_dir, args.verbose, args.max_atoms,
+                 workers=args.workers, max_time=args.max_time,
+                 memory_limit=args.memory_limit, shard=args.shard,
+                 retry_failed=args.retry_failed, recycle=args.recycle,
+                 merge_every=args.merge_every)
+
+
+if __name__ == '__main__':
+    sys.exit(main())

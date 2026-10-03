@@ -60,6 +60,7 @@ The `mofstructure` module includes a variety of features that simplify common op
 
    installation
    usage
+   cluster_runs
    examples
    api_reference
    updates

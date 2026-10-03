@@ -1,3 +1,44 @@
+Unreleased
+==========
+
+Topology keys no longer depend on how a crystal is written
+------------------------------------------------------------
+
+The canonical key is meant to identify a net whatever the cell, origin or
+atom order of the input. Testing every reduction on CSD MOFs, CoRE COFs and
+IZA zeolites under origin shifts, permutations, supercells and a change of
+cell setting found three errors, now fixed:
+
+* ``all_node``: edges built inside a rod or layered metal SBU took their
+  lattice translation with the wrong sign. The error vanished when no bond
+  crossed the cell boundary, so it appeared only after an origin shift or in
+  a different cell. Before the fix 90 % of transformed MOFs kept their key;
+  after it all of them do.
+* ``cof``: a linkage joining a building unit to its own neighbouring image
+  was discarded, and splicing two-connected units into edges used the wrong
+  sign. Small-cell COFs could reduce to a one-periodic net.
+* Nets whose barycentric placement has collisions between vertices that are
+  not neighbours received a key that changed with the cell. They are now
+  reported as ``unidentified`` with the reason, as Systre does and as the
+  method states. A timeout is now reported as ``timeout`` rather than
+  ``unidentified``.
+
+Keys computed with 0.1.9.1 for MOFs with rod or layered SBUs and for small
+cell COFs can differ from the corrected keys. The ``sbus`` and
+``ligand_cluster`` reductions collapse a rod SBU into one vertex, which has
+no cell-independent periodic graph; use ``all_node`` or ``single_node`` for
+rod MOFs.
+
+Batch commands no longer stop
+-----------------------------
+
+``mofstructure_database``, ``mofstructure_topology`` and
+``mofstructure_porosity`` now run every structure in a worker process with a
+hard time limit, record crashes and timeouts instead of stopping, save each
+result as it finishes, resume when repeated and can be split over a cluster
+array. ``mofstructure_merge`` joins the parts. Database json files are
+written atomically. See :doc:`cluster_runs`.
+
 Updates Version 0.1.9.1
 =======================
 

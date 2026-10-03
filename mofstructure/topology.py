@@ -115,8 +115,14 @@ _METALS = frozenset(
 )
 
 
-class _Timeout(Exception):
-    '''Raised when identification exceeds the budget it was given.'''
+class _Timeout(BaseException):
+    '''
+    Raised when identification exceeds the budget it was given.
+
+    Derived from BaseException so that the per-component error handling in
+    `graph_net.identify`, which catches Exception, does not record a timeout
+    as an ordinary failure and report it as "unidentified".
+    '''
 
 
 def _alarm(signum, frame):  # noqa: ARG001

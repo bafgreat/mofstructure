@@ -55,7 +55,10 @@ def test_database_collector_backfills_fingerprint(tmp_path, monkeypatch):
             return SAMPLE_FINGERPRINT
 
     monkeypatch.setattr(collect_data.structure, "MOFstructure", FakeMOF)
-    collect_data.compile_data([str(cif)], str(tmp_path / "database"))
+    # workers=0 runs in this process, where the substitute class is visible;
+    # a worker process would import the real one.
+    collect_data.compile_data([str(cif)], str(tmp_path / "database"),
+                              workers=0)
 
     records = json.loads(
         (structure_data / "fingerprint_data.json").read_text(encoding="utf-8")

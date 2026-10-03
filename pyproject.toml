@@ -41,6 +41,7 @@ mofstructure_curate = "mofstructure.scripts.curate_structures:main"
 mofstructure_generate_cgd="mofstructure.generate_cgd:main"
 mofstructure_topology = "mofstructure.scripts.topology:main"
 mofstructure_fingerprint = "mofstructure.scripts.fingerprint:main"
+mofstructure_merge = "mofstructure.scripts.merge:main"
 cof_stacking = "mofstructure.cof_stacking:Main"
 
 [tool.poetry.group.dev.dependencies]

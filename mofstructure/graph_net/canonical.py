@@ -83,6 +83,7 @@ from mofstructure.graph_net.barycentric import (
     UnstableNetError,
     barycentric_placement,
     edge_vectors,
+    find_collisions,
     find_local_collisions,
 )
 from mofstructure.graph_net.lattice import (
@@ -634,8 +635,10 @@ def canonical_form(
             `PeriodicGraph.components()` first if it may be disconnected.
 
         - check_stability: bool
-            When True, refuse to canonicalise a net that is not locally
-            stable rather than returning a key that depends on tie-breaking.
+            When True, refuse to canonicalise a net that is not stable, that
+            is one in which two vertices share a position in the barycentric
+            placement, rather than returning a key that depends on the cell
+            or on tie-breaking.
 
         - return_winners: bool
             When True, also return the reduced graph and every traversal that
@@ -655,14 +658,34 @@ def canonical_form(
 
     **raises:**
         UnstableNetError
-            If the net is not locally stable and `check_stability` is set.
+            If the net is not stable and `check_stability` is set.
         ValueError
             If the quotient graph is disconnected or has no valid basis.
     '''
-    reduced = primitive(graph.reduced()).reduced()
-    dim = reduced.dim
-    if dim == 0:
+    base = graph.reduced()
+    if base.dim == 0:
         raise ValueError("the graph has no periodicity and is not a net")
+
+    # The primitive reduction finds extra translations from the barycentric
+    # placement, which identifies a translation uniquely only when no two
+    # vertices share a position. With a collision, a translation composed with
+    # a swap of the colliding vertices has the same displacement, so neither
+    # the primitive cell nor the key is well defined and the result would
+    # depend on the cell the net was written in. Such a net is refused, as
+    # Systre refuses it. Instability is a property of the net, so the test
+    # gives the same answer in every cell.
+    base_placement = barycentric_placement(base)
+    if check_stability:
+        clashes = find_collisions(base, base_placement)
+        if clashes:
+            raise UnstableNetError(
+                "net is not stable: vertices collide in the barycentric "
+                "placement, so no canonical key exists",
+                collisions=clashes,
+            )
+
+    reduced = primitive(base, base_placement).reduced()
+    dim = reduced.dim
 
     # The placement is a function of the reduced graph alone, and both the
     # stability check and the edge vectors need it, so it is solved once and

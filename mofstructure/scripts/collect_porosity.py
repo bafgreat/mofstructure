@@ -12,10 +12,8 @@ __author__ = "Dr. Dinga Wonanke"
 __status__ = "production"
 import os
 import argparse
-from mofstructure import structure
 import mofstructure.filetyper as read_write
 from mofstructure.porosity import DEFAULT_TIMEOUT as porosity_timeout
-from mofstructure.porosity import empty_porosity_record
 
 
 def compile_data(cif_files,
@@ -25,104 +23,85 @@ def compile_data(cif_files,
                  rad_file=None,
                  verbose=False,
                  timeout=porosity_timeout,
-                 high_accuracy=True):
+                 high_accuracy=True,
+                 workers=1,
+                 max_time=None,
+                 memory_limit=None,
+                 shard=None,
+                 retry_failed=False,
+                 recycle=50, merge_every=60):
     '''
-    A workflow to remove guest and compute porosity from any porous periodic system.
-    The results is written in both a json format and csv file format.
-    The function starts with checking and removing any unbound
-    guest molecule present in the porous. After that it computed the porosity
-    of all the systems and load them in a single csv. The function always computes
-    the high accuracy calculation.
+    Remove guests and compute the pore geometry of every structure in a list.
 
-    1. ase_atoms_building_units.json
-    Json file containing ase atom object of all the building uints and for
-    each ase atom object there are additional information in the info[] key.
+    Every structure runs in a separate worker process (see
+    `mofstructure.batch`), so a crash or a stall in zeo++ or in the guest
+    removal costs only that structure. Results are checkpointed as they
+    finish and `Structure_Data/porosity_data.json` and its csv are rebuilt at
+    the end; a structure that failed has a row of missing values and its
+    reason in `porosity_status`. Repeating the call continues an interrupted
+    run.
 
-    2. sbus_and_linkers.json
-    A json file containing all the information about the linkers and metal
-    sbu.
+    **parameters:**
+        - cif_files: list of str
 
-    3. cluster_and_ligands.json
-    A json file containing all the information about the ligands and metal
-    cluster.
-    ::
-        Parameters
-        ----------
-        cif_file : a cif file or any ase readable file containing a MOF.
-        result_folder : path to output folder
+        - result_folder: str
+            Directory the database is written to.
+
+        - probe_radius, number_of_steps, rad_file, high_accuracy:
+            zeo++ settings, see `MOFstructure.get_porosity`.
+
+        - timeout: float
+            Seconds allowed for zeo++ per structure.
+
+        - workers, max_time, memory_limit, shard, retry_failed, recycle:
+            batch settings, see `mofstructure.batch_tasks.add_batch_arguments`.
+            max_time defaults to the zeo++ timeout plus ten minutes for the
+            guest removal.
     '''
-    if not os.path.exists(result_folder):
-        os.makedirs(result_folder)
-    structure_db = os.path.join(result_folder, read_write.STRUCTURE_DATA)
-    if not os.path.exists(structure_db):
-        os.makedirs(structure_db)
-    porosity_path = os.path.join(structure_db, 'porosity_data.json')
-    if os.path.exists(porosity_path):
-        all_porosity_data = read_write.load_data(porosity_path)
-    else:
-        all_porosity_data = {}
+    from types import SimpleNamespace
+    from mofstructure.batch_tasks import database_name, run_command
 
-    seen = list(all_porosity_data.keys())
-
-    for cif_file in cif_files:
-        base_name = os.path.basename(cif_file).split('.')[0]
-        try:
-            mof_object = structure.MOFstructure(filename=cif_file)
-            if base_name not in seen:
-                print("======================================\n")
-                print(f'     processing : {base_name}     \n')
-                print("======================================")
-
-                porosity = mof_object.get_porosity(
-                    probe_radius=probe_radius,
-                    number_of_steps=number_of_steps,
-                    rad_file=rad_file,
-                    timeout=timeout,
-                    high_accuracy=high_accuracy)
-                # The record has the same keys whether or not zeo++ managed
-                # the structure, so a failure is a row of missing values
-                # carrying its reason rather than a gap in the table.
-                all_porosity_data[base_name] = porosity
-                read_write.append_json(all_porosity_data, porosity_path)
-            else:
-                print("======================================\n")
-                print(f" !!! {base_name} is already done !!! \n")
-                print("======================================")
-        except Exception as error:
-            # A structure that cannot even be read still belongs in the
-            # table, with the reason attached. Skipping it silently leaves
-            # the caller unable to tell a missing row from a failed one.
-            print(f'!!! {base_name} could not be analysed: '
-                  f'{type(error).__name__}: {error} !!!')
-            all_porosity_data[base_name] = empty_porosity_record(
-                f'failed:{type(error).__name__}')
-
-    read_write.summary_frame(all_porosity_data).to_csv(
-        structure_db + '/porosity_data.csv')
-
+    os.makedirs(os.path.join(result_folder, read_write.STRUCTURE_DATA),
+                exist_ok=True)
+    items = [(database_name(f), f) for f in cif_files]
+    options = SimpleNamespace(
+        workers=workers,
+        max_time=max_time if max_time is not None else timeout + 600,
+        memory_limit=memory_limit, shard=shard,
+        retry_failed=retry_failed, recycle=recycle,
+                              merge_every=merge_every)
+    kwargs = dict(probe_radius=probe_radius, number_of_steps=number_of_steps,
+                  rad_file=rad_file, high_accuracy=high_accuracy,
+                  timeout=timeout)
+    run_command('porosity', items, 'mofstructure.batch_tasks:porosity_task',
+                kwargs, result_folder, options)
     if verbose:
         print(f"Saved results to {result_folder}")
-    return
 
 
 def main():
     '''
-    mofstructure command line interface to compute the porosity of any periodic
-    system.
+    mofstructure command line interface to compute the porosity of any
+    periodic system.
     '''
+    from mofstructure.batch_tasks import BATCH_EPILOG, add_batch_arguments
+
     parser = argparse.ArgumentParser(
-        description='Run work_flow function with optional verbose output')
+        description='Compute the pore geometry of a folder of structures.',
+        epilog=BATCH_EPILOG,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('cif_folder', type=str,
-                        help='list of cif files. like glob')
+                        help='folder of cif files')
 
     parser.add_argument('-pr', '--probe_radius', default=1.86, type=float,
                         help='probe radius (default: 1.86)')
 
     parser.add_argument('-ns', '--number_of_steps', default=10000, type=int,
-                        help='Number of GCMC simulation cycles (default: 10000)')
+                        help='Number of Monte Carlo samples (default: 10000)')
 
     parser.add_argument('-rf', '--rad_file', default=None, type=str,
-                        help='path to radii file (default: None). rad file must have .rad file extension')
+                        help='path to radii file (default: None). rad file '
+                             'must have .rad file extension')
     parser.add_argument('-a', '--accuracy', default='high',
                         choices=['high', 'low'],
                         help='zeo++ accuracy (default: high). low uses the '
@@ -138,9 +117,18 @@ def main():
                         help='directory to save output files')
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='print verbose output')
+    add_batch_arguments(parser, max_time=porosity_timeout + 600)
     args = parser.parse_args()
     cif_files = [os.path.join(args.cif_folder, f) for f in os.listdir(
-        args.cif_folder) if f.endswith('.cif')]
+        args.cif_folder) if f.endswith('.cif') and not f.startswith('.')]
     compile_data(cif_files, args.save_dir, args.probe_radius,
                  args.number_of_steps, args.rad_file, args.verbose,
-                 args.timeout, args.accuracy == 'high')
+                 args.timeout, args.accuracy == 'high',
+                 workers=args.workers, max_time=args.max_time,
+                 memory_limit=args.memory_limit, shard=args.shard,
+                 retry_failed=args.retry_failed, recycle=args.recycle,
+                 merge_every=args.merge_every)
+
+
+if __name__ == '__main__':
+    main()
