@@ -18,6 +18,14 @@ releases published on [PyPI](https://pypi.org/project/mofstructure/).
 - Framework classification recognises zeolites with exchange cations or
   carbon-bearing guests and COFs with metals held inside organic building units.
   Zeolite contraction infers tetrahedral elements from oxygen coordination.
+- `draw_topology` draws every edge between the real node positions. Nodes
+  were wrapped into the cell on their own and their images were then guessed
+  from the nearest copy. That guess fails for any edge longer than half the
+  cell. UiO-66 edges of 14.8 A were drawn up to 44.5 A long. The `sbus`
+  drawing also took every edge translation with the wrong sign and drew the
+  mirror image of the net. Each reduction now places its nodes in the frame
+  its edge shifts refer to. Identification never used the drawing graphs, so
+  topologies and keys are unchanged.
 
 ## 0.1.9.1
 

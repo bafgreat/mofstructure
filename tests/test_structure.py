@@ -45,3 +45,28 @@ def test_structure():
     assert topology.get('topology_hash') == topology.get('key_hash')
     assert topology.get('key')
     assert topology.get('cgd')
+
+
+def test_drawn_net_follows_real_geometry():
+    '''
+    The drawn net must place every edge between the real node positions.
+
+    UiO-66 is fcu with every Zr6 cluster 14.8 A from its twelve neighbours,
+    longer than half its 20.7 A cell. A drawing that guessed periodic images
+    from the nearest copy drew some of these edges across three cells, and
+    the sbus drawing was the mirror image of the net. Both keep the topology,
+    so the key alone cannot catch them: the edge lengths can.
+    '''
+    import numpy as np
+    from mofstructure.generate_cgd import net_geometry
+
+    data = get_test_data()
+    guest_free = structure.MOFstructure(data['UIO66']).remove_guest()
+    for method in ("all_node", "single_node", "sbus"):
+        positions, _, edges, cell = net_geometry(guest_free, method=method)
+        lengths = [
+            np.linalg.norm(positions[v] + np.array(s) @ cell - positions[u])
+            for u, v, *s in edges
+        ]
+        assert len(lengths) == 24
+        assert np.allclose(lengths, 14.8, atol=0.1), method

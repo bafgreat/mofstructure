@@ -926,6 +926,8 @@ def ligand_cluster_incidences(atoms: Atoms):
             is_cluster: per component, True for a metal cluster
             lattices: per component, basis of its own translation lattice
             incidences: mapping (cluster, ligand, sx, sy, sz) -> denticity
+            images: per component, the lattice image of each atom in the
+                unwrapped frame the incidence translations refer to
     '''
     components, _, porphyrin, _, breaking_pairs = \
         mofdeconstructor.ligands_and_metal_clusters(atoms)
@@ -992,6 +994,7 @@ def ligand_cluster_incidences(atoms: Atoms):
         "is_cluster": is_cluster,
         "lattices": lattices,
         "incidences": dict(incidences),
+        "images": images,
     }
 
 
@@ -1029,7 +1032,8 @@ def ligand_cluster_graph(atoms: Atoms, *, collapse_ditopic: bool = False):
 
         ligand_nodes: set of node identifiers belonging to ligands
 
-        node_atoms: mapping from node identifiers to represented atom indices
+        node_atoms: mapping from node identifiers to {atom index: lattice
+            image}, the represented atoms in the frame the shifts refer to
     '''
     deconstruction = ligand_cluster_incidences(atoms)
     components = deconstruction["components"]
@@ -1078,8 +1082,12 @@ def ligand_cluster_graph(atoms: Atoms, *, collapse_ditopic: bool = False):
     edges = dedup_periodic_edges(edges)
 
     ligand_nodes = {ligand_map[ligand] for ligand in participating_ligands}
+    images = deconstruction["images"]
     node_atoms = {
-        node: {int(a) for a in components[component]}
+        node: {
+            int(a): tuple(images[component].get(int(a), (0, 0, 0)))
+            for a in components[component]
+        }
         for component, node in node_of_component.items()
     }
 
@@ -1350,7 +1358,14 @@ def cgd_ligand_cluster(atoms: Atoms, *, name: str = "net", collapse_ditopic: boo
 
 
 def sbu_drawing_graph(atoms: Atoms):
-    '''Construct the SBU-contracted graph together with its atom mapping.'''
+    '''
+    Construct the SBU-contracted graph together with its atom mapping.
+
+    An edge (u, v, s) places v at its position plus s relative to u, the
+    convention of `base_edges_with_shifts`. Each node maps its atoms to their
+    images in the unwrapped frame of its component, so a drawing can place the
+    node in the frame the shifts refer to.
+    '''
     components, _, porphyrin, regions, breaking_pairs = \
         mofdeconstructor.secondary_building_units(atoms)
     target_regions = set(regions_with_metal(
@@ -1374,6 +1389,7 @@ def sbu_drawing_graph(atoms: Atoms):
     self_translations = component_self_translations(
         components, kept_graph, kept_offsets
     )
+    comp_images = component_atom_images(components, kept_graph, kept_offsets)
     pair_lattice = {}
     reduced_edges = []
     for u, v, sx, sy, sz in base_edges:
@@ -1398,14 +1414,20 @@ def sbu_drawing_graph(atoms: Atoms):
 
     edges = []
     organic = {node: False for node in node_of_component.values()}
+    def frame(component):
+        return {
+            int(a): tuple(comp_images[component].get(int(a), (0, 0, 0)))
+            for a in components[component]
+        }
+
     node_atoms = {
-        node_of_component[component]: {int(a) for a in components[component]}
-        for component in targets
+        node_of_component[component]: frame(component) for component in targets
     }
     next_node = len(node_of_component)
     for linker in range(len(components)):
         if linker in node_of_component:
             continue
+        # each incidence is a node and its position relative to the linker
         incidences = sorted({
             (node_of_component[neighbour], tuple(int(x) for x in shift))
             for neighbour, shift in adjacency.get(linker, [])
@@ -1416,13 +1438,13 @@ def sbu_drawing_graph(atoms: Atoms):
         if len(incidences) == 2:
             (u, su), (v, sv) = incidences
             edges.append((
-                u, v, su[0] - sv[0], su[1] - sv[1], su[2] - sv[2]
+                u, v, sv[0] - su[0], sv[1] - su[1], sv[2] - su[2]
             ))
             continue
         organic[next_node] = True
-        node_atoms[next_node] = {int(a) for a in components[linker]}
+        node_atoms[next_node] = frame(linker)
         for u, shift in incidences:
-            edges.append((u, next_node, *shift))
+            edges.append((u, next_node, -shift[0], -shift[1], -shift[2]))
         next_node += 1
 
     for component, node in node_of_component.items():
@@ -1788,8 +1810,10 @@ def _all_node_graph(atoms, components, breaking_pairs, regions, target_regions):
         edges: list of (u, v, sx, sy, sz) with 0-based node ids
         organic: dict node_id -> bool, True for carboxyl/linker (organic) nodes
                  and False for metal (inorganic) nodes
-        node_atoms: dict node_id -> set of atom indices the node represents,
-                 used to place the node at its real position when drawing
+        node_atoms: dict node_id -> {atom index: lattice image}, the atoms
+                 the node represents placed in the frame the edge shifts
+                 refer to, used to place the node at its real position when
+                 drawing
     '''
     tm = set(transition_metals())
     symbols = atoms.get_chemical_symbols()
@@ -1830,22 +1854,27 @@ def _all_node_graph(atoms, components, breaking_pairs, regions, target_regions):
         return nid
 
     atom_node = {}
-    node_atoms = defaultdict(set)
+    node_atoms = defaultdict(dict)
     for comp in target_comps:
         comp_atoms = {int(a) for a in components[comp]}
         if comp in rod_comps:
+            # a per-atom rod node is its own frame
             for atom in comp_atoms:
                 if symbols[atom] in tm:
                     atom_node[atom] = node_id(("metal", atom), False)
+                    node_atoms[atom_node[atom]][atom] = (0, 0, 0)
             for atom in broken_atoms[comp]:
                 if symbols[atom] not in tm:
                     atom_node[atom] = node_id(("bridge", atom), True)
+                    node_atoms[atom_node[atom]][atom] = (0, 0, 0)
         else:
+            # a cluster node shares the unwrapped frame of its component
             cluster = node_id(("cluster", comp), False)
             for atom in comp_atoms:
                 atom_node[atom] = cluster
-    for atom, nid in atom_node.items():
-        node_atoms[nid].add(atom)
+                node_atoms[cluster][atom] = tuple(
+                    comp_images[comp].get(atom, (0, 0, 0))
+                )
 
     edges = []
 
@@ -1912,14 +1941,17 @@ def _all_node_graph(atoms, components, breaking_pairs, regions, target_regions):
             lnode = next_linker_node
             next_linker_node += 1
             organic[lnode] = True
-            node_atoms[lnode] = {int(a) for a in components[link_comp]}
+            node_atoms[lnode] = {
+                int(a): tuple(comp_images[link_comp].get(int(a), (0, 0, 0)))
+                for a in components[link_comp]
+            }
             for u, su in items:
                 edges.append((u, lnode, su[0], su[1], su[2]))
 
     return edges, organic, dict(node_atoms)
 
 
-def _merge_organic_nodes(edges, organic):
+def _merge_organic_nodes(edges, organic, return_images=False):
     '''
     Collapse each connected group of organic nodes into a single node.
 
@@ -1929,6 +1961,10 @@ def _merge_organic_nodes(edges, organic):
     closes back on a member in a different cell) is left alone, so a periodic
     organic chain is never swallowed into one point. This turns the all-node net
     into the single-node net.
+
+    With return_images=True the image of each merged organic node within its
+    group is returned as well, which is what places the merged node when
+    drawing.
     '''
     all_nodes = set()
     for u, v, *_ in edges:
@@ -1988,6 +2024,8 @@ def _merge_organic_nodes(edges, organic):
             vmap[u], vmap[v],
             sx + du[0] - dv[0], sy + du[1] - dv[1], sz + du[2] - dv[2],
         ))
+    if return_images:
+        return remapped, vmap, image_in_group
     return remapped, vmap
 
 
@@ -2036,14 +2074,19 @@ def net_geometry(atoms, *, method="all_node"):
         )
 
     if method == "single_node":
-        edges, vmap = _merge_organic_nodes(edges, organic)
+        edges, vmap, group_image = _merge_organic_nodes(
+            edges, organic, return_images=True
+        )
         edges = dedup_periodic_edges(edges)
-        merged_atoms = defaultdict(set)
+        merged_atoms = defaultdict(dict)
         merged_organic = {}
         for nid, group in node_atoms.items():
             if nid not in vmap:
                 continue
-            merged_atoms[vmap[nid]].update(group)
+            # a merged member sits at its image within the group's frame
+            offset = np.array(group_image.get(nid, (0, 0, 0)), dtype=int)
+            for atom, image in group.items():
+                merged_atoms[vmap[nid]][atom] = tuple(np.add(image, offset))
             merged_organic[vmap[nid]] = (
                 merged_organic.get(vmap[nid], False) or organic.get(nid, False)
             )
@@ -2053,74 +2096,28 @@ def net_geometry(atoms, *, method="all_node"):
     cell = np.array(atoms.cell)
     frac = atoms.get_scaled_positions(wrap=False)
 
-    positions = {}
+    # Each node sits at the centroid of its atoms in the frame its edge shifts
+    # refer to. Moving a node into the home cell by the integer vector w
+    # changes every shift on it by the same w, so the drawn edges keep their
+    # real length and direction and no image has to be guessed.
+    positions, home = {}, {}
     for nid, group in node_atoms.items():
-        members = sorted(group)
-        ref = frac[members[0]]
-        unwrapped = []
-        for atom in members:
-            delta = frac[atom] - ref
-            delta -= np.round(delta)  # minimum image relative to the first atom
-            unwrapped.append(ref + delta)
+        unwrapped = [frac[atom] + np.array(image) for atom, image in group.items()]
         center = np.mean(unwrapped, axis=0)
-        center -= np.floor(center)
-        positions[nid] = np.asarray(center @ cell)
+        home[nid] = np.floor(center).astype(int)
+        positions[nid] = np.asarray((center - home[nid]) @ cell)
+
+    zero = np.zeros(3, dtype=int)
+    moved = []
+    for u, v, sx, sy, sz in edges:
+        shift = np.array((sx, sy, sz)) + home.get(v, zero) - home.get(u, zero)
+        moved.append((u, v, int(shift[0]), int(shift[1]), int(shift[2])))
+    edges = dedup_periodic_edges(moved)
 
     kinds = {
         nid: ("organic" if organic.get(nid) else "metal") for nid in positions
     }
-    edges = drawing_periodic_edges(positions, edges, cell)
     return positions, kinds, edges, cell
-
-
-def drawing_periodic_edges(positions, edges, cell):
-    '''
-    Express periodic edges in the coordinate gauge used by drawn node
-    positions.
-
-    Periodic graph translations depend on the unit-cell representative chosen
-    for every node. Node centroids are wrapped independently for display, so
-    their representatives can differ from those used during graph
-    construction. Integer gauge shifts are propagated along a spanning forest
-    to reconcile the two choices without changing cycle translations. This
-    preserves periodic self-edges and distinct connections between different
-    images of the same pair of nodes.
-    '''
-    cell = np.asarray(cell, dtype=float)
-    inv_cell = np.linalg.inv(cell)
-    fractional = {
-        node: np.asarray(position, dtype=float) @ inv_cell
-        for node, position in positions.items()
-    }
-    adjacency = defaultdict(list)
-    for u, v, sx, sy, sz in edges:
-        if u == v:
-            continue
-        shift = np.array((sx, sy, sz), dtype=int)
-        nearest = -np.rint(fractional[v] - fractional[u]).astype(int)
-        adjacency[u].append((v, nearest - shift))
-        adjacency[v].append((u, shift - nearest))
-
-    gauge = {}
-    for root in sorted(positions):
-        if root in gauge:
-            continue
-        gauge[root] = np.zeros(3, dtype=int)
-        queue = [root]
-        for node in queue:
-            for neighbour, delta in adjacency.get(node, []):
-                if neighbour in gauge:
-                    continue
-                gauge[neighbour] = gauge[node] + delta
-                queue.append(neighbour)
-
-    adjusted = []
-    for u, v, sx, sy, sz in edges:
-        shift = (
-            np.array((sx, sy, sz), dtype=int) + gauge[v] - gauge[u]
-        )
-        adjusted.append((u, v, int(shift[0]), int(shift[1]), int(shift[2])))
-    return dedup_periodic_edges(adjusted)
 
 
 @dataclass

@@ -22,9 +22,11 @@ records and blanks that has to be repaired before it can be used.
 
 __author__ = "Dr. Dinga Wonanke"
 __status__ = "production"
+import math
 import os
 import pickle
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -133,14 +135,24 @@ def zeo_calculation(ase_atom, probe_radius=1.86, number_of_steps=10000,
                          'probe_radius': probe_radius,
                          'number_of_steps': number_of_steps,
                          'high_accuracy': high_accuracy,
-                         'rad_file': rad_file}, file_handle)
+                         'rad_file': rad_file,
+                         'timeout': timeout}, file_handle)
+
+        # The child must import this copy of mofstructure. Started from the
+        # workdir it would otherwise find whichever copy is installed, which
+        # in a source checkout can be an older release.
+        package_root = os.path.dirname(
+            os.path.dirname(os.path.abspath(__file__)))
+        env = dict(os.environ)
+        env['PYTHONPATH'] = os.pathsep.join(
+            filter(None, [package_root, env.get('PYTHONPATH')]))
 
         # cwd is the workdir so the tmp.cssr and tmp.res scratch files land
         # there and go away with it, even when the child aborts
         try:
             completed = subprocess.run(
                 [sys.executable, '-m', 'mofstructure.porosity', workdir],
-                cwd=workdir, check=False, timeout=timeout)
+                cwd=workdir, check=False, timeout=timeout, env=env)
         except subprocess.TimeoutExpired:
             # run() has already killed the child by this point.
             print(f'zeo++ exceeded {timeout} s on this structure, '
@@ -255,6 +267,16 @@ def _run_as_child():
     tempfile.tempdir = workdir
     with open(os.path.join(workdir, 'input.pkl'), 'rb') as file_handle:
         arguments = pickle.load(file_handle)
+
+    # The parent enforces the timeout, but a parent that is itself killed
+    # (a batch worker past its limit, a cancelled job) cannot, and zeo++
+    # would then run on with nothing to stop it. SIGALRM ends the child even
+    # inside compiled code. The margin lets the parent's own timeout fire
+    # first, so a stall is still reported as a timeout.
+    timeout = arguments.pop('timeout', None)
+    if timeout and hasattr(signal, 'alarm'):
+        signal.signal(signal.SIGALRM, signal.SIG_DFL)
+        signal.alarm(int(math.ceil(timeout)) + 60)
 
     parameters = compute_zeo_parameters(**arguments)
 

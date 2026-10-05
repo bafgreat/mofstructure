@@ -29,6 +29,18 @@ cell COFs can differ from the corrected keys. The ``sbus`` and
 no cell-independent periodic graph; use ``all_node`` or ``single_node`` for
 rod MOFs.
 
+Topology drawings follow the real framework
+-------------------------------------------
+
+``draw_topology`` placed each node at its centroid wrapped into the cell and
+then guessed every edge image from the nearest copy. The guess fails for an
+edge longer than half the cell. UiO-66 edges of 14.8 A were drawn up to
+44.5 A long and HKUST-1 ``sbus`` edges up to 89 A. The ``sbus`` drawing also
+took every edge translation with the wrong sign and so drew the mirror image
+of the net. Each reduction now places its nodes in the frame its edge shifts
+refer to and no image is guessed. Identification never used the drawing
+graphs, so topologies and keys are unchanged.
+
 Batch commands no longer stop
 -----------------------------
 

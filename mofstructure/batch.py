@@ -96,9 +96,16 @@ def _worker(conn, task, kwargs, memory_gb, quiet) -> None:
     an error record, so only a crash in compiled code can end the process
     early, and that is detected by the parent.
     '''
-    # The parent decides when to stop; a Ctrl-C reaches every process in the
-    # group, so the worker leaves the interrupt to the parent.
+    # The parent decides when to stop, so the worker leaves an interrupt to
+    # the parent.
     signal.signal(signal.SIGINT, signal.SIG_IGN)
+    # A task can start children of its own, as porosity does for zeo++.
+    # Killing only the worker on a timeout would leave such a child running
+    # with nothing left to stop it, so the worker leads a process group the
+    # parent kills as a whole. This also keeps a Ctrl-C at the terminal away
+    # from the workers; the parent stops them on its way out.
+    if hasattr(os, "setpgrp"):
+        os.setpgrp()
     _limit_memory(memory_gb)
     if quiet:
         import warnings
@@ -271,17 +278,25 @@ class _Slot:
         self.started = time.monotonic()
         self.conn.send(item)
 
+    def kill(self):
+        '''Kill the worker together with any child its task started.'''
+        try:
+            os.killpg(self.process.pid, signal.SIGKILL)
+        except (AttributeError, ProcessLookupError, PermissionError):
+            # no process groups (Windows), or the group is already gone
+            self.process.kill()
+
     def stop(self, force=False):
         try:
             if force:
-                self.process.kill()
+                self.kill()
             else:
                 self.conn.send(None)
         except (BrokenPipeError, OSError):
             pass
         self.process.join(timeout=10)
         if self.process.is_alive():
-            self.process.kill()
+            self.kill()
             self.process.join(timeout=10)
         self.conn.close()
 

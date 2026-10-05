@@ -97,3 +97,26 @@ def test_a_corrupt_database_file_is_reported_not_overwritten(tmp_path):
     with pytest.raises(ValueError, match="not valid json"):
         filetyper.append_json({"c": 3}, str(target))
     assert target.read_text() == '{"a": 1, "b":'
+
+
+def test_a_timeout_kills_the_children_of_the_task(tmp_path):
+    '''
+    Porosity runs zeo++ in a child of the worker. Killing only the worker on
+    a timeout left that child running with nothing to stop it, so a long run
+    filled up with orphaned zeo++ processes until the machine stalled.
+    '''
+    import time
+
+    pid_file = tmp_path / "child.pid"
+    tally = run_batch(_items("child-1"), TASK, tmp_path / "run.jsonl",
+                      timeout=5, kwargs={"pid_file": str(pid_file)})
+    assert tally == {"timeout": 1}
+    pid = int(pid_file.read_text())
+    for _ in range(50):
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return
+        time.sleep(0.1)
+    os.kill(pid, 9)
+    pytest.fail("the task's child outlived its worker")
